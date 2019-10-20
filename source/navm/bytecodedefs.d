@@ -1,4 +1,4 @@
-module navm.bytecode;
+module navm.bytecodedefs;
 
 import utils.misc;
 import utils.lists;
