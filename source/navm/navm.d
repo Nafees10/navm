@@ -25,7 +25,7 @@ private:
 protected:
 	// instructions:
 
-	void executeExternalFunction(NaStack* _stack, ref NaData* _arguments){
+	void executeExternalFunction(){
 		_stack.push(
 			_externFunctions[_arguments[0].intVal](
 				_stack.pop(_arguments[1].intVal)
@@ -52,32 +52,65 @@ protected:
 		(*(++_instruction))();
 	}
 	void mathSubtractInt(){
-
+		uinteger bOperand = _stack.pop.intVal;
+		_stack.push(
+			NaData(_stack.pop.intVal - bOperand)
+			);
+		(*(++_instruction))();
 	}
 	void mathMultiplyInt(){
-
+		_stack.push(
+			NaData(_stack.pop.intVal * _stack.pop.intVal)
+			);
+		(*(++_instruction))();
 	}
 	void mathDivideInt(){
-		
+		uinteger bOperand = _stack.pop.intVal;
+		_stack.push(
+			NaData(_stack.pop.intVal / bOperand)
+			);
+		(*(++_instruction))();
 	}
 	void mathModInt(){
-
+		uinteger bOperand = _stack.pop.intVal;
+		_stack.push(
+			NaData(_stack.pop.intVal % bOperand)
+			);
+		(*(++_instruction))();
 	}
 
-	void mathAddDivide(){
-
+	void mathAddDouble(){
+		_stack.push(
+			NaData(_stack.pop.doubleVal + _stack.pop.doubleVal)
+			);
+		(*(++_instruction))();
 	}
-	void mathSubtractDivide(){
-
+	void mathSubtractDouble(){
+		double bOperand = _stack.pop.doubleVal;
+		_stack.push(
+			NaData(_stack.pop.doubleVal - bOperand)
+			);
+		(*(++_instruction))();
 	}
-	void mathMultiplyDivide(){
-
+	void mathMultiplyDouble(){
+		_stack.push(
+			NaData(_stack.pop.doubleVal * _stack.pop.doubleVal)
+			);
+		(*(++_instruction))();
 	}
-	void mathDivideDivide(){
-		
+	void mathDivideDouble(){
+		double bOperand = _stack.pop.doubleVal;
+		_stack.push(
+			NaData(_stack.pop.doubleVal / bOperand)
+			);
+		(*(++_instruction))();
 	}
-	void mathModDivide(){
-
+	void mathModDouble(){
+		double bOperand = _stack.pop.doubleVal;
+		_stack.push(
+			NaData(_stack.pop.doubleVal % bOperand)
+			);
+		(*(++_instruction))();
 	}
 public:
 

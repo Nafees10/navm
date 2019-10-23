@@ -1,12 +1,17 @@
 module navm.bytecodedefs;
 
 import utils.misc;
-import utils.lists;
 
 import navm.defs;
 
+/// Stores a byte code function (the instructions plus their arguments)
+public struct NaFunction{
+	Instruction[] instructions; /// the instructions making this function
+	NaData[][] arguments; /// arguments for each of the instructions
+}
+
 /// stores an instruction
-enum Instruction : ubyte{
+public enum Instruction : ubyte{
 	ExecuteFunctionExternal = 0x00,/// Executes external function
 	ExecuteFunction = 0x01,/// Executes another function defined in byte code
 
@@ -21,7 +26,7 @@ enum Instruction : ubyte{
 	MathMultiplyDouble = 0x14,/// Multiplication (double)
 	MathDivideDouble = 0x15,/// Division (double)
 	MathModDouble = 0x16,/// Mod (% operator) (double)
-
+	
 	isSameInt = 0x07,/// if both values are same (integer)
 	isSameArrayInt = 0x08, /// if 2 int[] have same values
 	isLesserInt = 0x09,/// is val0 < val1 (integer)
@@ -57,11 +62,11 @@ enum Instruction : ubyte{
 }
 
 /// stores number of arguments an instruction needs
-static ubyte[Instruction] INSTRUCTION_ARG_COUNT;
+public static ubyte[Instruction] INSTRUCTION_ARG_COUNT;
 
 
 /// stores how many elements an instruction will push to stack
-static ubyte[Instruction] INSTRUCTION_PUSH_COUNT;
+public static ubyte[Instruction] INSTRUCTION_PUSH_COUNT;
 
 /// stores how many elements an instruction will pop from stack (-1 if number varies depending on arguments)
 private static byte[Instruction] INSTRUCTION_POP_COUNT;
@@ -222,7 +227,7 @@ static this(){
 /// Returns: number of elements an instruction will pop from stack
 /// 
 /// Throws: Exception if wrong number of arguments provided
-uinteger instructionPopCount(Instruction inst, RuntimeData[] arguments){
+public uinteger instructionPopCount(Instruction inst, NaData[] arguments){
 	if (arguments.length != INSTRUCTION_ARG_COUNT[inst])
 		throw new Exception("wrong number of arguments provided for instruction");
 	if (inst == Instruction.ExecuteFunction || inst == Instruction.ExecuteFunctionExternal){
