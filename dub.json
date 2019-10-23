@@ -1,0 +1,12 @@
+{
+	"authors": [
+		"Nafees"
+	],
+	"copyright": "Copyright © 2019, Nafees",
+	"dependencies": {
+		"utils": "~>0.3.3"
+	},
+	"description": "A simple VM intended to be used in scripting languages",
+	"license": "MIT",
+	"name": "navm"
+}
