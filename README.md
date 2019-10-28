@@ -23,21 +23,21 @@ Although you do not need to actually write following this if you are using NaVM 
 
 The syntax is as follows:
 ```
-FunctionID#comment
-StackLength
+StackLength # this defiens function with function id = 0
 	FirstInstruction [InstructionArgument0] [Argument1]
 	SecondInstruction # comment
 	ThridInstruction
 # comment
 	FourthInstruction
-AnotherFunctionID
-StackLength
+
+StackLength # another function begins from here (id = 1)
 	...
 
 ```
 
 The bytecode is divided into functions.  
-Each function definition begins with the function id (this is a positive integer), and the required stack length.  
+Each function definition begins with the the required stack length.
+Function ID is automatically assigned, starting with 0. This is to avoid using assoc_arrays, to improve performace.  
 Both of these are to be on a separate line, and the lines cannot begin with whitespace.  
 After that, each line is an instruction or a comment.  
 
