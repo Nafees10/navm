@@ -8,6 +8,7 @@ import navm.defs;
 public struct NaFunction{
 	Instruction[] instructions; /// the instructions making this function
 	NaData[][] arguments; /// arguments for each of the instructions
+	uinteger stackLength; /// max number of elements needed on stack
 }
 
 /// stores an instruction
@@ -59,6 +60,9 @@ public enum Instruction : ubyte{
 
 	IntToDouble = 0x50,/// pushes doulbe with the same value as int poped from stack
 	DoubleToInt = 0x51,/// pushes int with same integer value as double poped from stack
+
+	ReturnVal = 0xF0, /// Pops value, sets it to the return value of currently executed function. Does **NOT** terminate execution
+	Terminate = 0xFF, /// Terminates execution of function
 }
 
 /// stores number of arguments an instruction needs
@@ -120,6 +124,9 @@ static this(){
 
 		Instruction.IntToDouble : 0,
 		Instruction.DoubleToInt : 0,
+
+		Instruction.ReturnVal : 0,
+		Instruction.Terminate : 0,
 	];
 
 	INSTRUCTION_PUSH_COUNT = [
@@ -170,6 +177,9 @@ static this(){
 
 		Instruction.IntToDouble : 1,
 		Instruction.DoubleToInt : 1,
+
+		Instruction.ReturnVal : 0,
+		Instruction.Terminate : 0,
 	];
 
 	INSTRUCTION_POP_COUNT = [
@@ -220,6 +230,9 @@ static this(){
 
 		Instruction.IntToDouble : 1,
 		Instruction.DoubleToInt : 1,
+
+		Instruction.ReturnVal : 1,
+		Instruction.Terminate : 0,
 	];
 }
 
