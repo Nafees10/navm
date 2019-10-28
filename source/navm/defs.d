@@ -16,7 +16,7 @@ public union NaData{
 		}else static if (is (T == double) || is (T == float)){
 			doubleVal = data;
 		}else static if (is (T == NaData[]) || is (T == void[])){
-			arrayVal = cast(NaData[])data;
+			arrayVal = &cast(NaData[])data;
 		}else static if (is (T == NaData*)){
 			ptrVal = data;
 		}else{
@@ -73,6 +73,10 @@ public:
 	/// Returns: the element at an index (this is possible as the stack is actually an array)
 	NaData read(uinteger index){
 		return _stackArray[index];
+	}
+	/// Returns: pointer to element at an index (same as this.read, but returns a pointer)
+	NaData* readPtr(uinteger index){
+		return &_stackArray[index];
 	}
 	/// Writes a value to an index on the stackArray (possible because the stack is actually a stack)
 	void write(uinteger index, NaData value){
