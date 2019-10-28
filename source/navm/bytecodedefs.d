@@ -42,18 +42,18 @@ public enum Instruction : ubyte{
 	BinaryOr = 0x22,/// or operator (integer)
 
 	Push = 0x30,/// pushes one value to stack
-	PushFrom = 0x31,/// Writes pop-ed data to an-index-N on stack
+	PushFrom = 0x31,/// reads value at index arg0 on stack, pushes it to stack
 	PushRefFrom = 0x32, /// Pushes a reference-to-element-at-index-arg0 to stack
-	PushTo = 0x33, /// Pops a value from stack, writes it to an index on stack
+	PushTo = 0x33, /// Pops a value from stack, writes it to an index arg0 on stack
 	Deref = 0x34, /// Pushes the value that is being referenced by a reference pop-ed from stack
 	Pop = 0x35,/// Pops one value from stack
 	Jump = 0x36, /// jumps to instruction at index N
 	JumpIf = 0x37, /// jump but checks if value pop-ed from stack == 1 before jumping
 
 	MakeArray = 0x40, /// pushes array with N number of elemets, read from stack
-	ReadElement = 0x41, /// Pushes ref-to-element-in-array-at-index-poped-from-stack to stack
+	ReadElement = 0x41, /// pops an index, then a ref-to-array. Pushes ref to element at that index in that array
 	ArrayLength = 0x42, /// Pushes length of array to stack, array pop-ed from stack
-	ArrayLengthSet = 0x43, /// Changes length of array pop-ef from stack to new length, pop-ed from stack
+	ArrayLengthSet = 0x43, /// Changes length of array (reference to array popped from stack) to new length, pop-ed from stack
 	Concatenate = 0x44,/// Concatenate arrays
 	Append = 0x45, /// Appends an element at end of array, pushes new array
 
