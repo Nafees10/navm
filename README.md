@@ -25,14 +25,14 @@ The syntax is as follows:
 ```
 FunctionID#comment
 StackLength
-0	FirstInstruction [InstructionArgument0] [Argument1]
-1	SecondInstruction # comment
-2	ThridInstruction
+	FirstInstruction [InstructionArgument0] [Argument1]
+	SecondInstruction # comment
+	ThridInstruction
 # comment
-3	FourthInstruction
+	FourthInstruction
 AnotherFunctionID
 StackLength
-1	...
+	...
 
 ```
 
@@ -42,10 +42,8 @@ Both of these are to be on a separate line, and the lines cannot begin with whit
 After that, each line is an instruction or a comment.  
 
 Instructions are written in either of these ways:  
-`%number% Tab %instruction% %arguments%`  
-or:  
 `Tab %instruction% %arguments%`  
-The tab must be a tab, spaces are not allowed.
+The a tab is used to indent, spaces are not allowed.
 
 ### Instructions
 
