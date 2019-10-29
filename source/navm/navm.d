@@ -267,15 +267,15 @@ public:
 			Instruction.MathDivideDouble : &mathDivideDouble,
 			Instruction.MathModDouble : &mathModDouble,
 
-			Instruction.isSameInt : &isSameInt,
-			Instruction.isSameArrayInt : &isSameArrayInt,
-			Instruction.isLesserInt : &isLesserInt,
-			Instruction.isLesserSameInt : &isLesserSameInt,
+			Instruction.IsSameInt : &isSameInt,
+			Instruction.IsSameArrayInt : &isSameArrayInt,
+			Instruction.IsLesserInt : &isLesserInt,
+			Instruction.IsLesserSameInt : &isLesserSameInt,
 
-			Instruction.isSameDouble : &isSameDouble,
-			Instruction.isSameArrayDouble : &isSameArrayDouble,
-			Instruction.isLesserDouble : &isLesserDouble,
-			Instruction.isLesserSameDouble : &isLesserSameDouble,
+			Instruction.IsSameDouble : &isSameDouble,
+			Instruction.IsSameArrayDouble : &isSameArrayDouble,
+			Instruction.IsLesserDouble : &isLesserDouble,
+			Instruction.IsLesserSameDouble : &isLesserSameDouble,
 
 			Instruction.BinaryAnd : &binaryAnd,
 			Instruction.BinaryNot : &binaryNot,
