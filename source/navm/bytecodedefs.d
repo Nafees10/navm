@@ -38,15 +38,15 @@ public enum Instruction : ubyte{
 	MathDivideDouble = 0x15,/// Division (double)
 	MathModDouble = 0x16,/// Mod (% operator) (double)
 	
-	isSameInt = 0x07,/// if both values are same (integer)
-	isSameArrayInt = 0x08, /// if 2 int[] have same values
-	isLesserInt = 0x09,/// is val0 < val1 (integer)
-	isLesserSameInt = 0x0A,/// if val1 <= val2 (integer)
+	IsSameInt = 0x07,/// if both values are same (integer)
+	IsSameArrayInt = 0x08, /// if 2 int[] have same values
+	IsLesserInt = 0x09,/// is val0 < val1 (integer)
+	IsLesserSameInt = 0x0A,/// if val1 <= val2 (integer)
 
-	isSameDouble = 0x17,/// if both values are same (double)
-	isSameArrayDouble = 0x18, /// if 2 double[] have same values
-	isLesserDouble = 0x19,/// is val0 < val1 (double)
-	isLesserSameDouble = 0x1A,/// if val1 <= val2 (double)
+	IsSameDouble = 0x17,/// if both values are same (double)
+	IsSameArrayDouble = 0x18, /// if 2 double[] have same values
+	IsLesserDouble = 0x19,/// is val0 < val1 (double)
+	IsLesserSameDouble = 0x1A,/// if val1 <= val2 (double)
 
 	BinaryNot = 0x20,/// not operator (integer)
 	BinaryAnd = 0x21,/// and operator (integer)
