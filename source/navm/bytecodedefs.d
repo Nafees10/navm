@@ -9,6 +9,16 @@ public struct NaFunction{
 	Instruction[] instructions; /// the instructions making this function
 	NaData[][] arguments; /// arguments for each of the instructions
 	uinteger stackLength; /// max number of elements needed on stack
+	/// postblit
+	this (this){
+		this.instructions = instructions.dup;
+		NaData[][] newArgs;
+		newArgs.length = arguments.length;
+		foreach(i, args; arguments){
+			newArgs[i] = args.dup;
+		}
+		arguments = newArgs;
+	}
 }
 
 /// stores an instruction
