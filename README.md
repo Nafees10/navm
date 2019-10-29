@@ -23,27 +23,30 @@ Although you do not need to actually write following this if you are using NaVM 
 
 The syntax is as follows:
 ```
-StackLength # this defiens function with function id = 0
+def %StackLength% # this defiens function with function id = 0
 	FirstInstruction [InstructionArgument0] [Argument1]
 	SecondInstruction # comment
 	ThridInstruction
 # comment
 	FourthInstruction
-
-StackLength # another function begins from here (id = 1)
+def %StackLength%# another function begins from here (id = 1)
+FirstInstruction
+Second
 	...
 
 ```
 
 The bytecode is divided into functions.  
-Each function definition begins with the the required stack length.
+Each function definition begins with the keyword `def`, followed by the required stack length (separate using whitespace).    
 Function ID is automatically assigned, starting with 0. This is to avoid using assoc_arrays, to improve performace.  
-Both of these are to be on a separate line, and the lines cannot begin with whitespace.  
+Both of these are to be on a separate line.  
 After that, each line is an instruction or a comment.  
 
 Instructions are written in either of these ways:  
 `Tab %instruction% %arguments%`  
-The a tab is used to indent, spaces are not allowed.
+or:  
+`%instruction% %arguments%`  
+Tabs or spaces can be used to indent, but indentation is not necesary.
 
 ### Instructions
 
