@@ -2,6 +2,7 @@ module navm.navm;
 
 import navm.defs;
 import navm.bytecodedefs;
+import navm.bytecode;
 
 import std.conv : to;
 
@@ -322,6 +323,14 @@ public:
 		return true;
 	}
 
+	/// Loads byte code
+	/// 
+	/// Throws: Exception in case of an error in byte code
+	void load(string[] code){
+		if (!this.load(readByteCode(code)))
+			throw new Exception("unexpected error in NaVM.load(NaFunction[])");
+	}
+
 
 	/// Calls a function
 	/// 
@@ -341,6 +350,7 @@ public:
 		_instruction = &(*_currentFunction)[0];
 		_arguments = &(*_currentArguments)[0];
 		_returnVal = NaData();
+		keepRunning = true;
 		// start executing
 		while (keepRunning){
 			(*_instruction)();
