@@ -40,7 +40,7 @@ NaFunction[] readByteCode(string[] input){
 	bool functionDefined = false; // true if its clear that its reading instructions for a function, and stackLength has been defined
 
 	foreach(i, line; words){
-		if (functionDefined){
+		if (functionDefined && line[0].lowercase != "def"){
 			Instruction inst;
 			string lCaseInst = line[0].lowercase;
 			if (lCaseInst.lowercase in INSTRUCTION_STRING_MAP){
