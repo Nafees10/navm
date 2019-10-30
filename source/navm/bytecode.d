@@ -13,6 +13,18 @@ public import navm.bytecodedefs : INSTRUCTION_ARG_COUNT;
 public import navm.bytecodedefs : INSTRUCTION_PUSH_COUNT;
 public import navm.bytecodedefs : instructionPopCount;
 
+/// stores names of byte code instructions in lowercase, mapped to Instruction enum, in assoc_array
+private static Instruction[string] INSTRUCTION_STRING_MAP;
+
+static this(){
+	import std.traits : EnumMembers;
+	Instruction[string] r;
+	foreach(inst; EnumMembers!Instruction){
+		r[to!string(inst).lowercase] = inst;
+	}
+	INSTRUCTION_STRING_MAP = r;
+}
+
 /// Reads a string[] into NaFunction[]
 ///
 /// Throws: Exception if there is some error in input
@@ -30,10 +42,11 @@ NaFunction[] readByteCode(string[] input){
 	foreach(i, line; words){
 		if (functionDefined){
 			Instruction inst;
-			try{
-				inst = to!Instruction(line[0]);
-			}catch(ConvException e){
-				throw new Exception(line[0]~" is not a valid instruction");
+			string lCaseInst = line[0].lowercase;
+			if (lCaseInst.lowercase in INSTRUCTION_STRING_MAP){
+				inst = INSTRUCTION_STRING_MAP[lCaseInst];
+			}else{
+				throw new Exception(lCaseInst~" is not a valid instruction");
 			}
 			NaData[] arguments;
 			arguments.length = line.length - 1;
