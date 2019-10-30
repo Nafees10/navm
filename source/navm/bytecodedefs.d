@@ -55,11 +55,12 @@ public enum Instruction : ubyte{
 	Push = 0x30,/// pushes one value to stack
 	PushFrom = 0x31,/// reads value at index arg0 on stack, pushes it to stack
 	PushRefFrom = 0x32, /// Pushes a reference-to-element-at-index-arg0 to stack
-	PushTo = 0x33, /// Pops a value from stack, writes it to an index arg0 on stack
-	Deref = 0x34, /// Pushes the value that is being referenced by a reference pop-ed from stack
-	Pop = 0x35,/// Pops one value from stack
-	Jump = 0x36, /// jumps to instruction at index N
-	JumpIf = 0x37, /// jump but checks if value pop-ed from stack == 1 before jumping
+	WriteTo = 0x33, /// Pops a value from stack, writes it to an index arg0 on stack
+	WriteToRef = 0x34, /// pops a value and a ref from stack, writes value to ref
+	Deref = 0x35, /// Pushes the value that is being referenced by a reference pop-ed from stack
+	Pop = 0x36,/// Pops one value from stack
+	Jump = 0x37, /// jumps to instruction at index N
+	JumpIf = 0x38, /// jump but checks if value pop-ed from stack == 1 before jumping
 
 	MakeArray = 0x40, /// pushes array with N number of elemets, read from stack
 	ReadElement = 0x41, /// pops an index, then a ref-to-array. Pushes ref to element at that index in that array
@@ -119,7 +120,8 @@ static this(){
 		Instruction.Push : 1,
 		Instruction.PushFrom : 1,
 		Instruction.PushRefFrom : 1,
-		Instruction.PushTo : 1,
+		Instruction.WriteTo : 1,
+		Instruction.WriteToRef : 0,
 		Instruction.Deref : 0,
 		Instruction.Pop : 0,
 		Instruction.Jump : 1,
@@ -172,7 +174,8 @@ static this(){
 		Instruction.Push : 1,
 		Instruction.PushFrom : 1,
 		Instruction.PushRefFrom : 1,
-		Instruction.PushTo : 0,
+		Instruction.WriteTo : 0,
+		Instruction.WriteToRef : 0,
 		Instruction.Deref : 1,
 		Instruction.Pop : 0,
 		Instruction.Jump : 0,
@@ -225,7 +228,8 @@ static this(){
 		Instruction.Push : 0,
 		Instruction.PushFrom : 0,
 		Instruction.PushRefFrom : 0,
-		Instruction.PushTo : 1,
+		Instruction.WriteTo : 1,
+		Instruction.WriteToRef : 2,
 		Instruction.Deref : 1,
 		Instruction.Pop : 1,
 		Instruction.Jump : 0,

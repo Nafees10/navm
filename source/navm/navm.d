@@ -180,8 +180,11 @@ protected:
 	void pushRefFrom(){
 		_stack.push(NaData(_stack.readPtr((*_arguments)[0].intVal)));
 	}
-	void pushTo(){
+	void writeTo(){
 		_stack.write((*_arguments)[0].intVal,_stack.pop);
+	}
+	void writeToRef(){
+		*(_stack.pop.ptrVal) = _stack.pop;
 	}
 	void deref(){
 		_stack.push(*(_stack.pop.ptrVal));
@@ -284,7 +287,8 @@ public:
 			Instruction.Push : &push,
 			Instruction.PushFrom : &pushFrom,
 			Instruction.PushRefFrom : &pushRefFrom,
-			Instruction.PushTo : &pushTo,
+			Instruction.WriteTo : &writeTo,
+			Instruction.WriteToRef : &writeToRef,
 			Instruction.Deref : &deref,
 			Instruction.Pop : &pop,
 			Instruction.Jump : &jump,
