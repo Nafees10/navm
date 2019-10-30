@@ -351,6 +351,8 @@ public:
 		_arguments = &(*_currentArguments)[0];
 		_returnVal = NaData();
 		keepRunning = true;
+		// push args
+		_stack.push(arguments);
 		// start executing
 		while (keepRunning){
 			(*_instruction)();
@@ -358,6 +360,7 @@ public:
 			_arguments++;
 		}
 		NaData r = _returnVal;
+		keepRunning = true;
 		// restore prev state
 		_currentFunction = prevFunction;
 		_currentArguments = prevFunctionArguments;
