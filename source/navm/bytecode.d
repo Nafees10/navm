@@ -31,7 +31,9 @@ static this(){
 /// 
 /// Returns: the loaded byte code in NaFunction
 NaFunction[] readByteCode(string[] input){
-	// separate input by words, ignore comments
+	// remove excess whitespace and comments
+	input = input.removeWhitespace;
+	// now read it into words
 	const string[][] words = readWords(input);
 	List!NaFunction functions = new List!NaFunction;
 	List!(NaData[]) currentFuncArgs = new List!(NaData[]);
@@ -112,7 +114,7 @@ private string removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(
 			r ~= line[i];
 		}
 	}
-	if (whitespace.hasElement(r[r.length-1])){
+	if (r.length > 0 && whitespace.hasElement(r[r.length-1])){
 		r = r[0 .. r.length-1];
 	}
 	return cast(string)r;
@@ -122,19 +124,69 @@ unittest{
 	assert("potato    potato".removeWhitespace == "potato potato");
 	assert("potato    \t\t".removeWhitespace == "potato");
 	assert("potato  \t  \t  potato  \t#comment".removeWhitespace == "potato potato");
+	assert ("   ".removeWhitespace == "");
+	assert ("   \t \t".removeWhitespace == "");
+	assert ("  # \t \t".removeWhitespace == "");
+	assert ("#  # \t \t".removeWhitespace == "");
+}
+
+/// Removes whitespace from multiple strings. IF a string is whitespace only, its excluded from output
+/// 
+/// Returns: string[] with minimal whitespace
+string[] removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string[] input){
+	input = input.dup;
+	for (uinteger i = 0, writeIndex = 0; i < input.length; i ++){
+		string line = input[i].removeWhitespace;
+		if (line.length > 0){
+			input[writeIndex] = line;
+			writeIndex ++;
+		}
+	}
+	return input;
 }
 
 /// ignores whitespace (space + tab + comments), then reads each line into words (separated by tab and space)
 /// 
-/// Returns: the words read
+/// Returns: the words read (stuff inside square brackets is considerd a sinle word)
 /// 
 /// Throws: Exception if incorrect syntax (in brackets usually)
 private string[][] readWords(string[] input){
-	return [[]];
+	List!(string[]) lines = new List!(string[]);
+	List!string words = new List!string;
+	foreach (line; input){
+		for (uinteger i = 0, readFrom = 0; i < line.length; i++){
+			if (line[i] == '['){
+				if (readFrom < i){
+					words.append(line[readFrom .. i]);
+					readFrom = i;
+				}
+				i = bracketPos(cast(char[])line, i);
+				words.append(line[readFrom .. i + 1]);
+				i ++; // skip the bracket end, the increment done by for will skip the space too
+				readFrom = i+1;
+				continue;
+			}
+			if (line[i] == ' ' && readFrom < i){
+				words.append(line[readFrom .. i]);
+				readFrom = i + 1;
+			}else if (i +1 == line.length && readFrom < i){
+				words.append(line[readFrom .. i + 1]);
+			}
+		}
+		lines.append(words.toArray);
+		words.clear;
+	}
+	.destroy(words);
+	string[][] r = lines.toArray;
+	.destroy(lines);
+	return r;
 }
 ///
 unittest{
-	//assert(readWords(["abc def #comment", "#comment", "ab#comment", "cd   d", " #a"]) == [["abc", "def"],["ab"],["cd","d"]]);
+	assert(["potato potato", "potato [asdf, sdfsdf, [0, 1, 2], 2] asd"].readWords == [
+			["potato", "potato"],
+			["potato", "[asdf, sdfsdf, [0, 1, 2], 2]", "asd"]
+		]);
 }
 
 /// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
