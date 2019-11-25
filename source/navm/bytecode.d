@@ -91,44 +91,70 @@ NaFunction[] readByteCode(string[] input){
 	return r;
 }
 
+/// Removes whitespace from a string. And the remaining whitespace is only of one type. e.g: whitespace is ' ' & '\t', 
+/// it will replace '\t' with ' ' so less conditions are needed after this
+/// 
+/// Returns: the string with minimal whitespace (just enough to separate identifiers)
+private string removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string line){
+	char[] r = [];
+	bool lastWasWhite = true;
+	for (uinteger i = 0; i < line.length; i ++){
+		if (line[i] == comment){
+			break;
+		}
+		if (whitespace.hasElement(line[i])){
+			if (!lastWasWhite){
+				r ~= whitespace[0];
+			}
+			lastWasWhite = true;
+		}else{
+			lastWasWhite = false;
+			r ~= line[i];
+		}
+	}
+	if (whitespace.hasElement(r[r.length-1])){
+		r = r[0 .. r.length-1];
+	}
+	return cast(string)r;
+}
+/// 
+unittest{
+	assert("potato    potato".removeWhitespace == "potato potato");
+	assert("potato    \t\t".removeWhitespace == "potato");
+	assert("potato  \t  \t  potato  \t#comment".removeWhitespace == "potato potato");
+}
 
 /// ignores whitespace (space + tab + comments), then reads each line into words (separated by tab and space)
 /// 
 /// Returns: the words read
+/// 
+/// Throws: Exception if incorrect syntax (in brackets usually)
 private string[][] readWords(string[] input){
-	List!(string[]) outputList = new List!(string[]); /// using this instead of directly array because it'll allocate extra (bit faster)
-	List!string lineWords = new List!string;
-	foreach(line; input){
-		for (uinteger i = 0, readFrom = 0; i < line.length; i ++){
-			if (readFrom == i){
-				if ([' ', '\t'].hasElement(line[i]))
-					readFrom++;
-				else if (line[i] == '#')
-					break;
-			}
-			if (readFrom <= i){
-				if ([' ', '\t', '#'].hasElement(line[i])){
-					lineWords.append(line[readFrom .. i]);
-					readFrom = i +1;
-					if (line[i] == '#')
-						break;
-				}else if (i + 1 == line.length){
-					lineWords.append(line[readFrom .. i+1]);
-					continue;
-				}
-			}
-		}
-		if (lineWords.length > 0){
-			outputList.append(lineWords.toArray);
-			lineWords.clear;
-		}
-	}
-	.destroy(lineWords);
-	string[][] r = outputList.toArray;
-	.destroy(outputList);
-	return r;
+	return [[]];
 }
 ///
 unittest{
-	assert(readWords(["abc def #comment", "#comment", "ab#comment", "cd d", " #a"]) == [["abc", "def"],["ab"],["cd","d"]]);
+	//assert(readWords(["abc def #comment", "#comment", "ab#comment", "cd   d", " #a"]) == [["abc", "def"],["ab"],["cd","d"]]);
+}
+
+/// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
+/// 
+/// Does not care if elements in array are of same type or not.
+/// 
+/// Returns: the data in NaData
+/// 
+/// Throws: Exception if data is invalid
+private NaData readData(string strData){
+	if (strData.length == 0)
+		return NaData();
+	if (strData.isNum(false))
+		return NaData(to!integer(strData));
+	if (strData.isNum(true))
+		return NaData(to!double(strData));
+	// now checking for arrays
+	if (strData[0] == '['){
+		NaData r;
+		
+	}
+	return NaData();
 }
