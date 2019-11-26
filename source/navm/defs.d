@@ -15,8 +15,8 @@ public union NaData{
 			intVal = data;
 		}else static if (is (T == double) || is (T == float)){
 			doubleVal = data;
-		}else static if (is (T == NaData[]) || is (T == void[])){
-			arrayVal = &cast(NaData[])data;
+		}else static if (is (T == NaData[])){
+			arrayVal = &data;
 		}else static if (is (T == NaData*)){
 			ptrVal = data;
 		}else{
