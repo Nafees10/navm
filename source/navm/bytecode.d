@@ -197,6 +197,15 @@ unittest{
 /// 
 /// Throws: Exception if data is invalid
 private NaData readData(string strData){
+	static string readElement(string array, uinteger startIndex){
+		if (array[startIndex] == '[')
+			return array[startIndex .. bracketPos(cast(char[])array, startIndex)+1];
+		// search for ] or ,
+		uinteger i = startIndex;
+		while (i < array.length && ! [',',']'].hasElement(array[i]))
+			i ++;
+		return array[startIndex .. i];
+	}
 	if (strData.length == 0)
 		return NaData();
 	if (strData.isNum(false))
@@ -205,8 +214,24 @@ private NaData readData(string strData){
 		return NaData(to!double(strData));
 	// now checking for arrays
 	if (strData[0] == '['){
-		NaData r;
-		
+		NaData r = NaData(cast(NaData[])[]);
+		string[] elements = [];
+		for (uinteger i = 1, bracketEnd = bracketPos(cast(char[])strData, 0); i < bracketEnd; i ++){
+			if (strData[i] == ' ')
+				continue;
+			if (strData[i] != ']'){
+				elements ~= readElement(strData, i);
+				i += elements[elements.length-1].length;
+				// skip till ','
+				while (![',',']'].hasElement(strData[i]))
+					i ++;
+			}
+		}
+		// now convert each of those elements to NaData
+		(*r.arrayVal).length = elements.length;
+		foreach (i, element; elements)
+			(*r.arrayVal)[i] = readData(element);
+		return r;
 	}
 	return NaData();
 }
