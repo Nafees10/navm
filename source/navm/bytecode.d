@@ -235,3 +235,40 @@ private NaData readData(string strData){
 	}
 	return NaData();
 }
+
+/// Returns: the index where a string ends, -1 if not terminated
+private integer strEnd(char specialCharBegin='\\', char strTerminator='"')(string s, uinteger startIndex){
+	uinteger i;
+	for (i = startIndex+1; i < s.length; i ++){
+		if (s[i] == specialCharBegin)
+			continue;
+		if (s[i] == strTerminator){
+			break;
+		}
+	}
+	if (i >= s.length || s[i] != strTerminator)
+		return -1;
+	return i;
+}
+///
+unittest{
+	assert("st\"sdfsdfsd\"0".strEnd(2) == 11);
+}
+
+/// Returns: string with special characters replaced with their actual characters (i.e, \t replaced with tab, \n with newline...)
+private string strReplaceSpecial(char specialCharBegin='\\', char[char] map = ['t' : '\t', 'n' : '\n','\\':'\\'])(string s){
+	char[] r = [];
+	for (uinteger i = 0; i < s.length; i ++){
+		if (s[i] == specialCharBegin && i + 1 < s.length && s[i+1] in map){
+			r ~= map[s[i+1]];
+			i++;
+			continue;
+		}
+		r ~= s[i];
+	}
+	return r;
+}
+///
+unittest{
+	assert("newline:\\ntab:\\t".strReplaceSpecial == "newline:\ntab:\t");
+}
