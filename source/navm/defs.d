@@ -8,6 +8,7 @@ public union NaData{
 	double doubleVal; /// double/float value
 	NaData[]* arrayVal; /// array value
 	NaData* ptrVal; /// to store references
+	char[]* strVal;
 	/// constructor
 	/// data can be any of the type which it can store
 	this (T)(T data){
@@ -19,6 +20,8 @@ public union NaData{
 			arrayVal = &data;
 		}else static if (is (T == NaData*)){
 			ptrVal = data;
+		}else static if (is (T == string) || is (T == char[])){
+			strVal = &data;
 		}else{
 			throw new Exception("cannot store "~T.stringof~" in NaData");
 		}
