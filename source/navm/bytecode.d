@@ -104,6 +104,13 @@ private string removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(
 		if (line[i] == comment){
 			break;
 		}
+		if (line[i] == '\"'){
+			integer endIndex = line.strEnd(i);
+			if (endIndex == -1)
+				throw new Exception("string not terminated");
+			i = endIndex;
+			lastWasWhite = false;
+		}
 		if (whitespace.hasElement(line[i])){
 			if (!lastWasWhite){
 				r ~= whitespace[0];
@@ -135,13 +142,15 @@ unittest{
 /// Returns: string[] with minimal whitespace
 string[] removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string[] input){
 	input = input.dup;
-	for (uinteger i = 0, writeIndex = 0; i < input.length; i ++){
+	uinteger writeIndex = 0;
+	for (uinteger i = 0; i < input.length; i ++){
 		string line = input[i].removeWhitespace;
 		if (line.length > 0){
 			input[writeIndex] = line;
 			writeIndex ++;
 		}
 	}
+	input.length = writeIndex;
 	return input;
 }
 
@@ -179,10 +188,10 @@ private string[][] readWords(string[] input){
 				readFrom = i + 1;
 				continue;
 			}
-			if (line[i] == ' ' && readFrom < i){
+			if (line[i] == ' ' && readFrom <= i){
 				words.append(line[readFrom .. i]);
 				readFrom = i + 1;
-			}else if (i +1 == line.length && readFrom < i){
+			}else if (i +1 == line.length && readFrom <= i){
 				words.append(line[readFrom .. i + 1]);
 			}
 		}
@@ -258,8 +267,10 @@ private NaData readData(string strData){
 private integer strEnd(char specialCharBegin='\\', char strTerminator='"')(string s, uinteger startIndex){
 	uinteger i;
 	for (i = startIndex+1; i < s.length; i ++){
-		if (s[i] == specialCharBegin)
+		if (s[i] == specialCharBegin){
+			i ++;
 			continue;
+		}
 		if (s[i] == strTerminator){
 			break;
 		}
