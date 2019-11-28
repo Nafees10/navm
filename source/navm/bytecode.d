@@ -166,6 +166,19 @@ private string[][] readWords(string[] input){
 				readFrom = i+1;
 				continue;
 			}
+			if (line[i] == '\"'){
+				if (readFrom < i){
+					words.append(line[readFrom .. i]);
+					readFrom = i;
+				}
+				integer endIndex = line.strEnd(i);
+				if (endIndex == -1)
+					throw new Exception("string not terminated");
+				i = endIndex;
+				words.append(line[readFrom .. i+1]);
+				readFrom = i + 1;
+				continue;
+			}
 			if (line[i] == ' ' && readFrom < i){
 				words.append(line[readFrom .. i]);
 				readFrom = i + 1;
@@ -183,9 +196,10 @@ private string[][] readWords(string[] input){
 }
 ///
 unittest{
-	assert(["potato potato", "potato [asdf, sdfsdf, [0, 1, 2], 2] asd"].readWords == [
+	assert(["potato potato", "potato [asdf, sdfsdf, [0, 1, 2], 2] asd", "potato \"some String\""].readWords == [
 			["potato", "potato"],
-			["potato", "[asdf, sdfsdf, [0, 1, 2], 2]", "asd"]
+			["potato", "[asdf, sdfsdf, [0, 1, 2], 2]", "asd"],
+			["potato","\"some String\""]
 		]);
 }
 
@@ -232,6 +246,10 @@ private NaData readData(string strData){
 		foreach (i, element; elements)
 			(*r.arrayVal)[i] = readData(element);
 		return r;
+	}
+	if (strData[0] == '\"'){
+		// assume the whole thing is string, no need to find string end index
+		return NaData(cast(char[])strReplaceSpecial(strData.dup[1 .. strData.length - 1]));
 	}
 	return NaData();
 }
