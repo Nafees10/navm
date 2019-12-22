@@ -6,9 +6,9 @@ import utils.misc;
 public union NaData{
 	integer intVal; /// integer value
 	double doubleVal; /// double/float value
-	NaData[]* arrayVal; /// array value
+	NaData[] arrayVal; /// array value
 	NaData* ptrVal; /// to store references
-	char[]* strVal;
+	char[] strVal; /// string value
 	/// constructor
 	/// data can be any of the type which it can store
 	this (T)(T data){
@@ -17,10 +17,10 @@ public union NaData{
 		}else static if (is (T == double) || is (T == float)){
 			doubleVal = data;
 		}else static if (is (T == NaData[])){
-			arrayVal = &data;
+			arrayVal = data;
 		}else static if (is (T == NaData*)){
 			ptrVal = data;
-		}else static if (is (T == string) || is (T == char[])){
+		}else static if (is (T == char[])){
 			strVal = &data;
 		}else{
 			throw new Exception("cannot store "~T.stringof~" in NaData");

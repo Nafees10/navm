@@ -53,10 +53,7 @@ NaFunction[] readByteCode(string[] input){
 			NaData[] arguments;
 			arguments.length = line.length - 1;
 			for (uinteger argNo = 0; argNo < arguments.length; argNo++){
-				if (line[1+argNo].isNum(false)){
-					arguments[argNo].intVal = to!integer(line[1+argNo]);
-				}else
-					throw new Exception("instruction arguments can only be integers");
+				arguments[argNo] = readData(line[1 + argNo]);
 			}
 			currentFuncInst.append(inst);
 			currentFuncArgs.append(arguments);
@@ -108,8 +105,10 @@ private string removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(
 			integer endIndex = line.strEnd(i);
 			if (endIndex == -1)
 				throw new Exception("string not terminated");
+			r ~= line[i .. endIndex + 1];
 			i = endIndex;
 			lastWasWhite = false;
+			continue;
 		}
 		if (whitespace.hasElement(line[i])){
 			if (!lastWasWhite){
@@ -180,7 +179,7 @@ private string[][] readWords(string[] input){
 					words.append(line[readFrom .. i]);
 					readFrom = i;
 				}
-				integer endIndex = line.strEnd(i);
+				integer endIndex = strEnd(line,i);
 				if (endIndex == -1)
 					throw new Exception("string not terminated");
 				i = endIndex;
@@ -251,14 +250,16 @@ private NaData readData(string strData){
 			}
 		}
 		// now convert each of those elements to NaData
-		(*r.arrayVal).length = elements.length;
+		r.arrayVal = new NaData[elements.length];
 		foreach (i, element; elements)
-			(*r.arrayVal)[i] = readData(element);
+			r.arrayVal[i] = readData(element);
 		return r;
 	}
 	if (strData[0] == '\"'){
 		// assume the whole thing is string, no need to find string end index
-		return NaData(cast(char[])strReplaceSpecial(strData.dup[1 .. strData.length - 1]));
+		NaData r;
+		r.strVal = cast(char[])(strReplaceSpecial(strData[1 .. strData.length-1]));
+		return r;
 	}
 	return NaData();
 }
@@ -267,17 +268,15 @@ private NaData readData(string strData){
 private integer strEnd(char specialCharBegin='\\', char strTerminator='"')(string s, uinteger startIndex){
 	uinteger i;
 	for (i = startIndex+1; i < s.length; i ++){
+		if (s[i] == strTerminator){
+			return i;
+		}
 		if (s[i] == specialCharBegin){
 			i ++;
 			continue;
 		}
-		if (s[i] == strTerminator){
-			break;
-		}
 	}
-	if (i >= s.length || s[i] != strTerminator)
-		return -1;
-	return i;
+	return -1;
 }
 ///
 unittest{

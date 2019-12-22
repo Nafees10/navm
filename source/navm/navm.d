@@ -111,7 +111,7 @@ protected:
 		_stack.push(NaData(cast(integer)(_stack.pop.intVal == _stack.pop.intVal)));
 	}
 	void isSameArrayInt(){
-		NaData[] a = *(_stack.pop.arrayVal), b = *(_stack.pop.arrayVal);
+		NaData[] a = _stack.pop.arrayVal, b = _stack.pop.arrayVal;
 		NaData r = NaData(0);
 		if (a.length == b.length){
 			r = NaData(1);
@@ -138,7 +138,7 @@ protected:
 		_stack.push(NaData(cast(integer)(_stack.pop.doubleVal == _stack.pop.doubleVal)));
 	}
 	void isSameArrayDouble(){
-		NaData[] a = *(_stack.pop.arrayVal), b = *(_stack.pop.arrayVal);
+		NaData[] a = _stack.pop.arrayVal, b = _stack.pop.arrayVal;
 		NaData r = NaData(0);
 		if (a.length == b.length){
 			r = NaData(1);
@@ -208,22 +208,22 @@ protected:
 	}
 	void readElement(){
 		uinteger index = _stack.pop.intVal;
-		_stack.push(NaData(&((*_stack.pop.arrayVal)[index])));
+		_stack.push(NaData(&((*(_stack.pop.ptrVal)).arrayVal[index])));
 	}
 	void arrayLength(){
-		_stack.push(NaData((*_stack.pop.arrayVal).length));
+		_stack.push(NaData(_stack.pop.arrayVal.length));
 	}
 	void arrayLengthSet(){
 		uinteger length = _stack.pop.intVal;
-		(*_stack.pop.arrayVal).length = length;
+		(*(_stack.pop.ptrVal)).arrayVal.length = length;
 	}
 	void concatenate(){
-		NaData[]* b = _stack.pop.arrayVal;
-		_stack.push(NaData(*_stack.pop.arrayVal ~ *b));
+		NaData[] b = _stack.pop.arrayVal;
+		_stack.push(NaData(_stack.pop.arrayVal ~ b));
 	}
 	void append(){
 		NaData element = _stack.pop;
-		_stack.push(NaData(*_stack.pop.arrayVal ~ element));
+		_stack.push(NaData(_stack.pop.arrayVal ~ element));
 	}
 
 	void intToDouble(){
