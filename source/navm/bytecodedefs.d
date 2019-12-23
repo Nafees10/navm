@@ -65,7 +65,7 @@ public enum Instruction : ubyte{
 	MakeArray = 0x40, /// pushes array with N number of elemets, read from stack
 	ReadElement = 0x41, /// pops an index, then a ref-to-array. Pushes ref to element at that index in that array
 	ArrayLength = 0x42, /// Pushes length of array to stack, array pop-ed from stack
-	ArrayLengthSet = 0x43, /// Changes length of array (reference to array popped from stack) to new length, pop-ed from stack
+	ArrayLengthSet = 0x43, /// Changes length of array (reference to array popped from stack) to new length, pop-ed from stack. Length is poped first
 	Concatenate = 0x44,/// Concatenate arrays
 	Append = 0x45, /// Appends an element at end of array, pushes new array
 
