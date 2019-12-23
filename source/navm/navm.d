@@ -204,7 +204,7 @@ protected:
 	}
 
 	void makeArray(){
-		_stack.push(NaData(_stack.pop((*_arguments)[0].intVal)));
+		_stack.push(NaData(_stack.pop((*_arguments)[0].intVal).dup));
 	}
 	void readElement(){
 		uinteger index = _stack.pop.intVal;
