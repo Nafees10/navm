@@ -56,7 +56,7 @@ public enum Instruction : ubyte{
 	PushFrom = 0x31,/// reads value at index arg0 on stack, pushes it to stack
 	PushRefFrom = 0x32, /// Pushes a reference-to-element-at-index-arg0 to stack
 	WriteTo = 0x33, /// Pops a value from stack, writes it to an index arg0 on stack
-	WriteToRef = 0x34, /// pops a value and then a ref from stack, writes value to ref
+	WriteToRef = 0x34, /// pops a ref and then a value, writes value to ref
 	Deref = 0x35, /// Pushes the value that is being referenced by a reference pop-ed from stack
 	Pop = 0x36,/// Pops one value from stack
 	Jump = 0x37, /// jumps to instruction at index N
