@@ -174,12 +174,12 @@ private string[][] readWords(string[] input){
 				readFrom = i+1;
 				continue;
 			}
-			if (line[i] == '\"'){
+			if (line[i] == '\"' || line[i] == '\''){
 				if (readFrom < i){
 					words.append(line[readFrom .. i]);
 					readFrom = i;
 				}
-				integer endIndex = strEnd(line,i);
+				immutable integer endIndex = line[i] == '\"' ? strEnd(line,i) : strEnd!('\\','\'')(line, i);
 				if (endIndex == -1)
 					throw new Exception("string not terminated");
 				i = endIndex;
@@ -187,8 +187,9 @@ private string[][] readWords(string[] input){
 				readFrom = i + 1;
 				continue;
 			}
-			if (line[i] == ' ' && readFrom <= i){
-				words.append(line[readFrom .. i]);
+			if (line[i] == ' '){
+				if (readFrom <= i && removeWhitespace(line[readFrom .. i]).length > 0)
+					words.append(line[readFrom .. i]);
 				readFrom = i + 1;
 			}else if (i +1 == line.length && readFrom <= i){
 				words.append(line[readFrom .. i + 1]);
@@ -204,10 +205,10 @@ private string[][] readWords(string[] input){
 }
 ///
 unittest{
-	assert(["potato potato", "potato [asdf, sdfsdf, [0, 1, 2], 2] asd", "potato \"some String\""].readWords == [
+	assert(["potato potato", "potato [asdf, sdfsdf, [0, 1, 2], 2] asd", "potato \"some String\" \'c\'"].readWords == [
 			["potato", "potato"],
 			["potato", "[asdf, sdfsdf, [0, 1, 2], 2]", "asd"],
-			["potato","\"some String\""]
+			["potato","\"some String\"","\'c\'"]
 		]);
 }
 
