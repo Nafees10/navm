@@ -265,9 +265,9 @@ public:
 			Instruction.IsGreaterDouble : &isGreaterDouble,
 			Instruction.IsGreaterSameDouble : &isGreaterSameDouble,
 
-			Instruction.BinaryAnd : &binaryAnd,
-			Instruction.BinaryNot : &binaryNot,
-			Instruction.BinaryOr : &binaryOr,
+			Instruction.And : &binaryAnd,
+			Instruction.Not : &binaryNot,
+			Instruction.Or : &binaryOr,
 
 			Instruction.Push : &push,
 			Instruction.PushFrom : &pushFrom,

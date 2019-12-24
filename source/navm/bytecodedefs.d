@@ -47,9 +47,9 @@ public enum Instruction : ubyte{
 	IsGreaterDouble = 0x19,/// Pops A, then B. Pushes 1 if A > B (double)
 	IsGreaterSameDouble = 0x1A,/// Pops A, then B. Pushes 1 if A > B (double)
 
-	BinaryNot = 0x20,/// Pops A(int). Pushes `not A`
-	BinaryAnd = 0x21,/// Pops A(int) then B(int). Pushes `A && B`
-	BinaryOr = 0x22,/// Pops A(int) then B(int). Pushes `A || B`
+	Not = 0x20,/// Pops A(int). Pushes `not A`
+	And = 0x21,/// Pops A(int) then B(int). Pushes `A && B`
+	Or = 0x22,/// Pops A(int) then B(int). Pushes `A || B`
 
 	Push = 0x30,/// pushes one value to stack. Value is arg0(any data type)
 	PushFrom = 0x31,/// reads value at index arg0(int) on stack, pushes it to stack
@@ -113,9 +113,9 @@ static this(){
 		Instruction.IsGreaterDouble : 0,
 		Instruction.IsGreaterSameDouble : 0,
 
-		Instruction.BinaryAnd : 0,
-		Instruction.BinaryNot : 0,
-		Instruction.BinaryOr : 0,
+		Instruction.And : 0,
+		Instruction.Not : 0,
+		Instruction.Or : 0,
 
 		Instruction.Push : 1,
 		Instruction.PushFrom : 1,
@@ -168,9 +168,9 @@ static this(){
 		Instruction.IsGreaterDouble : 1,
 		Instruction.IsGreaterSameDouble : 1,
 
-		Instruction.BinaryAnd : 1,
-		Instruction.BinaryNot : 1,
-		Instruction.BinaryOr : 1,
+		Instruction.And : 1,
+		Instruction.Not : 1,
+		Instruction.Or : 1,
 
 		Instruction.Push : 1,
 		Instruction.PushFrom : 1,
@@ -223,9 +223,9 @@ static this(){
 		Instruction.IsGreaterDouble : 2,
 		Instruction.IsGreaterSameDouble : 2,
 
-		Instruction.BinaryAnd : 2,
-		Instruction.BinaryNot : 2,
-		Instruction.BinaryOr : 2,
+		Instruction.And : 2,
+		Instruction.Not : 2,
+		Instruction.Or : 2,
 
 		Instruction.Push : 0,
 		Instruction.PushFrom : 0,
