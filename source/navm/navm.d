@@ -127,10 +127,10 @@ protected:
 		}
 		_stack.push(r);
 	}
-	void isLesserInt(){
+	void isGreaterInt(){
 		_stack.push(NaData(cast(integer)(_stack.pop.intVal > _stack.pop.intVal)));
 	}
-	void isLesserSameInt(){
+	void isGreaterSameInt(){
 		_stack.push(NaData(cast(integer)(_stack.pop.intVal >= _stack.pop.intVal)));
 	}
 
@@ -154,10 +154,10 @@ protected:
 		}
 		_stack.push(r);
 	}
-	void isLesserDouble(){
+	void isGreaterDouble(){
 		_stack.push(NaData(cast(integer)(_stack.pop.doubleVal > _stack.pop.doubleVal)));
 	}
-	void isLesserSameDouble(){
+	void isGreaterSameDouble(){
 		_stack.push(NaData(cast(integer)(_stack.pop.doubleVal >= _stack.pop.doubleVal)));
 	}
 
@@ -184,6 +184,7 @@ protected:
 		_stack.write((*_arguments)[0].intVal,_stack.pop);
 	}
 	void writeToRef(){
+		// Left side is evaluated first
 		*(_stack.pop.ptrVal) = _stack.pop;
 	}
 	void deref(){
@@ -207,23 +208,30 @@ protected:
 		_stack.push(NaData(_stack.pop((*_arguments)[0].intVal).dup));
 	}
 	void readElement(){
-		uinteger index = _stack.pop.intVal;
-		_stack.push(NaData(&((*(_stack.pop.ptrVal)).arrayVal[index])));
+		NaData arrayRef = _stack.pop;
+		_stack.push(NaData(&((*(arrayRef.ptrVal)).arrayVal[_stack.pop.intVal])));
 	}
 	void arrayLength(){
-		_stack.push(NaData(_stack.pop.arrayVal.length));
+		_stack.push(NaData((*(_stack.pop.ptrVal)).arrayVal.length));
 	}
 	void arrayLengthSet(){
-		uinteger length = _stack.pop.intVal;
-		(*(_stack.pop.ptrVal)).arrayVal.length = length;
+		/// Left side evaluated first
+		(*(_stack.pop.ptrVal)).arrayVal.length = _stack.pop.intVal;
 	}
 	void concatenate(){
-		NaData[] b = _stack.pop.arrayVal;
-		_stack.push(NaData(_stack.pop.arrayVal ~ b));
+		_stack.push(NaData((_stack.pop.arrayVal ~ _stack.pop.arrayVal).dup));
 	}
-	void append(){
-		NaData element = _stack.pop;
-		_stack.push(NaData(_stack.pop.arrayVal ~ element));
+	void appendElement(){
+		/// Left side evaluated first
+		(*(_stack.pop.ptrVal)).arrayVal ~= _stack.pop;
+	}
+	void appendArrayRef(){
+		/// Left side evaluated first
+		(*(_stack.pop.ptrVal)).arrayVal ~= (*(_stack.pop.ptrVal)).arrayVal.dup;
+	}
+	void appendArray(){
+		/// Left side evaluated first
+		(*(_stack.pop.ptrVal)).arrayVal ~= _stack.pop.arrayVal.dup;
 	}
 
 	void intToDouble(){
@@ -272,13 +280,13 @@ public:
 
 			Instruction.IsSameInt : &isSameInt,
 			Instruction.IsSameArrayInt : &isSameArrayInt,
-			Instruction.IsLesserInt : &isLesserInt,
-			Instruction.IsLesserSameInt : &isLesserSameInt,
+			Instruction.IsGreaterInt : &isGreaterInt,
+			Instruction.IsGreaterSameInt : &isGreaterSameInt,
 
 			Instruction.IsSameDouble : &isSameDouble,
 			Instruction.IsSameArrayDouble : &isSameArrayDouble,
-			Instruction.IsLesserDouble : &isLesserDouble,
-			Instruction.IsLesserSameDouble : &isLesserSameDouble,
+			Instruction.IsGreaterDouble : &isGreaterDouble,
+			Instruction.IsGreaterSameDouble : &isGreaterSameDouble,
 
 			Instruction.BinaryAnd : &binaryAnd,
 			Instruction.BinaryNot : &binaryNot,
@@ -299,7 +307,9 @@ public:
 			Instruction.ArrayLength : &arrayLength,
 			Instruction.ArrayLengthSet : &arrayLengthSet,
 			Instruction.Concatenate : &concatenate,
-			Instruction.Append : &append,
+			Instruction.AppendElement : &appendElement,
+			Instruction.AppendArrayRef : &appendArrayRef,
+			Instruction.AppendArray : &appendArray,
 
 			Instruction.IntToDouble : &intToDouble,
 			Instruction.DoubleToInt : &doubleToInt,
