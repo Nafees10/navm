@@ -38,13 +38,12 @@ public enum Instruction : ubyte{
 	MathDivideDouble = 0x15,/// Division (double). PoppedFirst / PoppedSecond
 	MathModDouble = 0x16,/// Mod (% operator) (double). PoppedFirst % PoppedSecond
 	
-	IsSameInt = 0x07,/// Pushes 1(integer) to stack if last two integers popped are same
-	IsSameArrayInt = 0x08, /// Pushes 1(integer) if 2 int[], popped from stack, have same values
+	IsSame = 0x07,/// Pushes 1(integer) to stack if last two integers popped are same
+	IsSameArray = 0x08, /// Pushes 1(integer) if 2 int[], popped from stack, have same values
+	
 	IsGreaterInt = 0x09,/// Pops A, then B. Pushes 1 if A > B (integer)
 	IsGreaterSameInt = 0x0A,/// Pops A, then B. Pushes 1 if A >= B (integer)
 
-	IsSameDouble = 0x17,/// Pushes 1(integer) to stack if last two doubles popped are same
-	IsSameArrayDouble = 0x18, /// Pushes 1(integer) if 2 double[], popped from stack, have same values
 	IsGreaterDouble = 0x19,/// Pops A, then B. Pushes 1 if A > B (double)
 	IsGreaterSameDouble = 0x1A,/// Pops A, then B. Pushes 1 if A > B (double)
 
@@ -105,13 +104,12 @@ static this(){
 		Instruction.MathDivideDouble : 0,
 		Instruction.MathModDouble : 0,
 
-		Instruction.IsSameInt : 0,
-		Instruction.IsSameArrayInt : 0,
+		Instruction.IsSame : 0,
+		Instruction.IsSameArray : 0,
+
 		Instruction.IsGreaterInt : 0,
 		Instruction.IsGreaterSameInt : 0,
 
-		Instruction.IsSameDouble : 0,
-		Instruction.IsSameArrayDouble : 0,
 		Instruction.IsGreaterDouble : 0,
 		Instruction.IsGreaterSameDouble : 0,
 
@@ -161,13 +159,12 @@ static this(){
 		Instruction.MathDivideDouble : 1,
 		Instruction.MathModDouble : 1,
 
-		Instruction.IsSameInt : 1,
-		Instruction.IsSameArrayInt : 1,
+		Instruction.IsSame : 1,
+		Instruction.IsSameArray : 1,
+
 		Instruction.IsGreaterInt : 1,
 		Instruction.IsGreaterSameInt : 1,
 
-		Instruction.IsSameDouble : 1,
-		Instruction.IsSameArrayDouble : 1,
 		Instruction.IsGreaterDouble : 1,
 		Instruction.IsGreaterSameDouble : 1,
 
@@ -217,13 +214,12 @@ static this(){
 		Instruction.MathDivideDouble : 2,
 		Instruction.MathModDouble : 2,
 
-		Instruction.IsSameInt : 2,
-		Instruction.IsSameArrayInt : 2,
+		Instruction.IsSame : 2,
+		Instruction.IsSameArray : 2,
+
 		Instruction.IsGreaterInt : 2,
 		Instruction.IsGreaterSameInt : 2,
 
-		Instruction.IsSameDouble : 2,
-		Instruction.IsSameArrayDouble : 2,
 		Instruction.IsGreaterDouble : 2,
 		Instruction.IsGreaterSameDouble : 2,
 
