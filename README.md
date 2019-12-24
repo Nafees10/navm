@@ -16,8 +16,8 @@ See `source/app.d` to see how to add external functions, and use it in your prog
 You need to have these present on your machine:
 
 1. dub 
-2. dlang compiler (recommended is dmd)
-3. Internet connection (for dub to fetch NaVM and its dependencies
+2. dlang compiler (only dmd is tested)
+3. Internet connection (for dub to fetch NaVM and its dependencies)
 
 ### Building
 Run:
@@ -45,7 +45,7 @@ This binary also has 2 external functions:
 ---
 
 ## Syntax
-Although you do not need to actually write following this if you are using NaVM in a library, you can programmatically add instructions to functions, this still exists.  
+Although you do not need to actually write following this if you are using NaVM in a library, you can programmatically add instructions to functions, this still exists.(See `source/bytecodedefs.d : NaFunction`)  
 
 The syntax is as follows:
 ```
@@ -75,9 +75,14 @@ or:
 Tabs or spaces can be used to indent, but indentation is not necesary, and you can use more than 1 tab/space to indent.  
 Instructions are not case sensitive, `ExecuteFunction` is the same as `eXeCuTeFuNcTiOn`.
 
+## License
+NaVM is licensed under the MIT License - see [LICENSE](LICENSE) for details
+
+---
+
 ### Instructions
 
-Here's a list of instructions that NaVM has out of the box. You can easily add more (Add name, argument count, and other info to `source/navm/bytecodedefs.d` and implement those instructions in `source/navm.d`
+Here's a list of instructions that NaVM has out of the box. You can easily add more (Add name, argument count, and other info to `source/navm/bytecodedefs.d` and implement those instructions in `source/navm/navm.d`
 
 #### Calling functions:
 
@@ -117,6 +122,8 @@ Pops `A (double)`, then `B (double)`. Pushes `A % B (double)` to stack.
 Pops 2 values from stack, pushes `1 (integer)` to stack if both have same value, else, pushes `0 (integer)`.
 * _`IsSameArray`_  
 Pops 2 arrays from stack (arrays, not referece to array). Pushes `1 (integer)` to stack if both are same (length, and elements), else, pushes `0 (integer)`
+* _`IsSameArrayRef`_  
+Pops 2 references to arrays from stack. Pushes `1 (integer)` to stack if both are same (length, and elements), else, pushes `0 (integer)`
 * _`IsGreaterInt`_  
 Pops `A (integer)`, then `B (integer)`. Pushes `1 (integer)` if `A > B`, else, pushes `0 (integer)`
 * _`IsGreaterSameInt`_  
