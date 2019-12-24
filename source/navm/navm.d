@@ -55,9 +55,8 @@ protected:
 			);
 	}
 	void mathSubtractInt(){
-		uinteger bOperand = _stack.pop.intVal;
 		_stack.push(
-			NaData(_stack.pop.intVal - bOperand)
+			NaData(_stack.pop.intVal - _stack.pop.intVal)
 			);
 	}
 	void mathMultiplyInt(){
@@ -66,15 +65,13 @@ protected:
 			);
 	}
 	void mathDivideInt(){
-		uinteger bOperand = _stack.pop.intVal;
 		_stack.push(
-			NaData(_stack.pop.intVal / bOperand)
+			NaData(_stack.pop.intVal / _stack.pop.intVal)
 			);
 	}
 	void mathModInt(){
-		uinteger bOperand = _stack.pop.intVal;
 		_stack.push(
-			NaData(_stack.pop.intVal % bOperand)
+			NaData(_stack.pop.intVal % _stack.pop.intVal)
 			);
 	}
 
@@ -84,9 +81,8 @@ protected:
 			);
 	}
 	void mathSubtractDouble(){
-		double bOperand = _stack.pop.doubleVal;
 		_stack.push(
-			NaData(_stack.pop.doubleVal - bOperand)
+			NaData(_stack.pop.doubleVal - _stack.pop.doubleVal)
 			);
 	}
 	void mathMultiplyDouble(){
@@ -95,15 +91,13 @@ protected:
 			);
 	}
 	void mathDivideDouble(){
-		double bOperand = _stack.pop.doubleVal;
 		_stack.push(
-			NaData(_stack.pop.doubleVal / bOperand)
+			NaData(_stack.pop.doubleVal / _stack.pop.doubleVal)
 			);
 	}
 	void mathModDouble(){
-		double bOperand = _stack.pop.doubleVal;
 		_stack.push(
-			NaData(_stack.pop.doubleVal % bOperand)
+			NaData(_stack.pop.doubleVal % _stack.pop.doubleVal)
 			);
 	}
 
