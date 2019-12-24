@@ -4,11 +4,12 @@ import utils.misc;
 
 /// to store data from script at runtime
 public union NaData{
-	integer intVal; /// integer value
-	double doubleVal; /// double/float value
+	union{
+		integer intVal; /// integer value
+		double doubleVal; /// double/float value
+		NaData* ptrVal; /// to store references
+	}
 	NaData[] arrayVal; /// array value
-	NaData* ptrVal; /// to store references
-	char[] strVal; /// string value
 	/// constructor
 	/// data can be any of the type which it can store
 	this (T)(T data){
@@ -20,11 +21,38 @@ public union NaData{
 			arrayVal = data;
 		}else static if (is (T == NaData*)){
 			ptrVal = data;
+		}else static if (is (T == char)){
+			intVal = cast(integer)data;
 		}else static if (is (T == char[])){
-			strVal = &data;
+			strVal = data;
 		}else{
 			throw new Exception("cannot store "~T.stringof~" in NaData");
 		}
+	}
+	/// Returns: character value stored in intVal
+	@property char charVal(){
+		return cast(char)intVal;
+	}
+	/// Setter for charVal
+	@property char charVal(char newVal){
+		return intVal = cast(integer)newVal;
+	}
+	/// Returns: string value stored as NaData[] (in arrayVal)
+	@property char[] strVal(){
+		char[] r;
+		r.length = arrayVal.length;
+		foreach (i, ch; arrayVal){
+			r[i] = cast(char)(ch.intVal);
+		}
+		return r;
+	}
+	/// Setter for strVal
+	@property char[] strVal(char[] newVal){
+		arrayVal.length = newVal.length;
+		foreach (i, ch; newVal){
+			arrayVal[i].intVal = cast(integer)ch;
+		}
+		return newVal;
 	}
 }
 
