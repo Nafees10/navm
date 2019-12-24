@@ -42,11 +42,11 @@ public enum Instruction : ubyte{
 	IsSameArray = 0x08, /// Pushes 1(integer) if 2 arrays, popped from stack, have same values, else, pushes 0(integer)
 	IsSameArrayRef = 0x09, /// Pushes 1(integer) if 2 arrays, whose refs are popped from stack, have same values, else, pushes 0(integer)
 	
-	IsGreaterInt = 0x09,/// Pops A, then B. Pushes 1 if A > B (integer), else, pushes 0(integer)
-	IsGreaterSameInt = 0x0A,/// Pops A, then B. Pushes 1 if A >= B (integer), else, pushes 0(integer)
+	IsGreaterInt = 0x10,/// Pops A, then B. Pushes 1 if A > B (integer), else, pushes 0(integer)
+	IsGreaterSameInt = 0x1A,/// Pops A, then B. Pushes 1 if A >= B (integer), else, pushes 0(integer)
 
-	IsGreaterDouble = 0x19,/// Pops A, then B. Pushes 1 if A > B (double), else, pushes 0(integer)
-	IsGreaterSameDouble = 0x1A,/// Pops A, then B. Pushes 1 if A > B (double), else, pushes 0(integer)
+	IsGreaterDouble = 0x11,/// Pops A, then B. Pushes 1 if A > B (double), else, pushes 0(integer)
+	IsGreaterSameDouble = 0x1B,/// Pops A, then B. Pushes 1 if A > B (double), else, pushes 0(integer)
 
 	Not = 0x20,/// Pops A(int). Pushes `not A`
 	And = 0x21,/// Pops A(int) then B(int). Pushes `A && B`
