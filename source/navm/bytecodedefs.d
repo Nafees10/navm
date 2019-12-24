@@ -23,54 +23,56 @@ public struct NaFunction{
 
 /// stores an instruction
 public enum Instruction : ubyte{
-	ExecuteFunctionExternal = 0x00,/// Executes external function
-	ExecuteFunction = 0x01,/// Executes another function defined in byte code
+	ExecuteFunctionExternal = 0x00,/// Executes external function. Function id is arg0(int), Argument count is arg1(int)
+	ExecuteFunction = 0x01,/// Executes another function defined in byte code. Function id is arg0(int), Argument count is arg1(int)
 
-	MathAddInt = 0x02,/// Addition (integer)
-	MathSubtractInt = 0x03,/// Subtraction (integer)
-	MathMultiplyInt = 0x04,/// Multiplication (integer)
-	MathDivideInt = 0x05,/// Division (integer)
-	MathModInt = 0x06,/// Mod (% operator) (integer)
+	MathAddInt = 0x02,/// Addition (integer). PoppedFirst + PoppedSecond
+	MathSubtractInt = 0x03,/// Subtraction (integer). PoppedFirst - PoppedSecond
+	MathMultiplyInt = 0x04,/// Multiplication (integer). PoppedFirst * PoppedSecond
+	MathDivideInt = 0x05,/// Division (integer). PoppedFirst / PoppedSecond
+	MathModInt = 0x06,/// Mod (% operator) (integer). PoppedFirst % PoppedSecond
 
-	MathAddDouble = 0x12,/// Addition (double)
-	MathSubtractDouble = 0x13,/// Subtraction (double)
-	MathMultiplyDouble = 0x14,/// Multiplication (double)
-	MathDivideDouble = 0x15,/// Division (double)
-	MathModDouble = 0x16,/// Mod (% operator) (double)
+	MathAddDouble = 0x12,/// Addition (double). PoppedFirst + PoppedSecond
+	MathSubtractDouble = 0x13,/// Subtraction (double). PoppedFirst - PoppedSecond
+	MathMultiplyDouble = 0x14,/// Multiplication (double). PoppedFirst * PoppedSecond
+	MathDivideDouble = 0x15,/// Division (double). PoppedFirst / PoppedSecond
+	MathModDouble = 0x16,/// Mod (% operator) (double). PoppedFirst % PoppedSecond
 	
-	IsSameInt = 0x07,/// if both values are same (integer)
-	IsSameArrayInt = 0x08, /// if 2 int[] have same values
-	IsLesserInt = 0x09,/// is val0 < val1 (integer)
-	IsLesserSameInt = 0x0A,/// if val1 <= val2 (integer)
+	IsSameInt = 0x07,/// Pushes 1(integer) to stack if last two integers popped are same
+	IsSameArrayInt = 0x08, /// Pushes 1(integer) if 2 int[], popped from stack, have same values
+	IsGreaterInt = 0x09,/// Pops A, then B. Pushes 1 if A > B (integer)
+	IsGreaterSameInt = 0x0A,/// Pops A, then B. Pushes 1 if A >= B (integer)
 
-	IsSameDouble = 0x17,/// if both values are same (double)
-	IsSameArrayDouble = 0x18, /// if 2 double[] have same values
-	IsLesserDouble = 0x19,/// is val0 < val1 (double)
-	IsLesserSameDouble = 0x1A,/// if val1 <= val2 (double)
+	IsSameDouble = 0x17,/// Pushes 1(integer) to stack if last two doubles popped are same
+	IsSameArrayDouble = 0x18, /// Pushes 1(integer) if 2 double[], popped from stack, have same values
+	IsGreaterDouble = 0x19,/// Pops A, then B. Pushes 1 if A > B (double)
+	IsGreaterSameDouble = 0x1A,/// Pops A, then B. Pushes 1 if A > B (double)
 
-	BinaryNot = 0x20,/// not operator (integer)
-	BinaryAnd = 0x21,/// and operator (integer)
-	BinaryOr = 0x22,/// or operator (integer)
+	BinaryNot = 0x20,/// Pops A(int). Pushes `not A`
+	BinaryAnd = 0x21,/// Pops A(int) then B(int). Pushes `A && B`
+	BinaryOr = 0x22,/// Pops A(int) then B(int). Pushes `A || B`
 
-	Push = 0x30,/// pushes one value to stack
-	PushFrom = 0x31,/// reads value at index arg0 on stack, pushes it to stack
+	Push = 0x30,/// pushes one value to stack. Value is arg0(any data type)
+	PushFrom = 0x31,/// reads value at index arg0(int) on stack, pushes it to stack
 	PushRefFrom = 0x32, /// Pushes a reference-to-element-at-index-arg0 to stack
-	WriteTo = 0x33, /// Pops a value from stack, writes it to an index arg0 on stack
+	WriteTo = 0x33, /// Pops a value from stack, writes it to an index arg0(int) on stack
 	WriteToRef = 0x34, /// pops a ref and then a value, writes value to ref
 	Deref = 0x35, /// Pushes the value that is being referenced by a reference pop-ed from stack
 	Pop = 0x36,/// Pops one value from stack
 	Jump = 0x37, /// jumps to instruction at index N
-	JumpIf = 0x38, /// jump but checks if value pop-ed from stack == 1 before jumping
+	JumpIf = 0x38, /// jump but checks if value pop-ed from stack == 1(int) before jumping
 
 	MakeArray = 0x40, /// pushes array with N number of elemets, read from stack
-	ReadElement = 0x41, /// pops an index, then a ref-to-array. Pushes ref to element at that index in that array
-	ArrayLength = 0x42, /// Pushes length of array to stack, array pop-ed from stack
-	ArrayLengthSet = 0x43, /// Changes length of array (reference to array popped from stack) to new length, pop-ed from stack. Length is poped first
-	Concatenate = 0x44,/// Concatenate arrays
-	Append = 0x45, /// Appends an element at end of array, pushes new array
+	ReadElement = 0x41, /// pops a ref-to-array, then an index. Pushes ref-to-element at that index in that array
+	ArrayLength = 0x42, /// pops ref-to-array pop-ed from stack, pushes length of array to stack
+	ArrayLengthSet = 0x43, /// Pops a ref-to-array, then length. Sets length of array to popped length.
+	Concatenate = 0x44, /// Pops an array(a1), then pops another(a2). Pushes `a1 + a2`
+	AppendElement = 0x45, /// Pops a ref-to-array, then an element. Appends element at end of array
+	AppendArrayRef = 0x46, /// Pops ref-to-array (r1), then another ref-to-array (r2). then does `*r1 = *r1 + *r2`
+	AppendArray = 0x47, /// Pops ref-to-array (r1), then an array (r2). then does `*r1 = *r1 + r2`
 
-	IntToDouble = 0x50,/// pushes doulbe with the same value as int poped from stack
-	DoubleToInt = 0x51,/// pushes int with same integer value as double poped from stack
+	IntToDouble = 0x60,/// pushes doulbe with the same value as int poped from stack
+	DoubleToInt = 0x61,/// pushes int with same integer value as double poped from stack
 
 	ReturnVal = 0xF0, /// Pops value, sets it to the return value of currently executed function. Does **NOT** terminate execution
 	Terminate = 0xFF, /// Terminates execution of function
@@ -105,13 +107,13 @@ static this(){
 
 		Instruction.IsSameInt : 0,
 		Instruction.IsSameArrayInt : 0,
-		Instruction.IsLesserInt : 0,
-		Instruction.IsLesserSameInt : 0,
+		Instruction.IsGreaterInt : 0,
+		Instruction.IsGreaterSameInt : 0,
 
 		Instruction.IsSameDouble : 0,
 		Instruction.IsSameArrayDouble : 0,
-		Instruction.IsLesserDouble : 0,
-		Instruction.IsLesserSameDouble : 0,
+		Instruction.IsGreaterDouble : 0,
+		Instruction.IsGreaterSameDouble : 0,
 
 		Instruction.BinaryAnd : 0,
 		Instruction.BinaryNot : 0,
@@ -132,7 +134,9 @@ static this(){
 		Instruction.ArrayLength : 0,
 		Instruction.ArrayLengthSet : 0,
 		Instruction.Concatenate : 0,
-		Instruction.Append : 0,
+		Instruction.AppendElement : 0,
+		Instruction.AppendArrayRef : 0,
+		Instruction.AppendArray : 0,
 
 		Instruction.IntToDouble : 0,
 		Instruction.DoubleToInt : 0,
@@ -159,13 +163,13 @@ static this(){
 
 		Instruction.IsSameInt : 1,
 		Instruction.IsSameArrayInt : 1,
-		Instruction.IsLesserInt : 1,
-		Instruction.IsLesserSameInt : 1,
+		Instruction.IsGreaterInt : 1,
+		Instruction.IsGreaterSameInt : 1,
 
 		Instruction.IsSameDouble : 1,
 		Instruction.IsSameArrayDouble : 1,
-		Instruction.IsLesserDouble : 1,
-		Instruction.IsLesserSameDouble : 1,
+		Instruction.IsGreaterDouble : 1,
+		Instruction.IsGreaterSameDouble : 1,
 
 		Instruction.BinaryAnd : 1,
 		Instruction.BinaryNot : 1,
@@ -186,7 +190,9 @@ static this(){
 		Instruction.ArrayLength : 1,
 		Instruction.ArrayLengthSet : 0,
 		Instruction.Concatenate : 1,
-		Instruction.Append : 1,
+		Instruction.AppendElement : 0,
+		Instruction.AppendArrayRef : 0,
+		Instruction.AppendArray : 0,
 
 		Instruction.IntToDouble : 1,
 		Instruction.DoubleToInt : 1,
@@ -213,13 +219,13 @@ static this(){
 
 		Instruction.IsSameInt : 2,
 		Instruction.IsSameArrayInt : 2,
-		Instruction.IsLesserInt : 2,
-		Instruction.IsLesserSameInt : 2,
+		Instruction.IsGreaterInt : 2,
+		Instruction.IsGreaterSameInt : 2,
 
 		Instruction.IsSameDouble : 2,
 		Instruction.IsSameArrayDouble : 2,
-		Instruction.IsLesserDouble : 2,
-		Instruction.IsLesserSameDouble : 2,
+		Instruction.IsGreaterDouble : 2,
+		Instruction.IsGreaterSameDouble : 2,
 
 		Instruction.BinaryAnd : 2,
 		Instruction.BinaryNot : 2,
@@ -240,7 +246,9 @@ static this(){
 		Instruction.ArrayLength : 1,
 		Instruction.ArrayLengthSet : 2,
 		Instruction.Concatenate : 2,
-		Instruction.Append : 2,
+		Instruction.AppendElement : 2,
+		Instruction.AppendArrayRef : 2,
+		Instruction.AppendArray : 2,
 
 		Instruction.IntToDouble : 1,
 		Instruction.DoubleToInt : 1,
