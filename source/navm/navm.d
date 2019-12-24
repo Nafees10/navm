@@ -121,6 +121,23 @@ protected:
 		}
 		_stack.push(r);
 	}
+	void isSameArrayRef(){
+		NaData[] a = _stack.pop.ptrVal.arrayVal, b = _stack.pop.ptrVal.arrayVal;
+		NaData r = NaData(0);
+		if (a.length == b.length){
+			r = NaData(1);
+			NaData* aPtr = &a[0], bPtr = &b[0];
+			for (uinteger i = 0; i < a.length; i++){
+				if ((*aPtr).intVal != (*bPtr).intVal){
+					r = NaData(0);
+					break;
+				}
+				aPtr ++;
+				bPtr ++;
+			}
+		}
+		_stack.push(r);
+	}
 
 	void isGreaterInt(){
 		_stack.push(NaData(cast(integer)(_stack.pop.intVal > _stack.pop.intVal)));
@@ -258,6 +275,7 @@ public:
 
 			Instruction.IsSame : &isSame,
 			Instruction.IsSameArray : &isSameArray,
+			Instruction.IsSameArrayRef : &isSameArrayRef,
 
 			Instruction.IsGreaterInt : &isGreaterInt,
 			Instruction.IsGreaterSameInt : &isGreaterSameInt,

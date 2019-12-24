@@ -38,14 +38,15 @@ public enum Instruction : ubyte{
 	MathDivideDouble = 0x15,/// Division (double). PoppedFirst / PoppedSecond
 	MathModDouble = 0x16,/// Mod (% operator) (double). PoppedFirst % PoppedSecond
 	
-	IsSame = 0x07,/// Pushes 1(integer) to stack if last two integers popped are same
-	IsSameArray = 0x08, /// Pushes 1(integer) if 2 int[], popped from stack, have same values
+	IsSame = 0x07,/// Pushes 1(integer) to stack if last two integers popped are same, else, pushes 0(integer)
+	IsSameArray = 0x08, /// Pushes 1(integer) if 2 arrays, popped from stack, have same values, else, pushes 0(integer)
+	IsSameArrayRef = 0x09, /// Pushes 1(integer) if 2 arrays, whose refs are popped from stack, have same values, else, pushes 0(integer)
 	
-	IsGreaterInt = 0x09,/// Pops A, then B. Pushes 1 if A > B (integer)
-	IsGreaterSameInt = 0x0A,/// Pops A, then B. Pushes 1 if A >= B (integer)
+	IsGreaterInt = 0x09,/// Pops A, then B. Pushes 1 if A > B (integer), else, pushes 0(integer)
+	IsGreaterSameInt = 0x0A,/// Pops A, then B. Pushes 1 if A >= B (integer), else, pushes 0(integer)
 
-	IsGreaterDouble = 0x19,/// Pops A, then B. Pushes 1 if A > B (double)
-	IsGreaterSameDouble = 0x1A,/// Pops A, then B. Pushes 1 if A > B (double)
+	IsGreaterDouble = 0x19,/// Pops A, then B. Pushes 1 if A > B (double), else, pushes 0(integer)
+	IsGreaterSameDouble = 0x1A,/// Pops A, then B. Pushes 1 if A > B (double), else, pushes 0(integer)
 
 	Not = 0x20,/// Pops A(int). Pushes `not A`
 	And = 0x21,/// Pops A(int) then B(int). Pushes `A && B`
@@ -106,6 +107,7 @@ static this(){
 
 		Instruction.IsSame : 0,
 		Instruction.IsSameArray : 0,
+		Instruction.IsSameArrayRef : 0,
 
 		Instruction.IsGreaterInt : 0,
 		Instruction.IsGreaterSameInt : 0,
@@ -161,6 +163,7 @@ static this(){
 
 		Instruction.IsSame : 1,
 		Instruction.IsSameArray : 1,
+		Instruction.IsSameArrayRef : 1,
 
 		Instruction.IsGreaterInt : 1,
 		Instruction.IsGreaterSameInt : 1,
@@ -216,6 +219,7 @@ static this(){
 
 		Instruction.IsSame : 2,
 		Instruction.IsSameArray : 2,
+		Instruction.IsSameArrayRef : 2,
 
 		Instruction.IsGreaterInt : 2,
 		Instruction.IsGreaterSameInt : 2,
