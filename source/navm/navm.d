@@ -101,10 +101,10 @@ protected:
 			);
 	}
 
-	void isSameInt(){
+	void isSame(){
 		_stack.push(NaData(cast(integer)(_stack.pop.intVal == _stack.pop.intVal)));
 	}
-	void isSameArrayInt(){
+	void isSameArray(){
 		NaData[] a = _stack.pop.arrayVal, b = _stack.pop.arrayVal;
 		NaData r = NaData(0);
 		if (a.length == b.length){
@@ -121,6 +121,7 @@ protected:
 		}
 		_stack.push(r);
 	}
+
 	void isGreaterInt(){
 		_stack.push(NaData(cast(integer)(_stack.pop.intVal > _stack.pop.intVal)));
 	}
@@ -128,26 +129,6 @@ protected:
 		_stack.push(NaData(cast(integer)(_stack.pop.intVal >= _stack.pop.intVal)));
 	}
 
-	void isSameDouble(){
-		_stack.push(NaData(cast(integer)(_stack.pop.doubleVal == _stack.pop.doubleVal)));
-	}
-	void isSameArrayDouble(){
-		NaData[] a = _stack.pop.arrayVal, b = _stack.pop.arrayVal;
-		NaData r = NaData(0);
-		if (a.length == b.length){
-			r = NaData(1);
-			NaData* aPtr = &a[0], bPtr = &b[0];
-			for (uinteger i = 0; i < a.length; i++){
-				if ((*aPtr).doubleVal != (*bPtr).doubleVal){
-					r = NaData(0);
-					break;
-				}
-				aPtr ++;
-				bPtr ++;
-			}
-		}
-		_stack.push(r);
-	}
 	void isGreaterDouble(){
 		_stack.push(NaData(cast(integer)(_stack.pop.doubleVal > _stack.pop.doubleVal)));
 	}
@@ -216,16 +197,19 @@ protected:
 		_stack.push(NaData((_stack.pop.arrayVal ~ _stack.pop.arrayVal).dup));
 	}
 	void appendElement(){
-		/// Left side evaluated first
-		(*(_stack.pop.ptrVal)).arrayVal ~= _stack.pop;
+		/// ~= evaluates right side first unfortunately
+		NaData arrayPtr = _stack.pop;
+		arrayPtr.ptrVal.arrayVal ~= _stack.pop;
 	}
 	void appendArrayRef(){
-		/// Left side evaluated first
-		(*(_stack.pop.ptrVal)).arrayVal ~= (*(_stack.pop.ptrVal)).arrayVal.dup;
+		/// ~= evaluates right side first unfortunately
+		NaData arrayPtr = _stack.pop;
+		arrayPtr.ptrVal.arrayVal ~= (*(_stack.pop.ptrVal)).arrayVal.dup;
 	}
 	void appendArray(){
-		/// Left side evaluated first
-		(*(_stack.pop.ptrVal)).arrayVal ~= _stack.pop.arrayVal.dup;
+		/// ~= evaluates right side first unfortunately
+		NaData arrayPtr = _stack.pop;
+		arrayPtr.ptrVal.arrayVal ~= _stack.pop.arrayVal.dup;
 	}
 
 	void intToDouble(){
@@ -272,13 +256,12 @@ public:
 			Instruction.MathDivideDouble : &mathDivideDouble,
 			Instruction.MathModDouble : &mathModDouble,
 
-			Instruction.IsSameInt : &isSameInt,
-			Instruction.IsSameArrayInt : &isSameArrayInt,
+			Instruction.IsSame : &isSame,
+			Instruction.IsSameArray : &isSameArray,
+
 			Instruction.IsGreaterInt : &isGreaterInt,
 			Instruction.IsGreaterSameInt : &isGreaterSameInt,
 
-			Instruction.IsSameDouble : &isSameDouble,
-			Instruction.IsSameArrayDouble : &isSameArrayDouble,
 			Instruction.IsGreaterDouble : &isGreaterDouble,
 			Instruction.IsGreaterSameDouble : &isGreaterSameDouble,
 
