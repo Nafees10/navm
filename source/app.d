@@ -8,16 +8,14 @@ import std.datetime.stopwatch;
 void main(string[] args){
 	NaData writelnInt(NaData[] args){
 		foreach(arg; args){
-			write(arg.intVal);
+			writeln(arg.intVal);
 		}
-		writeln();
 		return NaData();
 	}
 	NaData writelnDbl(NaData[] args){
 		foreach (arg; args){
-			write(arg.doubleVal);
+			writeln(arg.doubleVal);
 		}
-		writeln();
 		return NaData();
 	}
 	NaData writeString(NaData[] args){
@@ -27,11 +25,14 @@ void main(string[] args){
 		return NaData();
 	}
 	NaData writeNewlineChar(NaData[] args){
-		writeln();
+		foreach (i; 0 .. args[0].intVal)
+			writeln();
 		return NaData();
 	}
 	NaData readString(NaData[] args){
-		return NaData(readln);
+		string s = readln;
+		s.length --; // remove \n char from end of string
+		return NaData(s);
 	}
 	// ready the VM with these 5 external functions.
 	NaVM vm = new NaVM([&writelnInt, &writelnDbl, &writeString, &writeNewlineChar, &readString]);
