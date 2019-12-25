@@ -232,8 +232,20 @@ protected:
 	void intToDouble(){
 		_stack.push(NaData(to!double(_stack.pop.intVal)));
 	}
+	void intToString(){
+		_stack.push(NaData(to!string(_stack.pop.intVal)));
+	}
 	void doubleToInt(){
 		_stack.push(NaData(to!integer(_stack.pop.doubleVal)));
+	}
+	void doubleToString(){
+		_stack.push(NaData(to!string(_stack.pop.doubleVal)));
+	}
+	void stringToInt(){
+		_stack.push(NaData(to!integer(_stack.pop.strVal)));
+	}
+	void stringToDouble(){
+		_stack.push(NaData(to!double(_stack.pop.strVal)));
 	}
 
 	void returnVal(){
@@ -307,7 +319,11 @@ public:
 			Instruction.AppendArray : &appendArray,
 
 			Instruction.IntToDouble : &intToDouble,
+			Instruction.IntToString : &intToString,
 			Instruction.DoubleToInt : &doubleToInt,
+			Instruction.DoubleToString : &doubleToString,
+			Instruction.StringToInt : &stringToInt,
+			Instruction.StringToDouble : &stringToDouble,
 
 			Instruction.ReturnVal : &returnVal,
 			Instruction.Terminate : &terminate,

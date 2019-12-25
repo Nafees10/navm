@@ -71,8 +71,12 @@ public enum Instruction : ubyte{
 	AppendArrayRef = 0x46, /// Pops ref-to-array (r1), then another ref-to-array (r2). then does `*r1 = *r1 + *r2`
 	AppendArray = 0x47, /// Pops ref-to-array (r1), then an array (r2). then does `*r1 = *r1 + r2`
 
-	IntToDouble = 0x60,/// pushes doulbe with the same value as int poped from stack
-	DoubleToInt = 0x61,/// pushes int with same integer value as double poped from stack
+	IntToDouble = 0x60, /// pushes double with the same value as int poped from stack
+	IntToString = 0x61, /// pushes a string representation of an int popped from stack
+	DoubleToInt = 0x62, /// pushes int with same integer value as double poped from stack
+	DoubleToString = 0x63, /// pushes a string representation of a double popped from stack
+	StringToInt = 0x64, /// pushes an integer read from string, which is popped from stack
+	StringToDouble = 0x65, /// pushes an integer read from string, which is popped from stack
 
 	ReturnVal = 0xF0, /// Pops value, sets it to the return value of currently executed function. Does **NOT** terminate execution
 	Terminate = 0xFF, /// Terminates execution of function
@@ -139,7 +143,11 @@ static this(){
 		Instruction.AppendArray : 0,
 
 		Instruction.IntToDouble : 0,
+		Instruction.IntToString : 0,
 		Instruction.DoubleToInt : 0,
+		Instruction.DoubleToString : 0,
+		Instruction.StringToInt : 0,
+		Instruction.StringToDouble : 0,
 
 		Instruction.ReturnVal : 0,
 		Instruction.Terminate : 0,
@@ -195,7 +203,11 @@ static this(){
 		Instruction.AppendArray : 0,
 
 		Instruction.IntToDouble : 1,
+		Instruction.IntToString : 1,
 		Instruction.DoubleToInt : 1,
+		Instruction.DoubleToString : 1,
+		Instruction.StringToInt : 1,
+		Instruction.StringToDouble : 1,
 
 		Instruction.ReturnVal : 0,
 		Instruction.Terminate : 0,
@@ -251,7 +263,11 @@ static this(){
 		Instruction.AppendArray : 2,
 
 		Instruction.IntToDouble : 1,
+		Instruction.IntToString : 1,
 		Instruction.DoubleToInt : 1,
+		Instruction.DoubleToString : 1,
+		Instruction.StringToInt : 1,
+		Instruction.StringToDouble : 1,
 
 		Instruction.ReturnVal : 1,
 		Instruction.Terminate : 0,
