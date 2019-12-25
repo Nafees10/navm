@@ -23,7 +23,7 @@ public union NaData{
 			ptrVal = data;
 		}else static if (is (T == char)){
 			intVal = cast(integer)data;
-		}else static if (is (T == char[])){
+		}else static if (is (T == char[]) || is (T == string)){
 			strVal = data;
 		}else{
 			throw new Exception("cannot store "~T.stringof~" in NaData");
@@ -53,6 +53,14 @@ public union NaData{
 			arrayVal[i].intVal = cast(integer)ch;
 		}
 		return newVal;
+	}
+	/// Setter for strVal
+	@property char[] strVal(string newVal){
+		arrayVal.length = newVal.length;
+		foreach (i, ch; newVal){
+			arrayVal[i].intVal = cast(integer)ch;
+		}
+		return cast(char[])newVal;
 	}
 }
 
