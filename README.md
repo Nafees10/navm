@@ -186,8 +186,16 @@ Pops reference to array `r1`, then pops an array _(not reference)_. Then does `*
 #### Data type conversion
 * _`IntToDouble`_  
 Pops an integer from stack. Pushes a double with same value.
-* _`DoubleToInt`_
+* _`IntToString`_  
+Pops an integer from stack. Pushes a string representation of it.
+* _`DoubleToInt`_  
 Pops a double from stack. Pushes integer part of it (as a integer) to stack.
+* _`DoubleToString`_  
+Pops a double from stack. Pushes string representation of it.
+* _`StringToInt`_  
+Pops a string, reads integer from it, pushes the integer.
+* _`StringToDouble`_  
+Pops a string, reads a double from it, pushes the double.
 
 #### Misc.
 * _`ReturnVal`_  
