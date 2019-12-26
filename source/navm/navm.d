@@ -9,11 +9,13 @@ import std.conv : to;
 import utils.lists;
 import utils.misc : uinteger, integer;
 
-public import navm.defs : ExternFunction;
-public import navm.defs : NaData;
+alias ExternFunction = navm.defs.ExternFunction;
+alias NaData = navm.defs.NaData;
+alias Instruction = navm.bytecodedefs.Instruction;
+alias NaFunction = navm.bytecodedefs.NaFunction;
 
 
-/// the VM (where the ~~magic~~executon happens)
+/// the VM (where the ~~magic~~ executon happens)
 class NaVM{
 private:
 	void delegate()[][] _functions; /// instructions of functions loaded
