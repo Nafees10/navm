@@ -26,14 +26,14 @@ dub fetch navm
 ```
 to download this package, and then run:
 ```
-dub build navm -b=release
+dub build navm -b=release -c=demo
 ```
 to fetch dependencies and build NaVM.  
-Following this, you will have the NaVM binary with very basic functionality (to function as a demo).  
+Following this, you will have the NaVM binary (named `demo`) with very basic functionality.  
 
 You can now run NaVM bytecode using:  
 ```
-~/.dub/packages/navm-*/navm/navm path/to/bytecodefile
+~/.dub/packages/navm-*/navm/demo path/to/bytecodefile
 ```
 
 
