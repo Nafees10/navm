@@ -4,8 +4,21 @@
 	],
 	"copyright": "Copyright © 2019, Nafees",
 	"dependencies": {
-		"utils": "~>0.3.4"
+		"utils": "~>0.3.5"
 	},
+	"configurations": [
+		{
+			"name": "default",
+			"targetType": "library",
+			"targetName": "navm"
+		},
+		{
+			"name": "demo",
+			"targetType": "executable",
+			"targetName": "demo",
+			"versions": ["demo"]
+		}
+	],
 	"description": "A simple VM intended to be used in scripting languages",
 	"license": "MIT",
 	"name": "navm"
