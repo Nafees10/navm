@@ -90,7 +90,7 @@ Here's a list of instructions that NaVM has out of the box. You can easily add m
 
 * _`ExecuteFunction [function id - integer>=0] [n - integer>=0]`_  
 pops _`n`_ number of elements from stack. Calls a function defined in bytecode, pushes the elements in that function's stack in the same order they were. Pushes the return value from that function to stack.
-* _`ExecuteFunctionExternal [function id - integer>=0] [n - integer>=0]`  
+* _`ExecuteFunctionExternal [function id - integer>=0] [n - integer>=0]`_  
 pops _`n`_ number of elements from stack. Calls an external function with the elements popped as arguments. Pushes the return value from that function to stack.
   
 _Keep in mind that these functions push `NaData()` to stack if function did not return any meaningful data, so if you don't need to use the return value, or the function doesn't return meaningful data, follow these instructions with a `Pop` instruction._
