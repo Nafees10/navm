@@ -219,7 +219,7 @@ unittest{
 /// Returns: the data in NaData
 /// 
 /// Throws: Exception if data is invalid
-private NaData readData(string strData){
+public NaData readData(string strData){
 	static string readElement(string array, uinteger startIndex){
 		if (array[startIndex] == '[')
 			return array[startIndex .. bracketPos(cast(char[])array, startIndex)+1];

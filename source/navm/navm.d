@@ -13,6 +13,7 @@ alias ExternFunction = navm.defs.ExternFunction;
 alias NaData = navm.defs.NaData;
 alias Instruction = navm.bytecodedefs.Instruction;
 alias NaFunction = navm.bytecodedefs.NaFunction;
+alias readData = navm.bytecode.readData;
 
 
 /// the VM (where the ~~magic~~ executon happens)
