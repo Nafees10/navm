@@ -15,7 +15,7 @@ See `source/app.d` to see how to add external functions, and use it in your prog
 ### Prerequisites
 You need to have these present on your machine:
 
-1. dub 
+1. dub
 2. dlang compiler (only dmd is tested)
 3. Internet connection (for dub to fetch NaVM and its dependencies)
 
@@ -158,6 +158,8 @@ Pops a reference, then pops a value. Writes value to reference.
 Pops a reference from stack. Pushes the value being referenced
 * _`Pop`_  
 Pops 1 value from stack
+* _`PopN [n - integer >= 0]`_  
+Pops n number of values from stack
 
 #### Jumps
 * _`Jump [index - integer>=0]`_  
@@ -168,10 +170,12 @@ Pops integer from stack. If it is `1`, jumps execution to instruction at `index`
 #### Arrays
 * _`MakeArray [n - integer>0]`_  
 Pops `n` number of elements from stack, puts them in an array (in the order they were added to stack). Pushes array to stack.
-* _`ReadElement`_  
+* _`ArrayRefElement`_  
 Pops a reference to array, then an `index (integer)`. Pushes reference-to-element at `index` on array.
+* _`ArrayElement`_  
+Pops an array, then an `index (integer)`. Pushes reference-to-element at `index` on array.
 * _`ArrayLength`_  
-Pops a reference to array. Pushes length of stack (integer) to stack.
+Pops an array. Pushes length of stack (integer) to stack.
 * _`ArrayLengthSet`_  
 Pops a reference to array, then `length (integer)`. Sets length of array to `length`
 * _`Concatenate`_  
