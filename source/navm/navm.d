@@ -185,8 +185,14 @@ protected:
 	void deref(){
 		_stack.push(*(_stack.pop.ptrVal));
 	}
+	void getRef(){
+		_stack.push(NaData(&(_stack.pop)));
+	}
 	void pop(){
 		_stack.pop;
+	}
+	void popN(){
+		_stack.pop((*_arguments)[0].intVal);
 	}
 	void jump(){
 		_instruction = &(*_currentFunction)[(*_arguments)[0].intVal] - 1;
@@ -308,7 +314,9 @@ public:
 			Instruction.WriteTo : &writeTo,
 			Instruction.WriteToRef : &writeToRef,
 			Instruction.Deref : &deref,
+			Instruction.Ref : &getRef,
 			Instruction.Pop : &pop,
+			Instruction.PopN : &popN,
 			Instruction.Jump : &jump,
 			Instruction.JumpIf : &jumpIf,
 

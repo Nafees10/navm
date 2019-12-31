@@ -58,9 +58,11 @@ public enum Instruction : ubyte{
 	WriteTo = 0x33, /// Pops a value from stack, writes it to an index arg0(int) on stack
 	WriteToRef = 0x34, /// pops a ref and then a value, writes value to ref
 	Deref = 0x35, /// Pushes the value that is being referenced by a reference pop-ed from stack
-	Pop = 0x36,/// Pops one value from stack
-	Jump = 0x37, /// jumps to instruction at index N
-	JumpIf = 0x38, /// jump but checks if value pop-ed from stack == 1(int) before jumping
+	Ref = 0x36, /// Pops an element, pushes reference to that
+	Pop = 0x37,/// Pops one value from stack
+	PopN = 0x38, /// Pops n (arg0, int) number of elements from stack
+	Jump = 0x39, /// jumps to instruction at index N
+	JumpIf = 0x3A, /// jump but checks if value pop-ed from stack == 1(int) before jumping
 
 	MakeArray = 0x40, /// pushes array with N number of elemets, read from stack
 	ReadElement = 0x41, /// pops a ref-to-array, then an index. Pushes ref-to-element at that index in that array
@@ -89,7 +91,8 @@ public static ubyte[Instruction] INSTRUCTION_ARG_COUNT;
 /// stores how many elements an instruction will push to stack
 public static ubyte[Instruction] INSTRUCTION_PUSH_COUNT;
 
-/// stores how many elements an instruction will pop from stack (-1 if number varies depending on arguments)
+/// stores how many elements an instruction will pop from stack. 
+/// if number is negative, then it indicates what argument dictates pop_count. i.e, if -1, will pop arg0 number of elements, if -2, then arg1...
 private static byte[Instruction] INSTRUCTION_POP_COUNT;
 
 static this(){
@@ -129,7 +132,9 @@ static this(){
 		Instruction.WriteTo : 1,
 		Instruction.WriteToRef : 0,
 		Instruction.Deref : 0,
+		Instruction.Ref : 0,
 		Instruction.Pop : 0,
+		Instruction.PopN : 1,
 		Instruction.Jump : 1,
 		Instruction.JumpIf : 1,
 
@@ -189,7 +194,9 @@ static this(){
 		Instruction.WriteTo : 0,
 		Instruction.WriteToRef : 0,
 		Instruction.Deref : 1,
+		Instruction.Ref : 1,
 		Instruction.Pop : 0,
+		Instruction.PopN : 0,
 		Instruction.Jump : 0,
 		Instruction.JumpIf : 0,
 
@@ -214,8 +221,8 @@ static this(){
 	];
 
 	INSTRUCTION_POP_COUNT = [
-		Instruction.ExecuteFunctionExternal : -1,
-		Instruction.ExecuteFunction : -1,
+		Instruction.ExecuteFunctionExternal : -2,
+		Instruction.ExecuteFunction : -2,
 
 		Instruction.MathAddInt : 2,
 		Instruction.MathSubtractInt : 2,
@@ -249,7 +256,9 @@ static this(){
 		Instruction.WriteTo : 1,
 		Instruction.WriteToRef : 2,
 		Instruction.Deref : 1,
+		Instruction.Ref : 1,
 		Instruction.Pop : 1,
+		Instruction.PopN : -1,
 		Instruction.Jump : 0,
 		Instruction.JumpIf : 1,
 
@@ -279,12 +288,14 @@ static this(){
 /// 
 /// Throws: Exception if wrong number of arguments provided
 public uinteger instructionPopCount(Instruction inst, NaData[] arguments){
-	if (arguments.length != INSTRUCTION_ARG_COUNT[inst])
+	if (inst !in INSTRUCTION_POP_COUNT)
+		throw new Exception("unknown instruction provided");
+	if (INSTRUCTION_ARG_COUNT[inst] != arguments.length)
 		throw new Exception("wrong number of arguments provided for instruction");
-	if (inst == Instruction.ExecuteFunction || inst == Instruction.ExecuteFunctionExternal){
-		return arguments[1].intVal;
-	}else if (inst == Instruction.MakeArray){
-		return arguments[0].intVal;
-	}
-	return INSTRUCTION_POP_COUNT[inst];
+	integer count = INSTRUCTION_POP_COUNT[inst];
+	if (count >= 0)
+		return count;
+	count = (count * -1 ) - 1;
+	return arguments[count].intVal;
+	
 }
