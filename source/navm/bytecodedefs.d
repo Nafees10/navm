@@ -57,21 +57,21 @@ public enum Instruction : ubyte{
 	PushRefFrom = 0x32, /// Pushes a reference-to-element-at-index-arg0 to stack
 	WriteTo = 0x33, /// Pops a value from stack, writes it to an index arg0(int) on stack
 	WriteToRef = 0x34, /// pops a ref and then a value, writes value to ref
-	Deref = 0x35, /// Pushes the value that is being referenced by a reference pop-ed from stack
-	Ref = 0x36, /// Pops an element, pushes reference to that
+	Deref = 0x35, /// Pushes the value that is being referenced by a reference popped from stack
 	Pop = 0x37,/// Pops one value from stack
 	PopN = 0x38, /// Pops n (arg0, int) number of elements from stack
 	Jump = 0x39, /// jumps to instruction at index N
-	JumpIf = 0x3A, /// jump but checks if value pop-ed from stack == 1(int) before jumping
+	JumpIf = 0x3A, /// jump but checks if value popped from stack == 1(int) before jumping
 
 	MakeArray = 0x40, /// pushes array with N number of elemets, read from stack
-	ReadElement = 0x41, /// pops a ref-to-array, then an index. Pushes ref-to-element at that index in that array
-	ArrayLength = 0x42, /// pops ref-to-array pop-ed from stack, pushes length of array to stack
-	ArrayLengthSet = 0x43, /// Pops a ref-to-array, then length. Sets length of array to popped length.
-	Concatenate = 0x44, /// Pops an array(a1), then pops another(a2). Pushes `a1 + a2`
-	AppendElement = 0x45, /// Pops a ref-to-array, then an element. Appends element at end of array
-	AppendArrayRef = 0x46, /// Pops ref-to-array (r1), then another ref-to-array (r2). then does `*r1 = *r1 + *r2`
-	AppendArray = 0x47, /// Pops ref-to-array (r1), then an array (r2). then does `*r1 = *r1 + r2`
+	ArrayRefElement = 0x41, /// pops a ref-to-array, then an index. Pushes ref-to-element at that index in that array
+	ArrayElement = 0x42, /// pops an array, then an index. Pushes ref-to-element at that index in that array
+	ArrayLength = 0x43, /// pops array popped from stack, pushes length of array to stack
+	ArrayLengthSet = 0x44, /// Pops a ref-to-array, then length. Sets length of array to popped length.
+	Concatenate = 0x45, /// Pops an array(a1), then pops another(a2). Pushes `a1 + a2`
+	AppendElement = 0x46, /// Pops a ref-to-array, then an element. Appends element at end of array
+	AppendArrayRef = 0x47, /// Pops ref-to-array (r1), then another ref-to-array (r2). then does `*r1 = *r1 + *r2`
+	AppendArray = 0x48, /// Pops ref-to-array (r1), then an array (r2). then does `*r1 = *r1 + r2`
 
 	IntToDouble = 0x60, /// pushes double with the same value as int poped from stack
 	IntToString = 0x61, /// pushes a string representation of an int popped from stack
@@ -132,14 +132,14 @@ static this(){
 		Instruction.WriteTo : 1,
 		Instruction.WriteToRef : 0,
 		Instruction.Deref : 0,
-		Instruction.Ref : 0,
 		Instruction.Pop : 0,
 		Instruction.PopN : 1,
 		Instruction.Jump : 1,
 		Instruction.JumpIf : 1,
 
 		Instruction.MakeArray : 1,
-		Instruction.ReadElement : 0,
+		Instruction.ArrayRefElement : 0,
+		Instruction.ArrayElement : 0,
 		Instruction.ArrayLength : 0,
 		Instruction.ArrayLengthSet : 0,
 		Instruction.Concatenate : 0,
@@ -194,14 +194,14 @@ static this(){
 		Instruction.WriteTo : 0,
 		Instruction.WriteToRef : 0,
 		Instruction.Deref : 1,
-		Instruction.Ref : 1,
 		Instruction.Pop : 0,
 		Instruction.PopN : 0,
 		Instruction.Jump : 0,
 		Instruction.JumpIf : 0,
 
 		Instruction.MakeArray : 1,
-		Instruction.ReadElement : 1,
+		Instruction.ArrayRefElement : 1,
+		Instruction.ArrayElement : 1,
 		Instruction.ArrayLength : 1,
 		Instruction.ArrayLengthSet : 0,
 		Instruction.Concatenate : 1,
@@ -256,14 +256,14 @@ static this(){
 		Instruction.WriteTo : 1,
 		Instruction.WriteToRef : 2,
 		Instruction.Deref : 1,
-		Instruction.Ref : 1,
 		Instruction.Pop : 1,
 		Instruction.PopN : -1,
 		Instruction.Jump : 0,
 		Instruction.JumpIf : 1,
 
 		Instruction.MakeArray : -1,
-		Instruction.ReadElement : 2,
+		Instruction.ArrayRefElement : 2,
+		Instruction.ArrayElement : 2,
 		Instruction.ArrayLength : 1,
 		Instruction.ArrayLengthSet : 2,
 		Instruction.Concatenate : 2,
@@ -297,5 +297,5 @@ public uinteger instructionPopCount(Instruction inst, NaData[] arguments){
 		return count;
 	count = (count * -1 ) - 1;
 	return arguments[count].intVal;
-	
+
 }

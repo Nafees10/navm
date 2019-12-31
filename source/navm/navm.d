@@ -185,9 +185,6 @@ protected:
 	void deref(){
 		_stack.push(*(_stack.pop.ptrVal));
 	}
-	void getRef(){
-		_stack.push(NaData(&(_stack.pop)));
-	}
 	void pop(){
 		_stack.pop;
 	}
@@ -208,12 +205,16 @@ protected:
 	void makeArray(){
 		_stack.push(NaData(_stack.pop((*_arguments)[0].intVal).dup));
 	}
-	void readElement(){
+	void arrayRefElement(){
 		NaData arrayRef = _stack.pop;
 		_stack.push(NaData(&((*(arrayRef.ptrVal)).arrayVal[_stack.pop.intVal])));
 	}
+	void arrayElement(){
+		NaData array = _stack.pop;
+		_stack.push(NaData(&(array.arrayVal[_stack.pop.intVal])));
+	}
 	void arrayLength(){
-		_stack.push(NaData((*(_stack.pop.ptrVal)).arrayVal.length));
+		_stack.push(NaData(_stack.pop.arrayVal.length));
 	}
 	void arrayLengthSet(){
 		/// Left side evaluated first
@@ -314,14 +315,14 @@ public:
 			Instruction.WriteTo : &writeTo,
 			Instruction.WriteToRef : &writeToRef,
 			Instruction.Deref : &deref,
-			Instruction.Ref : &getRef,
 			Instruction.Pop : &pop,
 			Instruction.PopN : &popN,
 			Instruction.Jump : &jump,
 			Instruction.JumpIf : &jumpIf,
 
 			Instruction.MakeArray : &makeArray,
-			Instruction.ReadElement : &readElement,
+			Instruction.ArrayRefElement : &arrayRefElement,
+			Instruction.ArrayElement : &arrayElement,
 			Instruction.ArrayLength : &arrayLength,
 			Instruction.ArrayLengthSet : &arrayLengthSet,
 			Instruction.Concatenate : &concatenate,
