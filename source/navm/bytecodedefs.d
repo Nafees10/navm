@@ -247,7 +247,7 @@ static this(){
 		Instruction.IsGreaterSameDouble : 2,
 
 		Instruction.And : 2,
-		Instruction.Not : 2,
+		Instruction.Not : 1,
 		Instruction.Or : 2,
 
 		Instruction.Push : 0,
