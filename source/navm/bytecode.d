@@ -262,6 +262,17 @@ public NaData readData(string strData){
 		r.strVal = cast(char[])(strReplaceSpecial(strData[1 .. strData.length-1]));
 		return r;
 	}
+	if (strData[0] == '\''){
+		NaData r;
+		strData = strData.dup;
+		strData = strReplaceSpecial(strData[1 .. $ -1]);
+		if (strData.length > 1)
+			throw new Exception("'' can only contain 1 character");
+		if (strData.length < 1)
+			throw new Exception("no character provided in ''");
+		r.charVal = strData[0];
+		return r;
+	}
 	return NaData();
 }
 
