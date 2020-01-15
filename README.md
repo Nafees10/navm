@@ -41,12 +41,12 @@ You can now run NaVM bytecode using:
 ```
 
 
-This binary also has 5 external functions:
+This binary also has 4 external functions:
 
 * ID: 0, call using *`ExecuteFunctionExternal 0 n`* where n is number of integers to pop from stack and writeln(int) to terminal
 * ID: 1, call using *`ExecuteFunctionExternal 1 n`* where n is number of doubles (floats) to pop from stack and writeln(double) to terminal
 * ID: 2, call using *`ExecuteFunctionExternal 2 n`* where n is number of strings to pop from stack and write to terminal
-* ID: 4, call using *`ExecuteFunctionExternal 3 0`* reads a line from stdin, pushes it to stack
+* ID: 3, call using *`ExecuteFunctionExternal 3 0`* reads a line from stdin, pushes it to stack
 
 ---
 
