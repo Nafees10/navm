@@ -25,18 +25,13 @@ version(demo){
 			}
 			return NaData();
 		}
-		NaData writeNewlineChar(NaData[] args){
-			foreach (i; 0 .. args[0].intVal)
-				writeln();
-			return NaData();
-		}
 		NaData readString(NaData[] args){
 			string s = readln;
 			s.length --; // remove \n char from end of string
 			return NaData(s);
 		}
-		// ready the VM with these 5 external functions.
-		NaVM vm = new NaVM([&writelnInt, &writelnDbl, &writeString, &writeNewlineChar, &readString]);
+		// ready the VM with these 4 external functions.
+		NaVM vm = new NaVM([&writelnInt, &writelnDbl, &writeString, &readString]);
 		// load the bytecode
 		bool hasError = false;
 		try{

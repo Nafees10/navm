@@ -1,5 +1,0 @@
-def 1
-	push "Hello World!\n"
-	executefunctionexternal 2 1
-	# no need to pop return value, the program is ending anyways
-	terminate
