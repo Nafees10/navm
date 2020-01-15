@@ -2,7 +2,7 @@
 	"authors": [
 		"Nafees"
 	],
-	"copyright": "Copyright © 2019, Nafees",
+	"copyright": "Copyright © 2019-2020, Nafees",
 	"dependencies": {
 		"utils": "~>0.3.5"
 	},
