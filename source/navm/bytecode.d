@@ -233,6 +233,42 @@ private string[][] readFunctionWords(string[][] bytecode, uinteger defIndex){
 		end = bytecode.length;
 	return bytecode[defIndex .. end].dup;
 }
+///
+unittest{
+	assert([
+		["def","5"],
+		["instruction"],
+		["nother", "instruction"],
+		["and", "another"],
+		["def", "10"],
+		["instruction"],
+		["blabla"],
+		["blablabla"],
+		["bla"]
+	].readFunctionWords(4) == [
+		["def", "10"],
+		["instruction"],
+		["blabla"],
+		["blablabla"],
+		["bla"]
+	]);
+	assert([
+		["def","5"],
+		["instruction"],
+		["nother", "instruction"],
+		["and", "another"],
+		["def", "10"],
+		["instruction"],
+		["blabla"],
+		["blablabla"],
+		["bla"]
+	].readFunctionWords(0) == [
+		["def","5"],
+		["instruction"],
+		["nother", "instruction"],
+		["and", "another"],
+	]);
+}
 
 /// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
 /// 
