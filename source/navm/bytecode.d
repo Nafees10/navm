@@ -153,7 +153,7 @@ string[] removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string
 	return input;
 }
 
-/// ignores whitespace (space + tab + comments), then reads each line into words (separated by tab and space)
+/// reads each line into words (separated by tab and space)
 /// 
 /// Returns: the words read (stuff inside square brackets is considerd a sinle word)
 /// 
@@ -187,7 +187,7 @@ private string[][] readWords(string[] input){
 				readFrom = i + 1;
 				continue;
 			}
-			if (line[i] == ' '){
+			if (line[i] == ' ' || line[i] == '\t'){
 				if (readFrom <= i && removeWhitespace(line[readFrom .. i]).length > 0)
 					words.append(line[readFrom .. i]);
 				readFrom = i + 1;
@@ -195,7 +195,9 @@ private string[][] readWords(string[] input){
 				words.append(line[readFrom .. i + 1]);
 			}
 		}
-		lines.append(words.toArray);
+		string[] currentWords = words.toArray;
+		if (currentWords.length)
+			lines.append(currentWords);
 		words.clear;
 	}
 	.destroy(words);
@@ -205,11 +207,31 @@ private string[][] readWords(string[] input){
 }
 ///
 unittest{
-	assert(["potato potato", "potato [asdf, sdfsdf, [0, 1, 2], 2] asd", "potato \"some String\" \'c\'"].readWords == [
+	assert(["potato potato",
+		"potato [asdf, sdfsdf, [0, 1, 2], 2] asd",
+		"   \t",
+		"potato \"some String\" \'c\'"].readWords == [
 			["potato", "potato"],
 			["potato", "[asdf, sdfsdf, [0, 1, 2], 2]", "asd"],
 			["potato","\"some String\"","\'c\'"]
 		]);
+}
+
+/// Reads byte code for a single function from the whole bytecode
+/// 
+/// Returns: the bytecode for single function
+private string[][] readFunctionWords(string[][] bytecode, uinteger defIndex){
+	// read till it finds another def, or the bytecode ends
+	uinteger i, end = defIndex+1;
+	for (i = defIndex+1; i < bytecode.length; i ++){
+		if (bytecode[i].length > 0 && bytecode[i][0] == "def"){
+			end = i;
+			break;
+		}
+	}
+	if (i == bytecode.length)
+		end = bytecode.length;
+	return bytecode[defIndex .. end].dup;
 }
 
 /// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
