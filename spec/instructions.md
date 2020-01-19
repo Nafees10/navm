@@ -84,10 +84,10 @@ Pops n number of values from stack
 ---
 
 ## Jumps
-* _`Jump [index - integer>=0]`_  
-Jump execution to instruction at `index`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
-* _`JumpIf [index - integer>=0]`_  
-Pops integer from stack. If it is `1`, jumps execution to instruction at `index`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
+* _`Jump [jump position - string]`_  
+Jump execution to instruction at `jump position`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
+* _`JumpIf [jump position - string]`_  
+Pops integer from stack. If it is `1`, jumps execution to instruction at `jump position`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
 
 ---
 
