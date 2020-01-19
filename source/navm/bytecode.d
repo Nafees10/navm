@@ -41,6 +41,24 @@ NaFunction[] readByteCode(string[] input){
 	NaFunction current;
 	bool functionDefined = false; // true if its clear that its reading instructions for a function, and stackLength has been defined
 
+	// read till it finds a `def`
+	uinteger index;
+	for (index = 0; index < words.length; index ++)
+		if (words[index][0] == "def")
+			break;
+	if (index == words.length)
+		return [];
+	// now index is at index of first function definition
+
+	while (index < words.length){
+		const string[][] functionWords = (cast(string[][])words).readFunctionWords(index);
+		// check if stack length is provided
+		if (functionWords[0].length != 2 && !isNum(functionWords[0][1], false))
+			throw new Exception("invalid stack length in function defintion");
+		
+	}
+
+
 	foreach(i, line; words){
 		if (functionDefined && line[0].lowercase != "def"){
 			Instruction inst;
@@ -120,8 +138,8 @@ private string removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(
 			r ~= line[i];
 		}
 	}
-	if (r.length > 0 && whitespace.hasElement(r[r.length-1])){
-		r = r[0 .. r.length-1];
+	if (r.length > 0 && whitespace.hasElement(r[$-1])){
+		r = r[0 .. $-1];
 	}
 	return cast(string)r;
 }
@@ -143,7 +161,7 @@ string[] removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string
 	input = input.dup;
 	uinteger writeIndex = 0;
 	for (uinteger i = 0; i < input.length; i ++){
-		string line = input[i].removeWhitespace;
+		const string line = input[i].removeWhitespace;
 		if (line.length > 0){
 			input[writeIndex] = line;
 			writeIndex ++;
@@ -270,6 +288,68 @@ unittest{
 	]);
 }
 
+/// Reads indexes of jump positions from byte code. Only works with byte code of single function (use readFunctionWords to get that).  
+/// Also replaces jump positions names in jump and jumpIf instructions with the new indexes
+/// 
+/// Throws: Exception in case of an error in bytecode
+private void replaceJumpPositions(ref string[][] bytecode){
+	/// stores indexes of jump positions
+	uinteger[string] jumpIndexes;
+	// dup the bytecode, coz its going to be moditifed
+	bytecode = bytecode.dup;
+
+	// read all the jump positions into jumpIndexes, and remove jump positions from byte code
+	// i=1 because at i=0 is `def potatopotato` and we don't care bout that here
+	for (uinteger i = 1, instIndex = 0; i < bytecode.length; i ++){
+		if (bytecode[i][0][$-1] == ':'){// its a jump position. currentIndex+1 = the jump index
+			const string jumpName = bytecode[i][0][0 .. $-1];
+			// make sure that name isn't used already
+			if (jumpName in jumpIndexes)
+				throw new Exception(jumpName~" is used more than once");
+			jumpIndexes[jumpName] = instIndex;
+			// remove this line
+			bytecode = bytecode[0 .. i] ~ bytecode[i + 1 .. $];
+			i --;
+			continue;
+		}
+		instIndex ++;
+	}
+	// now replace all of those with the actual indexes
+	for (uinteger i = 1; i < bytecode.length; i ++){
+		if (["jump","jumpif"].hasElement(bytecode[i][0].lowercase)){
+			if (bytecode[i].length != 2)
+				throw new Exception("invalid number of arguments for jump/jumpIf instruction");
+			const string jumpName = bytecode[i][1];
+			if (jumpName !in jumpIndexes)
+				throw new Exception(jumpName ~ " is not a valid jump position");
+			bytecode[i][1] = jumpIndexes[jumpName].to!string;
+		}
+	}
+}
+///
+unittest{
+	string[][] input = [
+		["def", "5"],
+		["potatoInstruction", "somePotatoArg"],
+		["someJumpPos:"],
+		["someMoreInstructionsHere", "withArgs"],
+		["andThisOneIsWithoutArgs"],
+		["potato:"],
+		["jump", "someJumpPos"],
+		["jumpIf", "potato"],
+	];
+	const string[][] expectedOut = [
+		["def", "5"],
+		["potatoInstruction", "somePotatoArg"],
+		["someMoreInstructionsHere", "withArgs"],
+		["andThisOneIsWithoutArgs"],
+		["jump", "1"],
+		["jumpIf", "3"],
+	];
+	input.replaceJumpPositions;
+	assert(input == expectedOut);
+}
+
 /// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
 /// 
 /// Does not care if elements in array are of same type or not.
@@ -302,7 +382,7 @@ public NaData readData(string strData){
 				continue;
 			if (strData[i] != ']'){
 				elements ~= readElement(strData, i);
-				i += elements[elements.length-1].length;
+				i += elements[$-1].length;
 				// skip till ','
 				while (![',',']'].hasElement(strData[i]))
 					i ++;
@@ -317,7 +397,7 @@ public NaData readData(string strData){
 	if (strData[0] == '\"'){
 		// assume the whole thing is string, no need to find string end index
 		NaData r;
-		r.strVal = cast(char[])(strReplaceSpecial(strData[1 .. strData.length-1]));
+		r.strVal = cast(char[])(strReplaceSpecial(strData[1 .. $-1]));
 		return r;
 	}
 	if (strData[0] == '\''){
@@ -354,7 +434,8 @@ unittest{
 }
 
 /// Returns: string with special characters replaced with their actual characters (i.e, \t replaced with tab, \n with newline...)
-private string strReplaceSpecial(char specialCharBegin='\\', char[char] map = ['t' : '\t', 'n' : '\n','\\':'\\'])(string s){
+private string strReplaceSpecial(char specialCharBegin='\\', char[char] map = ['t' : '\t', 'n' : '\n','\\':'\\'])
+(string s){
 	char[] r = [];
 	for (uinteger i = 0; i < s.length; i ++){
 		if (s[i] == specialCharBegin && i + 1 < s.length && s[i+1] in map){
