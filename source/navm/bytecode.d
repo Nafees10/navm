@@ -31,72 +31,42 @@ static this(){
 /// 
 /// Returns: the loaded byte code in NaFunction
 NaFunction[] readByteCode(string[] input){
-	// remove excess whitespace and comments
-	input = input.removeWhitespace;
-	// now read it into words
-	const string[][] words = readWords(input);
 	List!NaFunction functions = new List!NaFunction;
 	List!(NaData[]) currentFuncArgs = new List!(NaData[]);
 	List!Instruction currentFuncInst = new List!Instruction;
 	NaFunction current;
-	bool functionDefined = false; // true if its clear that its reading instructions for a function, and stackLength has been defined
-
-	// read till it finds a `def`
-	uinteger index;
-	for (index = 0; index < words.length; index ++)
-		if (words[index][0] == "def")
-			break;
-	if (index == words.length)
-		return [];
-	// now index is at index of first function definition
-
+	input = input.removeWhitespace;
+	const string[][] words = readWords(input);
+	uinteger index = 0;
 	while (index < words.length){
-		const string[][] functionWords = (cast(string[][])words).readFunctionWords(index);
+		// read till next def
+		for (; index < words.length; index ++)
+			if (words[index][0] == "def")
+				break;
+		string[][] functionWords = (cast(string[][])words).readFunctionWords(index);
+		index += functionWords.length;
+
+		// read & replace jump positions with indexes
+		functionWords.replaceJumpPositions();
 		// check if stack length is provided
 		if (functionWords[0].length != 2 && !isNum(functionWords[0][1], false))
 			throw new Exception("invalid stack length in function defintion");
-		
-	}
-
-
-	foreach(i, line; words){
-		if (functionDefined && line[0].lowercase != "def"){
+		current.stackLength = functionWords[0][1].to!uinteger;
+		foreach (i; 1 .. functionWords.length){
 			Instruction inst;
-			string lCaseInst = line[0].lowercase;
-			if (lCaseInst.lowercase in INSTRUCTION_STRING_MAP){
+			string lCaseInst = functionWords[i][0].lowercase;
+			if (lCaseInst in INSTRUCTION_STRING_MAP)
 				inst = INSTRUCTION_STRING_MAP[lCaseInst];
-			}else{
-				throw new Exception(lCaseInst~" is not a valid instruction");
-			}
-			NaData[] arguments;
-			arguments.length = line.length - 1;
-			for (uinteger argNo = 0; argNo < arguments.length; argNo++){
-				arguments[argNo] = readData(line[1 + argNo]);
-			}
+			else
+				throw new Exception(functionWords[i][0] ~ " is not a valid instruction");
+			NaData[] args;
+			args.length = functionWords[i].length - 1;
+			foreach (argNo; 0 .. args.length)
+				args[argNo] = readData(functionWords[i][argNo + 1]);
 			currentFuncInst.append(inst);
-			currentFuncArgs.append(arguments);
-		}else{
-			if (line[0] == "def" && line.length == 2){
-				if (functionDefined){
-					// write last one to list
-					current.arguments = currentFuncArgs.toArray;
-					current.instructions = currentFuncInst.toArray;
-					functions.append(current);
-					currentFuncArgs.clear;
-					currentFuncInst.clear;
-					current = NaFunction();
-				}
-				functionDefined = true;
-				if (line[1].isNum(false))
-					current.stackLength = to!uinteger(line[1]);
-				else
-					throw new Exception("stack length must be an integer");
-			}else
-				throw new Exception("function definition expected");
+			currentFuncArgs.append(args);
 		}
-	}
-	if (functionDefined){
-		// write last one to list
+		// add it to list
 		current.arguments = currentFuncArgs.toArray;
 		current.instructions = currentFuncInst.toArray;
 		functions.append(current);
