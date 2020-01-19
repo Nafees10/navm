@@ -15,6 +15,7 @@ def 8 # 8 is just made up, I'm just assuming it doesn't need more than 8.
 		pop
 	
 	# fill it with 0,1,2,3,4 - use element at stack[1] as counter
+	jumpBackToHere:
 	pushFrom 1 # this one is value for writeTo
 		pushFrom 1 # this one is index for arrayRefElement
 		pushRefFrom 0 # and this is ref to array for arrayRefElement
@@ -29,7 +30,7 @@ def 8 # 8 is just made up, I'm just assuming it doesn't need more than 8.
 	pushFrom 1
 	push 5
 	isGreaterInt
-	JumpIf 12 # remember, lines that are comments don't count, so it needs to jump to instruction index 12, not line 12
+	JumpIf jumpBackToHere
 	
 	# now write it's contents, lets just use a function for that
 	pushFrom 0
@@ -43,6 +44,7 @@ def 8 # again, it **probably** doesn't need more than 8
 	pushFrom 0
 	arrayLength # this puts array length at stack[2]
 	
+	jumpBackPosition:
 	pushFrom 1
 	pushFrom 0
 	arrayElement
@@ -58,5 +60,5 @@ def 8 # again, it **probably** doesn't need more than 8
 	pushFrom 1
 	pushFrom 2
 	isGreaterInt
-	jumpIf 3
+	jumpIf jumpBackPosition
 	terminate
