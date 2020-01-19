@@ -40,14 +40,13 @@ NaFunction[] readByteCode(string[] input){
 	uinteger index = 0;
 	while (index < words.length){
 		// read till next def
-		for (; index < words.length; index ++)
+		/*for (; index < words.length; index ++)
 			if (words[index][0] == "def")
-				break;
+				break;*/
 		string[][] functionWords = (cast(string[][])words).readFunctionWords(index);
 		index += functionWords.length;
-
 		// read & replace jump positions with indexes
-		functionWords.replaceJumpPositions();
+		replaceJumpPositions(functionWords);
 		// check if stack length is provided
 		if (functionWords[0].length != 2 && !isNum(functionWords[0][1], false))
 			throw new Exception("invalid stack length in function defintion");
@@ -70,6 +69,8 @@ NaFunction[] readByteCode(string[] input){
 		current.arguments = currentFuncArgs.toArray;
 		current.instructions = currentFuncInst.toArray;
 		functions.append(current);
+		currentFuncArgs.clear;
+		currentFuncInst.clear;
 	}
 	.destroy(currentFuncArgs);
 	.destroy(currentFuncInst);
@@ -265,8 +266,6 @@ unittest{
 private void replaceJumpPositions(ref string[][] bytecode){
 	/// stores indexes of jump positions
 	uinteger[string] jumpIndexes;
-	// dup the bytecode, coz its going to be moditifed
-	bytecode = bytecode.dup;
 
 	// read all the jump positions into jumpIndexes, and remove jump positions from byte code
 	// i=1 because at i=0 is `def potatopotato` and we don't care bout that here
