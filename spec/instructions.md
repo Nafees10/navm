@@ -133,4 +133,4 @@ Pops a string, reads a double from it, pushes the double.
 * _`ReturnVal`_  
 Pops a value from stack, sets it as the return value of currently executing function. **Does NOT terminate execution**
 * _`Terminate`_  
-Terminates execution of function. **Must be called at end of function, or it'll segfault**
+Terminates execution of function. In older versions, its necessary to call `Terminate` at end of a function. No longer the case.
