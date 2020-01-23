@@ -30,7 +30,6 @@ private:
 	NaData[]* _arguments; /// pointer to next instruction's arguments
 	NaStack _stack; /// as the name says, stack
 	NaData _returnVal; /// return value of current function
-	bool keepRunning; /// set it to false to terminate execution
 	
 	ExternFunction[] _externFunctions; /// external functions 
 protected:
@@ -262,7 +261,7 @@ protected:
 		_returnVal = _stack.pop;
 	}
 	void terminate(){
-		keepRunning = false;
+		_instruction = &(*_currentFunction)[$-1] + 1;
 	}
 public:
 	/// constructor
@@ -387,17 +386,17 @@ public:
 		_instruction = &(*_currentFunction)[0];
 		_arguments = &(*_currentArguments)[0];
 		_returnVal = NaData();
-		keepRunning = true;
+		void delegate()* end = &(*_currentFunction)[$-1];
+		end++;// so i can use < instead of <=
 		// push args
 		_stack.push(arguments);
 		// start executing
-		while (keepRunning){
+		while (_instruction < end){
 			(*_instruction)();
 			_instruction++;
 			_arguments++;
 		}
 		NaData r = _returnVal;
-		keepRunning = true;
 		// restore prev state
 		_currentFunction = prevFunction;
 		_currentArguments = prevFunctionArguments;
