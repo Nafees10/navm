@@ -35,7 +35,6 @@ def 8 # 8 is just made up, I'm just assuming it doesn't need more than 8.
 	# now write it's contents, lets just use a function for that
 	pushFrom 0
 	executeFunction 1 1
-	terminate
 	
 	
 def 8 # again, it **probably** doesn't need more than 8
@@ -61,4 +60,3 @@ def 8 # again, it **probably** doesn't need more than 8
 	pushFrom 2
 	isGreaterInt
 	jumpIf jumpBackPosition
-	terminate
