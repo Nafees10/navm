@@ -237,6 +237,12 @@ protected:
 		NaData arrayPtr = _stack.pop;
 		arrayPtr.ptrVal.arrayVal ~= _stack.pop.arrayVal.dup;
 	}
+	void copyArray(){
+		_stack.push(NaData(_stack.pop.arrayVal.dup));
+	}
+	void copyArrayRef(){
+		_stack.push(NaData((*(_stack.pop.ptrVal)).arrayVal.dup));
+	}
 
 	void intToDouble(){
 		_stack.push(NaData(to!double(_stack.pop.intVal)));
@@ -328,6 +334,8 @@ public:
 			Instruction.AppendElement : &appendElement,
 			Instruction.AppendArrayRef : &appendArrayRef,
 			Instruction.AppendArray : &appendArray,
+			Instruction.CopyArray : &copyArray,
+			Instruction.CopyArrayRef : &copyArrayRef,
 
 			Instruction.IntToDouble : &intToDouble,
 			Instruction.IntToString : &intToString,
@@ -368,7 +376,7 @@ public:
 	}
 
 
-	/// Calls a function
+	/// Calls a function from bytecode.
 	/// 
 	/// Returns: what that function returned
 	NaData execute(uinteger functionId, NaData[] arguments){

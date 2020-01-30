@@ -39,8 +39,8 @@ public enum Instruction : ubyte{
 	MathModDouble = 0x16,/// Mod (% operator) (double). PoppedFirst % PoppedSecond
 	
 	IsSame = 0x07,/// Pushes 1(integer) to stack if last two integers popped are same, else, pushes 0(integer)
-	IsSameArray = 0x08, /// Pushes 1(integer) if 2 arrays, popped from stack, have same values, else, pushes 0(integer)
-	IsSameArrayRef = 0x09, /// Pushes 1(integer) if 2 arrays, whose refs are popped from stack, have same values, else, pushes 0(integer)
+	IsSameArray = 0x08, /// Pushes 1(integer) if 2 arrays (1 dimensional), popped from stack, have same values, else, pushes 0(integer)
+	IsSameArrayRef = 0x09, /// Pushes 1(integer) if 2 arrays (1 dimensional), whose refs are popped from stack, have same values, else, pushes 0(integer)
 	
 	IsGreaterInt = 0x10,/// Pops A, then B. Pushes 1 if A > B (integer), else, pushes 0(integer)
 	IsGreaterSameInt = 0x1A,/// Pops A, then B. Pushes 1 if A >= B (integer), else, pushes 0(integer)
@@ -72,6 +72,8 @@ public enum Instruction : ubyte{
 	AppendElement = 0x46, /// Pops a ref-to-array, then an element. Appends element at end of array
 	AppendArrayRef = 0x47, /// Pops ref-to-array (r1), then another ref-to-array (r2). then does `*r1 = *r1 + *r2`
 	AppendArray = 0x48, /// Pops ref-to-array (r1), then an array (r2). then does `*r1 = *r1 + r2`
+	CopyArray = 0x49, /// Pops an array, makes a copy of it, pushes the copy to stack
+	CopyArrayRef = 0x4A, /// Pops a ref-to-array, makes a copy of the array, pushes the copy (**not ref-to-copy**) to stack 
 
 	IntToDouble = 0x60, /// pushes double with the same value as int poped from stack
 	IntToString = 0x61, /// pushes a string representation of an int popped from stack
@@ -146,6 +148,8 @@ static this(){
 		Instruction.AppendElement : 0,
 		Instruction.AppendArrayRef : 0,
 		Instruction.AppendArray : 0,
+		Instruction.CopyArray : 0,
+		Instruction.CopyArrayRef : 0,
 
 		Instruction.IntToDouble : 0,
 		Instruction.IntToString : 0,
@@ -208,6 +212,8 @@ static this(){
 		Instruction.AppendElement : 0,
 		Instruction.AppendArrayRef : 0,
 		Instruction.AppendArray : 0,
+		Instruction.CopyArray : 1,
+		Instruction.CopyArrayRef : 1,
 
 		Instruction.IntToDouble : 1,
 		Instruction.IntToString : 1,
@@ -270,6 +276,8 @@ static this(){
 		Instruction.AppendElement : 2,
 		Instruction.AppendArrayRef : 2,
 		Instruction.AppendArray : 2,
+		Instruction.CopyArray : 1,
+		Instruction.CopyArrayRef : 1,
 
 		Instruction.IntToDouble : 1,
 		Instruction.IntToString : 1,
