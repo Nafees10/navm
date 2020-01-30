@@ -43,9 +43,9 @@ Pops `A (double)`, then `B (double)`. Pushes `A % B (double)` to stack.
 * _`IsSame`_  
 Pops 2 values from stack, pushes `1 (integer)` to stack if both have same value, else, pushes `0 (integer)`.
 * _`IsSameArray`_  
-Pops 2 arrays from stack (arrays, not referece to array). Pushes `1 (integer)` to stack if both are same (length, and elements), else, pushes `0 (integer)`
+Pops 2 arrays from stack (arrays, not referece to array). Pushes `1 (integer)` to stack if both are same (length, and elements), else, pushes `0 (integer)`. **Will only work on 1 dimensional arrays.**
 * _`IsSameArrayRef`_  
-Pops 2 references to arrays from stack. Pushes `1 (integer)` to stack if both are same (length, and elements), else, pushes `0 (integer)`
+Pops 2 references to arrays from stack. Pushes `1 (integer)` to stack if both are same (length, and elements), else, pushes `0 (integer)`. **Will only work on 1 dimensional arrays.**
 * _`IsGreaterInt`_  
 Pops `A (integer)`, then `B (integer)`. Pushes `1 (integer)` if `A > B`, else, pushes `0 (integer)`
 * _`IsGreaterSameInt`_  
@@ -110,6 +110,12 @@ Pops a reference to array, then an element. Appends element at end of array.
 Pops reference to array `r1`, pops another `r2`. Then does `*r1 = *r1 ~ *r2`
 * _`AppendArray`_  
 Pops reference to array `r1`, then pops an array _(not reference)_. Then does `*r1 = *r1 ~ r2`
+* _`copyArray`_  
+Pops an array, makes a copy of it, pushes the copy to stack. Any changes made to copy won't reflect on original.  
+**Will only work on 1 dimensional arrays.**
+* _`copyArrayRef`_  
+Pops a ref-to-array, makes a copy of array, pushes to stack. Any changes made to copy won't reflect on original.  
+**Will only work on 1 dimensional arrays.**
 
 ---
 
