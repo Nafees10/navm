@@ -6,6 +6,12 @@ import navm.defs;
 
 /// Stores a byte code function (the instructions plus their arguments)
 public struct NaFunction{
+	/// possible types of functions
+	enum Type{
+		Function, /// just a regular function
+		OnLoad, /// To be executed when byte code is loaded (usually used to init global variables..)
+	}
+	Type type = this.Type.Function; /// type of this function
 	Instruction[] instructions; /// the instructions making this function
 	NaData[][] arguments; /// arguments for each of the instructions
 	uinteger stackLength; /// max number of elements needed on stack

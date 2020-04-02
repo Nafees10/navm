@@ -15,14 +15,25 @@ public import navm.bytecodedefs : instructionPopCount;
 
 /// stores names of byte code instructions in lowercase, mapped to Instruction enum, in assoc_array
 private static Instruction[string] INSTRUCTION_STRING_MAP;
+/// stores types of functions' string representation in lowecase, mapped to the NaFunction.Type, in assoc_array
+private static NaFunction.Type[string] FUNCTION_TYPE_STRING_MAP;
 
 static this(){
 	import std.traits : EnumMembers;
-	Instruction[string] r;
-	foreach(inst; EnumMembers!Instruction){
-		r[to!string(inst).lowercase] = inst;
+	{
+		Instruction[string] r;
+		foreach(inst; EnumMembers!Instruction){
+			r[to!string(inst).lowercase] = inst;
+		}
+		INSTRUCTION_STRING_MAP = r;
 	}
-	INSTRUCTION_STRING_MAP = r;
+	{
+		NaFunction.Type[string] r;
+		foreach(type; EnumMembers!(NaFunction.Type)){
+			r[to!string(type).lowercase] = type;
+		}
+		FUNCTION_TYPE_STRING_MAP = r;
+	}
 }
 
 /// Reads a string[] into NaFunction[]
@@ -38,19 +49,32 @@ NaFunction[] readByteCode(string[] input){
 	input = input.removeWhitespace;
 	const string[][] words = readWords(input);
 	uinteger index = 0;
+	bool onLoadDeclared = false;
 	while (index < words.length){
-		// read till next def
-		/*for (; index < words.length; index ++)
-			if (words[index][0] == "def")
-				break;*/
 		string[][] functionWords = (cast(string[][])words).readFunctionWords(index);
 		index += functionWords.length;
 		// read & replace jump positions with indexes
 		replaceJumpPositions(functionWords);
-		// check if stack length is provided
-		if (functionWords[0].length != 2 && !isNum(functionWords[0][1], false))
-			throw new Exception("invalid stack length in function defintion");
-		current.stackLength = functionWords[0][1].to!uinteger;
+		// check declaration
+		if (functionWords[0].length < 2 || functionWords[0][0].lowercase != "def")
+			throw new Exception("invalid function declaration");
+		if (functionWords[0].length == 2){
+			if (!functionWords[0][1].isNum(false))
+				throw new Exception("invalid stack length in function declaration");
+			current.stackLength = functionWords[0][1].to!uinteger;
+		}else if (functionWords[0].length == 3){
+			if (!functionWords[0][2].isNum(false))
+				throw new Exception("invalid stack length in function declaration");
+			if (functionWords[0][1].lowercase !in FUNCTION_TYPE_STRING_MAP)
+				throw new Exception("invalid function type");
+			current.type = FUNCTION_TYPE_STRING_MAP[functionWords[0][1].lowercase];
+			current.stackLength = functionWords[0][2].to!uinteger;
+			if (current.type == NaFunction.Type.OnLoad && onLoadDeclared)
+				throw new Exception("only 1 onload function allowed");
+			onLoadDeclared = true;
+		}else
+			throw new Exception("invalid function declaration");
+		// start reading instructions
 		foreach (i; 1 .. functionWords.length){
 			Instruction inst;
 			string lCaseInst = functionWords[i][0].lowercase;
