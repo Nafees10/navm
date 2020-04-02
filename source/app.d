@@ -42,6 +42,8 @@ version(demo){
 		}
 
 		if (!hasError){
+			// execute the onLoad first
+			vm.executeOnLoad();
 			StopWatch sw;
 			sw.start;
 			// execute the function with id=0 (function defined first in bytecode), 
