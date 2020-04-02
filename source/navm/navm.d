@@ -23,6 +23,13 @@ private:
 	uinteger[] _functionsStackLength;
 	NaData[][][] _functionsArguments; /// arguments of each functions' each instruction
 
+	void delegate()[] _onloadInstructions; /// instructions for onLoad function
+	uinteger _onloadStackLength; /// stack length of onLoad function
+	NaData[][] _onloadArguments; /// arguments for isntructions of onLoad function
+
+	bool _onloadExists; /// if onLoad function exists
+	bool _onloadExecuted; /// if onLoad has been executed
+
 	void delegate()[]* _currentFunction; /// instructions of function currently being executed
 	NaData[][]* _currentArguments; /// arguments of instructions of function currently being executed
 	
@@ -282,7 +289,10 @@ public:
 	}
 	/// Loads functions into VM, prepares them for execution
 	/// 
-	/// Returns: true if there was no error, false if there was and failed to load (probably because of an instruction not existing)
+	/// Returns: true if there was no error, false in the following cases:  
+	/// * More than 1 function is of type onLoad  
+	/// * In some function, .instruction.length != .arguments.length  
+	/// * Invalid instruction used  
 	bool load(NaFunction[] functions){
 		void delegate()[Instruction] map = [
 			Instruction.ExecuteFunctionExternal : &executeExternalFunction,
@@ -347,6 +357,40 @@ public:
 			Instruction.ReturnVal : &returnVal,
 			Instruction.Terminate : &terminate,
 		];
+		// clear existing stuff
+		_functions = [];
+		_functionsArguments = [];
+		_functionsStackLength = [];
+		_onloadInstructions = [];
+		_onloadArguments = [];
+		_onloadStackLength = 0;
+		_onloadExecuted = false;
+		_onloadExists = false;
+		// search for onLoad functions
+		foreach (i, func; functions){
+			if (func.type == NaFunction.Type.OnLoad){
+				functions = functions.dup; // going to modify it, so copy
+				// check if some other is onLoad too
+				foreach (j; i + 1 .. functions.length)
+					if (functions[j].type == NaFunction.Type.OnLoad)
+						return false;
+				_onloadExists = true;
+				_onloadExecuted = false;
+				if (func.instructions.length != func.arguments.length)
+					return false;
+				_onloadInstructions.length = func.instructions.length;
+				_onloadArguments.length = func.arguments.length;
+				_onloadStackLength = func.stackLength;
+				foreach (index, instruction; func.instructions){
+					if (instruction !in map)
+						return false;
+					_onloadInstructions[index] = map[instruction];
+					_onloadArguments[index] = func.arguments[index].dup;
+				}
+				functions = functions[0 .. i].dup ~ functions[i+1 .. $].dup;
+				break;
+			}
+		}
 		_functions.length = functions.length;
 		_functionsArguments.length = functions.length;
 		_functionsStackLength.length = functions.length;
@@ -375,8 +419,33 @@ public:
 			throw new Exception("unexpected error in NaVM.load(NaFunction[])");
 	}
 
+	/// Calls the onLoad function if present, and not executed since bytecode loading
+	void executeOnLoad(){
+		if (_onloadExists && !_onloadExecuted){
+			_onloadExecuted = true;
+			// start
+			_currentFunction = &_onloadInstructions;
+			_currentArguments = &_onloadArguments;
+			_stack = new NaStack(_onloadStackLength);
+			_instruction = &(*_currentFunction)[0];
+			_arguments = &(*_currentArguments)[0];
+			void delegate()* end = &(*_currentFunction)[$-1];
+			end ++;
+			while (_instruction < end){
+				(*_instruction)();
+				_instruction++;
+				_arguments++;
+			}
+			_stack.destroy();
+			_currentFunction = null;
+			_currentArguments = null;
+			_instruction = null;
+			_arguments = null;
+		}
+	}
 
-	/// Calls a function from bytecode.
+
+	/// Calls a function from bytecode. Before calling this, make sure you have called `this.executeOnLoad` to init the bytecode
 	/// 
 	/// Returns: what that function returned
 	NaData execute(uinteger functionId, NaData[] arguments){
