@@ -71,7 +71,7 @@ NaFunction[] readByteCode(string[] input){
 			current.stackLength = functionWords[0][2].to!uinteger;
 			if (current.type == NaFunction.Type.OnLoad && onLoadDeclared)
 				throw new Exception("only 1 onload function allowed");
-			onLoadDeclared = true;
+			onLoadDeclared = onLoadDeclared || current.type == NaFunction.Type.OnLoad;
 		}else
 			throw new Exception("invalid function declaration");
 		// start reading instructions
