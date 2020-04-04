@@ -88,6 +88,11 @@ public enum Instruction : ubyte{
 	StringToInt = 0x64, /// pushes an integer read from string, which is popped from stack
 	StringToDouble = 0x65, /// pushes an integer read from string, which is popped from stack
 
+	GlobalVarCount = 0x70, /// Sets the number of global variables available to N (arg0, int). Preferably, call once in OnLoad function, as it is slow. All global variables will be resset to 0
+	GlobalVarGet = 0x71, /// Pushes the value of global variable with ID N(int, arg0)
+	GlobalVarGetRef = 0x72, /// Pushes the reference of global variable with ID N(int, arg0)
+	GlobalVarSet = 0x73, /// Pops a value from stack, assigns it to global variable with ID N(int, arg0)
+
 	ReturnVal = 0xF0, /// Pops value, sets it to the return value of currently executed function. Does **NOT** terminate execution
 	Terminate = 0xFF, /// Terminates execution of function
 }
@@ -164,6 +169,11 @@ static this(){
 		Instruction.StringToInt : 0,
 		Instruction.StringToDouble : 0,
 
+		Instruction.GlobalVarCount : 1,
+		Instruction.GlobalVarGet : 1,
+		Instruction.GlobalVarGetRef : 1,
+		Instruction.GlobalVarSet : 1,
+
 		Instruction.ReturnVal : 0,
 		Instruction.Terminate : 0,
 	];
@@ -228,6 +238,11 @@ static this(){
 		Instruction.StringToInt : 1,
 		Instruction.StringToDouble : 1,
 
+		Instruction.GlobalVarCount : 0,
+		Instruction.GlobalVarGet : 1,
+		Instruction.GlobalVarGetRef : 1,
+		Instruction.GlobalVarSet : 0,
+
 		Instruction.ReturnVal : 0,
 		Instruction.Terminate : 0,
 	];
@@ -291,6 +306,11 @@ static this(){
 		Instruction.DoubleToString : 1,
 		Instruction.StringToInt : 1,
 		Instruction.StringToDouble : 1,
+
+		Instruction.GlobalVarCount : 0,
+		Instruction.GlobalVarGet : 0,
+		Instruction.GlobalVarGetRef : 0,
+		Instruction.GlobalVarSet : 1,
 
 		Instruction.ReturnVal : 1,
 		Instruction.Terminate : 0,
