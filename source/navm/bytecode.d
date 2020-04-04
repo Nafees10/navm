@@ -62,6 +62,7 @@ NaFunction[] readByteCode(string[] input){
 			if (!functionWords[0][1].isNum(false))
 				throw new Exception("invalid stack length in function declaration");
 			current.stackLength = functionWords[0][1].to!uinteger;
+			current.type = NaFunction.Type.Function;
 		}else if (functionWords[0].length == 3){
 			if (!functionWords[0][2].isNum(false))
 				throw new Exception("invalid stack length in function declaration");
