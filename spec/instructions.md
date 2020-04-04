@@ -135,6 +135,18 @@ Pops a string, reads a double from it, pushes the double.
 
 ---
 
+## Global Variables
+Global variables are shared across all functions inside a byte code. Currently, they can only be altered from within byte code, but this might be changed later.  
+  
+* _`GlobalVarCount [newCount - integer>=0]`_  
+sets `newCount` as total number of global variables, initializes them all as 0(int).
+* _`GlobalVarGet [ID - integer>=0]`_  
+Pushes, the value of Global variable with `ID`, to stack.
+* _`GlobalVarGetRef [ID - integer>=0]`_  
+Pushes, the reference to Global variable with `ID`, to stack.
+* _`GlobalVarSet [ID - integer>=0]`_  
+Pops a value from stack, assigns this value to global variables with ID=`ID`
+
 ## Misc.
 * _`ReturnVal`_  
 Pops a value from stack, sets it as the return value of currently executing function. **Does NOT terminate execution**
