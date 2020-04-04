@@ -16,7 +16,7 @@ alias NaFunction = navm.bytecodedefs.NaFunction;
 alias readData = navm.bytecode.readData;
 
 
-/// the VM (where the ~~magic~~ executon happens)
+/// the VM
 class NaVM{
 private:
 	void delegate()[][] _functions; /// instructions of functions loaded
@@ -32,6 +32,8 @@ private:
 
 	void delegate()[]* _currentFunction; /// instructions of function currently being executed
 	NaData[][]* _currentArguments; /// arguments of instructions of function currently being executed
+
+	NaData[] _globalVars; /// stores global variables for a bytecode
 	
 	void delegate()* _instruction; /// pointer to next instruction
 	NaData[]* _arguments; /// pointer to next instruction's arguments
@@ -270,6 +272,21 @@ protected:
 		_stack.push(NaData(to!double(_stack.pop.strVal)));
 	}
 
+	void globalVarCount(){
+		_globalVars.length = (*_arguments)[0].intVal;
+		foreach (i; 0 .. _globalVars.length)
+			_globalVars[i].intVal = 0;
+	}
+	void globalVarGet(){
+		_stack.push(_globalVars[(*_arguments)[0].intVal]);
+	}
+	void globalVarGetRef(){
+		_stack.push(NaData(&_globalVars[(*_arguments)[0].intVal]));
+	}
+	void globalVarSet(){
+		_globalVars[(*_arguments)[0].intVal] = _stack.pop;
+	}
+
 	void returnVal(){
 		_returnVal = _stack.pop;
 	}
@@ -353,6 +370,11 @@ public:
 			Instruction.DoubleToString : &doubleToString,
 			Instruction.StringToInt : &stringToInt,
 			Instruction.StringToDouble : &stringToDouble,
+
+			Instruction.GlobalVarCount : &globalVarCount,
+			Instruction.GlobalVarGet : &globalVarGet,
+			Instruction.GlobalVarGetRef : &globalVarGetRef,
+			Instruction.GlobalVarSet : &globalVarSet,
 
 			Instruction.ReturnVal : &returnVal,
 			Instruction.Terminate : &terminate,
