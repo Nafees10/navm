@@ -4,12 +4,8 @@ Here's a list of instructions that NaVM has out of the box. You can easily add m
 
 ## Calling functions:
 
-* _`ExecuteFunction [function id - integer>=0] [n - integer>=0]`_  
-pops _`n`_ number of elements from stack. Calls a function defined in bytecode, pushes the elements in that function's stack in the same order they were. Pushes the return value from that function to stack.
-* _`ExecuteFunctionExternal [function id - integer>=0] [n - integer>=0]`_  
-pops _`n`_ number of elements from stack. Calls an external function with the elements popped as arguments. Pushes the return value from that function to stack.
-  
-_Keep in mind that these functions push `NaData()` to stack if function did not return any meaningful data, so if you don't need to use the return value, or the function doesn't return meaningful data, follow these instructions with a `Pop` instruction._
+* _`Call [function id - uinteger]`_  
+Pops `n (uinteger)`, then pops `n` number of elements as function arguments. Calls a function with the id `function id`. Pushes the return value to stack, if no meaningful data is returned by functions, it pushes a `NaData()`.
 
 ## Arithmetic operators
 
@@ -41,69 +37,69 @@ Pops `A (double)`, then `B (double)`. Pushes `A % B (double)` to stack.
 
 ## Comparison Operators
 * _`IsSame`_  
-Pops 2 values from stack, pushes `1 (integer)` to stack if both have same value, else, pushes `0 (integer)`.
+Pops 2 values from stack, pushes `true (bool)` to stack if both have same value, else, pushes `false (bool)`.
 * _`IsSameArray`_  
-Pops 2 arrays from stack (arrays, not referece to array). Pushes `1 (integer)` to stack if both are same (length, and elements), else, pushes `0 (integer)`. **Will only work on 1 dimensional arrays.**
+Pops 2 arrays from stack (arrays, not referece to array). Pushes `true (bool)` to stack if both are same (length, and elements), else, pushes `false (bool)`. **Will only work on 1 dimensional arrays.**
 * _`IsSameArrayRef`_  
-Pops 2 references to arrays from stack. Pushes `1 (integer)` to stack if both are same (length, and elements), else, pushes `0 (integer)`. **Will only work on 1 dimensional arrays.**
+Pops 2 references to arrays from stack. Pushes `true (bool)` to stack if both are same (length, and elements), else, pushes `false (bool)`. **Will only work on 1 dimensional arrays.**
 * _`IsGreaterInt`_  
-Pops `A (integer)`, then `B (integer)`. Pushes `1 (integer)` if `A > B`, else, pushes `0 (integer)`
+Pops `A (integer)`, then `B (integer)`. Pushes `true (bool)` if `A > B`, else, pushes `false (bool)`
 * _`IsGreaterSameInt`_  
-Pops `A (integer)`, then `B (integer)`. Pushes `1 (integer)` if `A >= B`, else, pushes `0 (integer)`
+Pops `A (integer)`, then `B (integer)`. Pushes `true (bool)` if `A >= B`, else, pushes `false (bool)`
 * _`IsGreaterDouble`_  
-Pops `A (double)`, then `B (double)`. Pushes `1 (integer)` if `A > B`, else, pushes `0 (integer)`
+Pops `A (double)`, then `B (double)`. Pushes `true (bool)` if `A > B`, else, pushes `false (bool)`
 * _`IsGreaterSameDouble`_  
-Pops `A (double)`, then `B (double)`. Pushes `1 (integer)` if `A >= B`, else, pushes `0 (integer)`
-* _`Not`_  
-Pops `A (integer)`. Pushes `!A`
-* _`And`_  
-Pops `A (integer)` and then `B (integer)`. Pushes `A && B`
-* _`Or`_  
-Pops `A (integer)` and then `B (integer)`. Pushes `A || B`
+Pops `A (double)`, then `B (double)`. Pushes `true (bool)` if `A >= B`, else, pushes `false (bool)`
+* _`NotBool`_  
+Pops `A (bool)`. Pushes `!A`
+* _`AndBool`_  
+Pops `A (bool)` and then `B (bool)`. Pushes `A && B`
+* _`OrBool`_  
+Pops `A (bool)` and then `B (bool)`. Pushes `A || B`
 
 ---
 
 ## Stack
 * _`Push [arg0 - any data type]`_  
 Pushes `arg0` to stack
-* _`PushFrom [index - integer>=0]`_  
-Reads value at `index` on stack, pushes it. Value at `index` is not removed from stack.
-* _`PushRefFrom [index - integer>=0]`_  
-Pushes reference to value at `index` on stack.
-* _`WriteTo [index - integer>=0]`_  
-Pops a value from stack, writes it to `index` on stack.
+* _`PushFrom [index - uinteger]`_  
+Reads value at `stack.peek - index` on stack, pushes it, without removing original.
+* _`PushRefFrom [index - uinteger]`_  
+Pushes reference to value at `stack.peek - index` on stack, without removing original.
+* _`WriteTo [index - uinteger]`_  
+Pops a value from stack, writes it to `stack.peek - index` on stack.
 * _`WriteToRef`_  
 Pops a reference, then pops a value. Writes value to reference.
 * _`Deref`_  
 Pops a reference from stack. Pushes the value being referenced
 * _`Pop`_  
 Pops 1 value from stack
-* _`PopN [n - integer >= 0]`_  
+* _`PopN [n - uinteger]`_  
 Pops n number of values from stack
 
 ---
 
 ## Jumps
-* _`Jump [jump position - string]`_  
+* _`Jump [jump positionIdentifier]`_  
 Jump execution to instruction at `jump position`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
-* _`JumpIf [jump position - string]`_  
-Pops integer from stack. If it is `1`, jumps execution to instruction at `jump position`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
+* _`JumpIf [jump positionIdentifier]`_  
+Pops `bool` from stack. If it is `true`, jumps execution to instruction at `jump position`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
 
 ---
 
 ## Arrays
-* _`MakeArray [n - integer>0]`_  
+* _`MakeArray [n - uinteger>0]`_  
 Pops `n` number of elements from stack, puts them in an array (in the order they were added to stack). Pushes array to stack.
 * _`ArrayRefElement`_  
-Pops a reference to array, then an `index (integer)`. Pushes reference-to-element at `index` on array.
+Pops a reference to array, then an `index (uinteger)`. Pushes reference-to-element at `index` on array.
 * _`ArrayElement`_  
-Pops an array, then an `index (integer)`. Pushes reference-to-element at `index` on array.
+Pops an array, then an `index (uinteger)`. Pushes reference-to-element at `index` on array.
 * _`ArrayLength`_  
-Pops an array. Pushes length of stack (integer) to stack.
+Pops an array. Pushes length of array (`uinteger`) to stack.
 * _`ArrayLengthSet`_  
-Pops a reference to array, then `length (integer)`. Sets length of array to `length`
+Pops a reference to array, then `length (uinteger)`. Sets length of array to `length`
 * _`Concatenate`_  
-Pops an array `a1` _(not reference, array)_, then pops another array `a2`. Pushes new array `a1 ~ a2`.
+Pops an array `a1` _(not reference)_, then pops another array `a2`. Pushes new array `a1 ~ a2`.
 * _`AppendElement`_  
 Pops a reference to array, then an element. Appends element at end of array.
 * _`AppendArrayRef`_  
@@ -135,20 +131,8 @@ Pops a string, reads a double from it, pushes the double.
 
 ---
 
-## Global Variables
-Global variables are shared across all functions inside a byte code. Currently, they can only be altered from within byte code, but this might be changed later.  
-  
-* _`GlobalVarCount [newCount - integer>=0]`_  
-sets `newCount` as total number of global variables, initializes them all as 0(int).
-* _`GlobalVarGet [ID - integer>=0]`_  
-Pushes, the value of Global variable with `ID`, to stack.
-* _`GlobalVarGetRef [ID - integer>=0]`_  
-Pushes, the reference to Global variable with `ID`, to stack.
-* _`GlobalVarSet [ID - integer>=0]`_  
-Pops a value from stack, assigns this value to global variables with ID=`ID`
-
 ## Misc.
 * _`ReturnVal`_  
-Pops a value from stack, sets it as the return value of currently executing function. **Does NOT terminate execution**
+Pops a value from stack, sets it as the return value.**Does NOT terminate execution**
 * _`Terminate`_  
-Terminates execution of function. In older versions, its necessary to call `Terminate` at end of a function. No longer the case.
+Terminates execution.
