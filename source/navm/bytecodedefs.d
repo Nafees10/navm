@@ -116,8 +116,8 @@ public:
 	/// Call `resolve` before this or prepare for crashes
 	/// 
 	/// Returns: pointers for all instructions
-	void delegate()*[] getBytecodePointers(){
-		void delegate()*[] r;
+	void delegate()[] getBytecodePointers(){
+		void delegate()[] r;
 		r.length = _instructions.length;
 		foreach (i, inst; _instructions){
 			NaInstruction instInfo;
@@ -246,7 +246,7 @@ public struct NaInstruction{
 	bool needsArg; /// if this instruction needs an argument
 	ubyte pushCount = 0; /// number of elements it will push to stack
 	private ubyte _popCount = 0; /// number of elements it will pop (if ==255, then the argument is the number of elements to pop)
-	void delegate()* pointer; /// pointer to the delegate behind this instruction
+	void delegate() pointer; /// pointer to the delegate behind this instruction
 	/// Returns: number of elements it will pop
 	ubyte popCount(NaData arg){
 		if (_popCount < 255)
@@ -254,18 +254,18 @@ public struct NaInstruction{
 		return cast(ubyte)(arg.intVal);
 	}
 	/// constructor, for instruction with no arg, no push/pop
-	this (string name, ushort code, void delegate()* pointer){
+	this (string name, integer code, void delegate() pointer){
 		this.name = name;
-		this.code = code;
+		this.code = cast(ushort)code;
 		this.pointer = pointer;
 		this.needsArg = false;
 		this.pushCount = 0;
 		this._popCount = 0;
 	}
 	/// constructor, for instruction with arg
-	this (string name, ushort code, bool argIsJumpPos, void delegate()* pointer){
+	this (string name, integer code, bool argIsJumpPos, void delegate() pointer){
 		this.name = name;
-		this.code = code;
+		this.code = cast(ushort)code;
 		this.argIsJumpPos = argIsJumpPos;
 		this.pointer = pointer;
 		this.needsArg = true;
@@ -273,9 +273,9 @@ public struct NaInstruction{
 		this._popCount = 0;
 	}
 	/// full constructor
-	this (string name, ushort code, bool needsArg, bool argIsJumpPos, ubyte pushCount, ubyte popCount, void delegate()* pointer){
+	this (string name, integer code, bool needsArg, bool argIsJumpPos, ubyte pushCount, ubyte popCount, void delegate() pointer){
 		this.name = name;
-		this.code = code;
+		this.code = cast(ushort)code;
 		this.needsArg = needsArg;
 		this.argIsJumpPos = argIsJumpPos;
 		this.pushCount = pushCount;
