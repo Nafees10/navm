@@ -5,57 +5,56 @@ import utils.misc;
 /// to store data from script at runtime
 public union NaData{
 	union{
+		bool boolVal; /// boolean value
+		ubyte ubyteVal; /// unsigned byte
+		byte byteVal; /// signed byte
+		dchar dcharVal; /// dchar value
 		integer intVal; /// integer value
+		uinteger uintVal; /// unsigned integer value
 		double doubleVal; /// double/float value
 		NaData* ptrVal; /// to store references
+		NaData[] arrayVal; /// array value
 	}
-	NaData[] arrayVal; /// array value
 	/// constructor
 	/// data can be any of the type which it can store
 	this (T)(T data){
-		static if (is (T == int) || is (T == long) || is (T == uint) || is (T == ulong)){
+		static if (is (T == int) || is (T == long)){
 			intVal = data;
+		}else static if (is (T == uint) || is (T == ulong)){
+			uintVal = data;
 		}else static if (is (T == double) || is (T == float)){
 			doubleVal = data;
 		}else static if (is (T == NaData[])){
 			arrayVal = data;
 		}else static if (is (T == NaData*)){
 			ptrVal = data;
-		}else static if (is (T == char)){
-			intVal = cast(integer)data;
-		}else static if (is (T == char[]) || is (T == string)){
+		}else static if (is (T == dchar)){
+			dcharVal = data;
+		}else static if (is (T == dchar[]) || is (T == dstring)){
 			strVal = data;
 		}else{
 			throw new Exception("cannot store "~T.stringof~" in NaData");
 		}
 	}
-	/// Returns: character value stored in intVal
-	@property char charVal(){
-		return cast(char)intVal;
-	}
-	/// Setter for charVal
-	@property char charVal(char newVal){
-		return intVal = cast(integer)newVal;
-	}
 	/// Returns: string value stored as NaData[] (in arrayVal)
-	@property char[] strVal(){
-		char[] r;
+	@property dchar[] strVal(){
+		dchar[] r;
 		r.length = arrayVal.length;
 		foreach (i, ch; arrayVal){
-			r[i] = cast(char)(ch.intVal);
+			r[i] = ch.dcharVal;
 		}
 		return r;
 	}
 	/// Setter for strVal
-	@property char[] strVal(char[] newVal){
+	@property dchar[] strVal(dchar[] newVal){
 		arrayVal.length = newVal.length;
 		foreach (i, ch; newVal){
-			arrayVal[i].intVal = cast(integer)ch;
+			arrayVal[i].dcharVal = ch;
 		}
 		return newVal;
 	}
 	/// Setter for strVal
-	@property char[] strVal(string newVal){
+	@property char[] strVal(dstring newVal){
 		arrayVal.length = newVal.length;
 		foreach (i, ch; newVal){
 			arrayVal[i].intVal = cast(integer)ch;
