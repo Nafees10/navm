@@ -32,6 +32,8 @@ public union NaData{
 			dcharVal = data;
 		}else static if (is (T == dchar[]) || is (T == dstring)){
 			strVal = data;
+		}else static if (is (T == bool)){
+			boolVal = data;
 		}else{
 			throw new Exception("cannot store "~T.stringof~" in NaData");
 		}
@@ -62,9 +64,6 @@ public union NaData{
 		return cast(char[])newVal;
 	}
 }
-
-/// Definition of external function
-public alias ExternFunction = NaData delegate(NaData[]);
 
 /// Fixed max-length stack (not using utils.lists.Stack because that one isnt optimized to be fast as much as this should be)
 ///
