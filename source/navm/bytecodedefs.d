@@ -3,6 +3,7 @@ module navm.bytecodedefs;
 import utils.misc;
 
 import navm.defs;
+import navm.bytecode : readData;
 
 import std.conv : to;
 
@@ -144,8 +145,20 @@ public:
 	}
 	/// Call `resolve` before this.
 	/// 
-	/// Returns: arguments for each instruction as NaData
-	
+	/// Returns: arguments for each instruction as NaData, or [] if error
+	NaData[] getArgumentsNaData(){
+		NaData[] r;
+		r.length = _arguments.length;
+		foreach (i, arg; _arguments){
+			try{
+				r[i] = readData(arg);
+			}catch (Exception e){
+				r = [];
+				break;
+			}
+		}
+		return r;
+	}
 }
 
 /// stores an data about available instruction
