@@ -1,7 +1,7 @@
 ## Calling external functions:
 
-* _`Call [function id - uinteger]`_  
-Pops `n (uinteger)`, then pops `n` number of elements as function arguments. Calls a function with the id `function id`. Pushes the return value to stack, if no meaningful data is returned by functions, it pushes a `NaData()`.
+* _`Call [function id - integer>=0]`_  
+Pops `n (integer>=0)`, then pops `n` number of elements as function arguments. Calls a function with the id `function id`. Pushes the return value to stack, if no meaningful data is returned by functions, it pushes a `NaData()`.
 
 ## Arithmetic operators
 
@@ -58,11 +58,11 @@ Pops `A (bool)` and then `B (bool)`. Pushes `A || B`
 ## Stack
 * _`Push [arg0 - any data type]`_  
 Pushes `arg0` to stack
-* _`PushFrom [index - uinteger]`_  
+* _`PushFrom [index - integer>=0]`_  
 Reads value at `stack.peek - index` on stack, pushes it, without removing original.
-* _`PushRefFrom [index - uinteger]`_  
+* _`PushRefFrom [index - integer>=0]`_  
 Pushes reference to value at `stack.peek - index` on stack, without removing original.
-* _`WriteTo [index - uinteger]`_  
+* _`WriteTo [index - integer>=0]`_  
 Pops a value from stack, writes it to `stack.peek - index` on stack.
 * _`WriteToRef`_  
 Pops a reference, then pops a value. Writes value to reference.
@@ -70,7 +70,7 @@ Pops a reference, then pops a value. Writes value to reference.
 Pops a reference from stack. Pushes the value being referenced
 * _`Pop`_  
 Pops 1 value from stack
-* _`PopN [n - uinteger]`_  
+* _`PopN [n - integer>=0]`_  
 Pops n number of values from stack
 
 ---
@@ -84,16 +84,16 @@ Pops `bool` from stack. If it is `true`, jumps execution to instruction at `jump
 ---
 
 ## Arrays
-* _`MakeArray [n - uinteger>0]`_  
+* _`MakeArray [n - integer>0]`_  
 Pops `n` number of elements from stack, puts them in an array (in the order they were added to stack). Pushes array to stack.
 * _`ArrayRefElement`_  
-Pops a reference to array, then an `index (uinteger)`. Pushes reference-to-element at `index` on array.
+Pops a reference to array, then an `index (integer>=0)`. Pushes reference-to-element at `index` on array.
 * _`ArrayElement`_  
-Pops an array, then an `index (uinteger)`. Pushes reference-to-element at `index` on array.
+Pops an array, then an `index (integer>=0)`. Pushes reference-to-element at `index` on array.
 * _`ArrayLength`_  
-Pops an array. Pushes length of array (`uinteger`) to stack.
+Pops an array. Pushes length of array (`integer>=0`) to stack.
 * _`ArrayLengthSet`_  
-Pops a reference to array, then `length (uinteger)`. Sets length of array to `length`
+Pops a reference to array, then `length (integer>=0)`. Sets length of array to `length`
 * _`Concatenate`_  
 Pops an array `a1` _(not reference)_, then pops another array `a2`. Pushes new array `a1 ~ a2`.
 * _`AppendElement`_  
