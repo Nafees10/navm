@@ -255,7 +255,7 @@ public struct NaInstruction{
 	}
 	/// constructor, for instruction with no arg, no push/pop
 	this (string name, integer code, void delegate() pointer){
-		this.name = name;
+		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.pointer = pointer;
 		this.needsArg = false;
@@ -264,7 +264,7 @@ public struct NaInstruction{
 	}
 	/// constructor, for instruction with arg
 	this (string name, integer code, bool argIsJumpPos, void delegate() pointer){
-		this.name = name;
+		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.argIsJumpPos = argIsJumpPos;
 		this.pointer = pointer;
@@ -274,7 +274,7 @@ public struct NaInstruction{
 	}
 	/// full constructor
 	this (string name, integer code, bool needsArg, bool argIsJumpPos, ubyte pushCount, ubyte popCount, void delegate() pointer){
-		this.name = name;
+		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.needsArg = needsArg;
 		this.argIsJumpPos = argIsJumpPos;
