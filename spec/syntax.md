@@ -1,6 +1,6 @@
 # NaVM syntax
 
-_Note that you **don't** necessarily need to use this syntax to execute byte code using NaVM. You can programmatically construct programs as the `NaFunction` struct._  
+_Note that you don't need to use this syntax to execute byte code using NaVM. You can programmatically construct programs as the `NaBytecode` struct._  
 
 ## Comments
 Anything following a `#` (including the `#`) are considered comments and are ignored:  

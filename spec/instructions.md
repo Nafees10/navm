@@ -1,8 +1,4 @@
-# NaVM Instructions
-
-Here's a list of instructions that NaVM has out of the box. You can easily add more (Add name, argument count, and other info to `source/navm/bytecodedefs.d` and implement those instructions in `source/navm/navm.d`
-
-## Calling functions:
+## Calling external functions:
 
 * _`Call [function id - uinteger]`_  
 Pops `n (uinteger)`, then pops `n` number of elements as function arguments. Calls a function with the id `function id`. Pushes the return value to stack, if no meaningful data is returned by functions, it pushes a `NaData()`.
