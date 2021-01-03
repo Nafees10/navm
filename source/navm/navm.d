@@ -32,8 +32,8 @@ protected:
 
 	void call(){
 		_stack.push(
-			_externFunctions[_arg.uintVal](
-				_stack.pop(_stack.pop().uintVal)
+			_externFunctions[_arg.intVal](
+				_stack.pop(_stack.pop().intVal)
 				)
 			);
 	}
@@ -156,13 +156,13 @@ protected:
 		_stack.push(_arg);
 	}
 	void pushFrom(){
-		_stack.push(_stack.read(_arg.uintVal));
+		_stack.push(_stack.read(_arg.intVal));
 	}
 	void pushRefFrom(){
-		_stack.push(NaData(_stack.readPtr(_arg.uintVal)));
+		_stack.push(NaData(_stack.readPtr(_arg.intVal)));
 	}
 	void writeTo(){
-		_stack.write(_arg.uintVal,_stack.pop);
+		_stack.write(_arg.intVal,_stack.pop);
 	}
 	void writeToRef(){
 		// Left side is evaluated first
@@ -175,36 +175,36 @@ protected:
 		_stack.pop;
 	}
 	void popN(){
-		_stack.pop(_arg.uintVal);
+		_stack.pop(_arg.intVal);
 	}
 	void jump(){
-		_nextInstruction = &(_instructions)[_arg.uintVal] - 1;
-		_nextArgument = &(_arguments)[_arg.uintVal] - 1;
+		_nextInstruction = &(_instructions)[_arg.intVal] - 1;
+		_nextArgument = &(_arguments)[_arg.intVal] - 1;
 	}
 	void jumpIf(){
 		if (_stack.pop.intVal == 1){
-			_nextInstruction = &(_instructions)[_arg.uintVal] - 1;
-			_nextArgument = &(_arguments)[_arg.uintVal] - 1;
+			_nextInstruction = &(_instructions)[_arg.intVal] - 1;
+			_nextArgument = &(_arguments)[_arg.intVal] - 1;
 		}
 	}
 
 	void makeArray(){
-		_stack.push(NaData(_stack.pop((_arg).uintVal).dup));
+		_stack.push(NaData(_stack.pop((_arg).intVal).dup));
 	}
 	void arrayRefElement(){
 		NaData arrayRef = _stack.pop;
-		_stack.push(NaData(&((*(arrayRef.ptrVal)).arrayVal[_stack.pop.uintVal])));
+		_stack.push(NaData(&((*(arrayRef.ptrVal)).arrayVal[_stack.pop.intVal])));
 	}
 	void arrayElement(){
 		NaData array = _stack.pop;
-		_stack.push(NaData(&(array.arrayVal[_stack.pop.uintVal])));
+		_stack.push(NaData(&(array.arrayVal[_stack.pop.intVal])));
 	}
 	void arrayLength(){
 		_stack.push(NaData(_stack.pop.arrayVal.length));
 	}
 	void arrayLengthSet(){
 		/// Left side evaluated first
-		(*(_stack.pop.ptrVal)).arrayVal.length = _stack.pop.uintVal;
+		(*(_stack.pop.ptrVal)).arrayVal.length = _stack.pop.intVal;
 	}
 	void concatenate(){
 		_stack.push(NaData((_stack.pop.arrayVal ~ _stack.pop.arrayVal).dup));

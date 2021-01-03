@@ -251,7 +251,7 @@ public struct NaInstruction{
 	ubyte popCount(NaData arg){
 		if (_popCount < 255)
 			return _popCount;
-		return cast(ubyte)(arg.uintVal);
+		return cast(ubyte)(arg.intVal);
 	}
 	/// constructor, for instruction with no arg, no push/pop
 	this (string name, ushort code, void delegate()* pointer){

@@ -6,11 +6,8 @@ import utils.misc;
 public union NaData{
 	union{
 		bool boolVal; /// boolean value
-		ubyte ubyteVal; /// unsigned byte
-		byte byteVal; /// signed byte
 		dchar dcharVal; /// dchar value
 		integer intVal; /// integer value
-		uinteger uintVal; /// unsigned integer value
 		double doubleVal; /// double/float value
 		NaData* ptrVal; /// to store references
 		NaData[] arrayVal; /// array value
@@ -18,10 +15,8 @@ public union NaData{
 	/// constructor
 	/// data can be any of the type which it can store
 	this (T)(T data){
-		static if (is (T == int) || is (T == long)){
+		static if (is (T == int) || is (T == long) || is (T == uint) || is (T == ulong)){
 			intVal = data;
-		}else static if (is (T == uint) || is (T == ulong)){
-			uintVal = data;
 		}else static if (is (T == double) || is (T == float)){
 			doubleVal = data;
 		}else static if (is (T == NaData[])){
