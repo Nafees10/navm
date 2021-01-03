@@ -75,7 +75,7 @@ NaFunction[] readByteCode(string[] input){
 	NaFunction[] r = functions.toArray;
 	.destroy(functions);
 	return r;
-}
+}*/
 
 /// Removes whitespace from a string. And the remaining whitespace is only of one type. e.g: whitespace is ' ' & '\t', 
 /// it will replace '\t' with ' ' so less conditions are needed after this
@@ -202,7 +202,7 @@ unittest{
 			["potato", "[asdf, sdfsdf, [0, 1, 2], 2]", "asd"],
 			["potato","\"some String\"","\'c\'"]
 		]);
-}*/
+}
 
 /// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
 /// 
