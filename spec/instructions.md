@@ -120,6 +120,8 @@ Pops a ref-to-array, makes a copy of array, pushes to stack. Any changes made to
 Pops an integer from stack. Pushes a double with same value.
 * _`IntToString`_  
 Pops an integer from stack. Pushes a string representation of it.
+* _`BoolToString`_  
+Pops a bool from stack. Pushes `"true"` or `"false"` (string) depending on bool.
 * _`DoubleToInt`_  
 Pops a double from stack. Pushes integer part of it (as a integer) to stack.
 * _`DoubleToString`_  
@@ -136,3 +138,13 @@ Pops a string, reads a double from it, pushes the double.
 Pops a value from stack, sets it as the return value.**Does NOT terminate execution**
 * _`Terminate`_  
 Terminates execution.
+
+--
+
+## D equivalent of data types in NaVM
+* `uinteger` is a `ulong` or `uint` depending on whether it is compiled for 64bit or 32bit. or you could use `uinteger` from `misc.d` from package `utils`.
+* `integer` is a `long` or `int` depending on whether it is compiled for 64bit or 32bit.  or you could use `integer` from `misc.d` from package `utils`.
+* `string` is a `dstring`
+* `char` is a `dchar`
+* `bool` is the same as a D `bool`
+* arrays are `NaData[]` (stored in `NaData.arrayVal`).
