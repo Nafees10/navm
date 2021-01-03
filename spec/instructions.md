@@ -138,7 +138,6 @@ Terminates execution.
 --
 
 ## D equivalent of data types in NaVM
-* `uinteger` is a `ulong` or `uint` depending on whether it is compiled for 64bit or 32bit. or you could use `uinteger` from `misc.d` from package `utils`.
 * `integer` is a `long` or `int` depending on whether it is compiled for 64bit or 32bit.  or you could use `integer` from `misc.d` from package `utils`.
 * `string` is a `dstring`
 * `char` is a `dchar`
