@@ -4,26 +4,188 @@ import utils.misc;
 
 import navm.defs;
 
-/// Stores a byte code function (the instructions plus their arguments)
-public struct NaFunction{
-	/// possible types of functions
-	enum Type{
-		Function, /// just a regular function
-		OnLoad, /// To be executed when byte code is loaded (usually used to init global variables..)
+import std.conv : to;
+
+/// Class used for storing/constructing bytecode
+package class NaBytecode{
+private:
+	/// where the bytecode is actually stored
+	string[] _instructions;
+	string[] _arguments;
+	/// stores number of elements sitting on stack right now after the last added instruction would be executed
+	uinteger _stackLength;
+	/// stores max number of elements sitting on stack at any time
+	uinteger _stackLengthMax;
+	/// stores any elements that have been "bookmarked". Useful for keeping track of elements during constructing byte code
+	uinteger[uinteger] _bookmarks;
+	/// stores the instruction table
+	NaInstruction[] _instructionTable;
+public:
+	this(NaInstruction[] instructionTable){
+		_instructionTable = instructionTable.dup;
 	}
-	Type type = this.Type.Function; /// type of this function
-	Instruction[] instructions; /// the instructions making this function
-	NaData[][] arguments; /// arguments for each of the instructions
-	uinteger stackLength; /// max number of elements needed on stack
-	/// postblit
-	this (this){
-		this.instructions = instructions.dup;
-		NaData[][] newArgs;
-		newArgs.length = arguments.length;
-		foreach(i, args; arguments){
-			newArgs[i] = args.dup;
+	~this(){
+		// nothing to do
+	}
+	/// Returns: the number of elements on stack after executing the last added instruction
+	@property uinteger elementCount(){
+		return _stackLength;
+	}
+	/// Returns: true if a NaInstruction exists
+	bool hasInstruction(string name, ref NaInstruction instruction){
+		foreach (inst; _instructionTable){
+			if (name.lowercase == inst.name){
+				instruction = inst;
+				return true;
+			}
 		}
-		arguments = newArgs;
+		return false;
+	}
+	/// ditto
+	bool hasInstruction(string name){
+		NaInstruction dummy;
+		return hasInstruction(name, dummy);
+	}
+	/// adds an instruction to the instruction table
+	/// 
+	/// Returns: true if it was added, false if not due to name or code already used
+	bool addInstructionToTable(NaInstruction instruction){
+		foreach (inst; _instructionTable){
+			if (inst.name == instruction.name || inst.code == instruction.code)
+				return false;
+		}
+		_instructionTable ~= instruction;
+		return true;
+	}
+	/// goes over bytecode, and converts jump position identifiers into indexes  
+	/// 
+	/// Returns: errors in a string[], or an empty array in case no errors
+	string[] resolveJumps(){
+		string[] errors;
+		uinteger[string] jumpPos;
+		uinteger instCount = 0;
+		for (uinteger i=0, instIndex=0; i < _instructions.length; i ++){
+			string name = _instructions[i];
+			if (name.length && name[$-1] == ':'){
+				name = name[0 .. $-1];
+				if (name in jumpPos){
+					errors ~= "line#"~(i+1).to!string~' '~name~" as jump postion declared multiple times";
+					continue;
+				}
+				jumpPos[name.lowercase] = instIndex;
+				continue;
+			}
+			instIndex ++;
+			instCount = instIndex;
+		}
+		for (uinteger i=0, writeIndex=0; i < _instructions.length; i ++){
+			string name = _instructions[i];
+			if (name.length && name[$-1] == ':')
+				continue;
+			if (writeIndex != i){
+				_instructions[writeIndex] = name;
+				_arguments[writeIndex] = _arguments[i];
+			}
+			NaInstruction instInfo;
+			if (this.hasInstruction(name, instInfo)){
+				if (instInfo.needsArg && !_arguments[writeIndex].length)
+					errors ~= "line#"~(i+1).to!string~' '~name~"  needs argument";
+				if (instInfo.argIsJumpPos){
+					string arg = _arguments[writeIndex].lowercase;
+					if (arg !in jumpPos)
+						errors ~= "line#"~(i+1).to!string~' '~arg~" is not a valid jump position";
+					_arguments[writeIndex] = jumpPos[arg].to!string;
+				}
+			}else
+				errors ~= "line#"~(i+1).to!string~" instruction does not exist";
+			writeIndex ++;
+		}
+		_instructions.length = instCount;
+		_arguments.length = instCount;
+		return errors;
+	}
+	/// Returns: the bytecode in a readable format
+	string[] getBytecodePretty(){
+		string[] r;
+		r.length = _instructions.length;
+		foreach (i, inst; _instructions){
+			r[i] = _instructions[i];
+			if (_arguments[i].length)
+				r[i] ~= "\t\t" ~ _arguments[i];
+		}
+		return r;
+	}
+	/// Call `resolvePointers` before this or prepare for crashes
+	/// 
+	/// Returns: pointers for all instructions
+	void delegate()*[] getBytecodePointers(){
+		void delegate()*[] r;
+		r.length = _instructions.length;
+		foreach (i, inst; _instructions){
+			NaInstruction instInfo;
+			hasInstruction(inst, instInfo);
+			r[i] = instInfo.pointer;
+		}
+		return r;
+	}
+	/// Call `resolvePointers` before this or prepare for crashes
+	/// 
+	/// Returns: codes for all instructions
+	ushort[] getBytecodeCodes(){
+		ushort[] r;
+		r.length = _instructions.length;
+		foreach (i, inst; _instructions){
+			NaInstruction instInfo;
+			hasInstruction(inst, instInfo);
+			r[i] = instInfo.code;
+		}
+		return r;
+	}
+}
+
+/// stores an data about available instruction
+public struct NaInstruction{
+	bool argIsJumpPos = false; /// if the argument to this instruction is a jump position
+	string name; /// name of instruction, in lowercase
+	ushort code = 0x0000; /// value when read as a ubyte
+	bool needsArg; /// if this instruction needs an argument
+	ubyte pushCount = 0; /// number of elements it will push to stack
+	private ubyte _popCount = 0; /// number of elements it will pop (if ==255, then the argument is the number of elements to pop)
+	void delegate()* pointer; /// pointer to the delegate behind this instruction
+	/// Returns: number of elements it will pop
+	ubyte popCount(NaData arg){
+		if (_popCount < 255)
+			return _popCount;
+		return cast(ubyte)(arg.uintVal);
+	}
+	/// constructor, for instruction with no arg, no push/pop
+	this (string name, ushort code, void delegate()* pointer){
+		this.name = name;
+		this.code = code;
+		this.pointer = pointer;
+		this.needsArg = false;
+		this.pushCount = 0;
+		this._popCount = 0;
+	}
+	/// constructor, for instruction with arg
+	this (string name, ushort code, bool argIsJump, void delegate()* pointer){
+		this.name = name;
+		this.code = code;
+		this.argIsJumpPos = argIsJump;
+		this.pointer = pointer;
+		this.needsArg = true;
+		this.pushCount = 0;
+		this._popCount = 0;
+	}
+	/// full constructor
+	this (string name, ushort code, bool needsArg, bool argIsJumpPos, ubyte pushCount, ubyte popCount, void delegate()* pointer){
+		this.name = name;
+		this.code = code;
+		this.needsArg = needsArg;
+		this.argIsJumpPos = argIsJumpPos;
+		this.pushCount = pushCount;
+		this._popCount = popCount;
+		this.pointer = pointer;
 	}
 }
 
