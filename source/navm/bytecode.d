@@ -7,35 +7,8 @@ import utils.misc;
 
 import std.conv : to, ConvException;
 
-public import navm.bytecodedefs : NaFunction;
-public import navm.bytecodedefs : Instruction;
-public import navm.bytecodedefs : INSTRUCTION_ARG_COUNT;
-public import navm.bytecodedefs : INSTRUCTION_PUSH_COUNT;
-public import navm.bytecodedefs : instructionPopCount;
-
-/// stores names of byte code instructions in lowercase, mapped to Instruction enum, in assoc_array
-private static Instruction[string] INSTRUCTION_STRING_MAP;
-/// stores types of functions' string representation in lowecase, mapped to the NaFunction.Type, in assoc_array
-private static NaFunction.Type[string] FUNCTION_TYPE_STRING_MAP;
-
-static this(){
-	import std.traits : EnumMembers;
-	{
-		Instruction[string] r;
-		foreach(inst; EnumMembers!Instruction){
-			r[to!string(inst).lowercase] = inst;
-		}
-		INSTRUCTION_STRING_MAP = r;
-	}
-	{
-		NaFunction.Type[string] r;
-		foreach(type; EnumMembers!(NaFunction.Type)){
-			r[to!string(type).lowercase] = type;
-		}
-		FUNCTION_TYPE_STRING_MAP = r;
-	}
-}
-
+public import navm.bytecodedefs;
+/*
 /// Reads a string[] into NaFunction[]
 ///
 /// Throws: Exception if there is some error in input
@@ -231,119 +204,6 @@ unittest{
 		]);
 }
 
-/// Reads byte code for a single function from the whole bytecode
-/// 
-/// Returns: the bytecode for single function
-private string[][] readFunctionWords(string[][] bytecode, uinteger defIndex){
-	// read till it finds another def, or the bytecode ends
-	uinteger i, end = defIndex+1;
-	for (i = defIndex+1; i < bytecode.length; i ++){
-		if (bytecode[i].length > 0 && bytecode[i][0] == "def"){
-			end = i;
-			break;
-		}
-	}
-	if (i == bytecode.length)
-		end = bytecode.length;
-	return bytecode[defIndex .. end].dup;
-}
-///
-unittest{
-	assert([
-		["def","5"],
-		["instruction"],
-		["nother", "instruction"],
-		["and", "another"],
-		["def", "10"],
-		["instruction"],
-		["blabla"],
-		["blablabla"],
-		["bla"]
-	].readFunctionWords(4) == [
-		["def", "10"],
-		["instruction"],
-		["blabla"],
-		["blablabla"],
-		["bla"]
-	]);
-	assert([
-		["def","5"],
-		["instruction"],
-		["nother", "instruction"],
-		["and", "another"],
-		["def", "10"],
-		["instruction"],
-		["blabla"],
-		["blablabla"],
-		["bla"]
-	].readFunctionWords(0) == [
-		["def","5"],
-		["instruction"],
-		["nother", "instruction"],
-		["and", "another"],
-	]);
-}
-
-/// Reads indexes of jump positions from byte code. Only works with byte code of single function (use readFunctionWords to get that).  
-/// Also replaces jump positions names in jump and jumpIf instructions with the new indexes
-/// 
-/// Throws: Exception in case of an error in bytecode
-private void replaceJumpPositions(ref string[][] bytecode){
-	/// stores indexes of jump positions
-	uinteger[string] jumpIndexes;
-
-	// read all the jump positions into jumpIndexes, and remove jump positions from byte code
-	// i=1 because at i=0 is `def potatopotato` and we don't care bout that here
-	for (uinteger i = 1, instIndex = 0; i < bytecode.length; i ++){
-		if (bytecode[i][0][$-1] == ':'){// its a jump position. currentIndex+1 = the jump index
-			const string jumpName = bytecode[i][0][0 .. $-1];
-			// make sure that name isn't used already
-			if (jumpName in jumpIndexes)
-				throw new Exception(jumpName~" is used more than once");
-			jumpIndexes[jumpName] = instIndex;
-			// remove this line
-			bytecode = bytecode[0 .. i] ~ bytecode[i + 1 .. $];
-			i --;
-			continue;
-		}
-		instIndex ++;
-	}
-	// now replace all of those with the actual indexes
-	for (uinteger i = 1; i < bytecode.length; i ++){
-		if (["jump","jumpif"].hasElement(bytecode[i][0].lowercase)){
-			if (bytecode[i].length != 2)
-				throw new Exception("invalid number of arguments for jump/jumpIf instruction");
-			const string jumpName = bytecode[i][1];
-			if (jumpName !in jumpIndexes)
-				throw new Exception(jumpName ~ " is not a valid jump position");
-			bytecode[i][1] = jumpIndexes[jumpName].to!string;
-		}
-	}
-}
-///
-unittest{
-	string[][] input = [
-		["def", "5"],
-		["potatoInstruction", "somePotatoArg"],
-		["someJumpPos:"],
-		["someMoreInstructionsHere", "withArgs"],
-		["andThisOneIsWithoutArgs"],
-		["potato:"],
-		["jump", "someJumpPos"],
-		["jumpIf", "potato"],
-	];
-	const string[][] expectedOut = [
-		["def", "5"],
-		["potatoInstruction", "somePotatoArg"],
-		["someMoreInstructionsHere", "withArgs"],
-		["andThisOneIsWithoutArgs"],
-		["jump", "1"],
-		["jumpIf", "3"],
-	];
-	input.replaceJumpPositions;
-	assert(input == expectedOut);
-}
-
 /// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
 /// 
 /// Does not care if elements in array are of same type or not.
@@ -444,4 +304,4 @@ private string strReplaceSpecial(char specialCharBegin='\\', char[char] map = ['
 ///
 unittest{
 	assert("newline:\\ntab:\\t".strReplaceSpecial == "newline:\ntab:\t");
-}
+}*/
