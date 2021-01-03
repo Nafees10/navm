@@ -202,7 +202,7 @@ unittest{
 			["potato", "[asdf, sdfsdf, [0, 1, 2], 2]", "asd"],
 			["potato","\"some String\"","\'c\'"]
 		]);
-}
+}*/
 
 /// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
 /// 
@@ -251,7 +251,7 @@ public NaData readData(string strData){
 	if (strData[0] == '\"'){
 		// assume the whole thing is string, no need to find string end index
 		NaData r;
-		r.strVal = cast(char[])(strReplaceSpecial(strData[1 .. $-1]));
+		r.strVal = strReplaceSpecial(strData[1 .. $-1]).to!dstring;
 		return r;
 	}
 	if (strData[0] == '\''){
@@ -262,7 +262,7 @@ public NaData readData(string strData){
 			throw new Exception("'' can only contain 1 character");
 		if (strData.length < 1)
 			throw new Exception("no character provided in ''");
-		r.charVal = strData[0];
+		r.dcharVal = strData[0];
 		return r;
 	}
 	return NaData();
@@ -304,4 +304,4 @@ private string strReplaceSpecial(char specialCharBegin='\\', char[char] map = ['
 ///
 unittest{
 	assert("newline:\\ntab:\\t".strReplaceSpecial == "newline:\ntab:\t");
-}*/
+}

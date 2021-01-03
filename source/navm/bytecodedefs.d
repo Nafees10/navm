@@ -57,10 +57,11 @@ public:
 		_instructionTable ~= instruction;
 		return true;
 	}
-	/// goes over bytecode, and converts jump position identifiers into indexes  
+	/// goes over bytecode, checks if there are any errors, and converts jump positions to indexes
+	/// i.e: makes the byte code a bit more ready for execution
 	/// 
 	/// Returns: errors in a string[], or an empty array in case no errors
-	string[] resolveJumps(){
+	string[] resolve(){
 		string[] errors;
 		uinteger[string] jumpPos;
 		uinteger instCount = 0;
@@ -115,7 +116,7 @@ public:
 		}
 		return r;
 	}
-	/// Call `resolvePointers` before this or prepare for crashes
+	/// Call `resolve` before this or prepare for crashes
 	/// 
 	/// Returns: pointers for all instructions
 	void delegate()*[] getBytecodePointers(){
@@ -128,7 +129,7 @@ public:
 		}
 		return r;
 	}
-	/// Call `resolvePointers` before this or prepare for crashes
+	/// Call `resolve` before this or prepare for crashes
 	/// 
 	/// Returns: codes for all instructions
 	ushort[] getBytecodeCodes(){
@@ -141,6 +142,10 @@ public:
 		}
 		return r;
 	}
+	/// Call `resolve` before this.
+	/// 
+	/// Returns: arguments for each instruction as NaData
+	
 }
 
 /// stores an data about available instruction
