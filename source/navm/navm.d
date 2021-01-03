@@ -8,7 +8,7 @@ import std.conv : to;
 
 import utils.lists;
 import utils.misc : uinteger, integer;
-
+/*
 alias ExternFunction = navm.defs.ExternFunction;
 alias NaData = navm.defs.NaData;
 alias Instruction = navm.bytecodedefs.Instruction;
@@ -506,4 +506,4 @@ public:
 		_returnVal = prevReturnVal;
 		return r;
 	}
-}
+}*/
