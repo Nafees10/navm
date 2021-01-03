@@ -237,6 +237,9 @@ protected:
 	void intToString(){
 		_stack.push(NaData(to!dstring(_stack.pop.intVal)));
 	}
+	void boolToString(){
+		_stack.push(NaData((_stack.pop.boolVal).to!dstring));
+	}
 	void doubleToInt(){
 		_stack.push(NaData(to!integer(_stack.pop.doubleVal)));
 	}
