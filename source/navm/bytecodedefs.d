@@ -28,11 +28,7 @@ public:
 	~this(){
 		// nothing to do
 	}
-	/// Returns: the number of elements on stack after executing the last added instruction
-	@property uinteger elementCount(){
-		return _stackLength;
-	}
-	/// Returns: true if a NaInstruction exists
+	/// Returns: true if a NaInstruction exists in instruction table
 	bool hasInstruction(string name, ref NaInstruction instruction){
 		foreach (inst; _instructionTable){
 			if (name.lowercase == inst.name){
@@ -159,6 +155,87 @@ public:
 		}
 		return r;
 	}
+	// functions for generating byte code
+	
+	/// appends an instruction
+	/// 
+	/// Returns: true if successful, false if not (writes error in `error`)
+	bool addInstruction(string instName, string argument, ref string error){
+		import navm.bytecode : removeWhitespace;
+		NaInstruction inst;
+		if (hasInstruction(instName, inst)){
+			if (inst.needsArg && !removeWhitespace(argument).length){
+				error = "instruction needs an argument";
+				return false;
+			}
+			NaData arg;
+			if (inst.needsArg && !inst.argIsJumpPos){
+				try{
+					arg = readData(argument);
+				}catch (Exception e){
+					error = "invalid argument: "~e.msg;
+					return false;
+				}
+				if (_stackLength < inst.popCount(arg)){
+					error = "stack does not have enough elements for instruction";
+					return false;
+				}
+			}
+			_instructions ~= instName;
+			_arguments ~= argument;
+			_stackLength -= inst.popCount(arg);
+			_stackLength += inst.pushCount;
+			_stackLengthMax = _stackLength > _stackLengthMax ? _stackLength : _stackLengthMax;
+			return true;
+		}
+		error = "instruction does not exist";
+		return false;
+	}
+	/// ditto
+	bool addInstruction(string instName, string argument){
+		string dummy;
+		return addInstruction(instName, argument, dummy);
+	}
+	/// adds a jump position
+	void addJumpPos(string name){
+		_instructions ~= name~':';
+		_arguments ~= "";
+	}
+	/// Returns: the number of elements on stack after executing the last added instruction
+	@property uinteger elementCount(){
+		return _stackLength;
+	}
+	/// adds a "bookmark" to the last element on stack, so later on, relative to current peek index, bookmark index
+	/// can be read.
+	/// 
+	/// Returns: bookmark id, or -1 if stack empty
+	integer addBookmark(){
+		if (_stackLength == 0)
+			return -1;
+		integer bookmarkId;
+		for (bookmarkId = 0; bookmarkId <= integer.max; bookmarkId ++)
+			if (bookmarkId !in _bookmarks)
+				break;
+		_bookmarks[bookmarkId] = _stackLength-1;
+		return bookmarkId;
+	}
+	/// removes a bookmark
+	/// 
+	/// Returns: true if successful, false if does not exists
+	bool removeBookmark(uinteger id){
+		if (id !in _bookmarks)
+			return false;
+		_bookmarks.remove(id);
+		return true;
+	}
+	/// gets relative index from current stack index to a bookmark
+	/// 
+	/// Returns: relative index, or integer.max if bookmark does not exist
+	integer bookmarkRelIndex(uinteger id){
+		if (id !in _bookmarks)
+			return integer.max;
+		return _stackLength.to!integer - (_bookmarks[id]+1).to!integer;
+	}
 }
 
 /// stores an data about available instruction
@@ -186,10 +263,10 @@ public struct NaInstruction{
 		this._popCount = 0;
 	}
 	/// constructor, for instruction with arg
-	this (string name, ushort code, bool argIsJump, void delegate()* pointer){
+	this (string name, ushort code, bool argIsJumpPos, void delegate()* pointer){
 		this.name = name;
 		this.code = code;
-		this.argIsJumpPos = argIsJump;
+		this.argIsJumpPos = argIsJumpPos;
 		this.pointer = pointer;
 		this.needsArg = true;
 		this.pushCount = 0;
