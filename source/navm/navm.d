@@ -12,7 +12,7 @@ import utils.misc : uinteger, integer;
 /// external function
 public alias ExternFunction = NaData delegate(NaData[]);
 public alias NaData = navm.defs.NaData;
-public alias NaInstruction = navm.bytecodedefs.NaInstruction;
+public alias NaInstruction = navm.bytecode.NaInstruction;
 public alias readData = navm.bytecode.readData;
 
 /// the VM
@@ -329,16 +329,22 @@ public:
 	~this(){
 
 	}
-	/// Loads functions into VM, prepares them for execution
+	/// Loads bytecode into VM
 	/// 
-	/// Returns: true if there was no error, false in the following cases:  
-	/// * More than 1 function is of type onLoad  
-	/// * In some function, .instruction.length != .arguments.length  
-	/// * Invalid instruction used  
-	bool load(){
-		// TODO
-		return true;
+	/// Returns: errors in a string[], or [] if no errors
+	string[] load(string[] byteCode){
+		NaBytecode bcode = new NaBytecode(_instructionTable.dup);
+		string[] r = bcode.readByteCode(byteCode);
+		if (r.length || {r = bcode.resolve; return r.length;})
+			return r;
+		_instructions = bcode.getBytecodePointers();
+		_arguments = bcode.getArgumentsNaData();
+		if (!_arguments.length)
+			return ["unknown error in NaBytecode.getArgumentsNaData"];
+		return [];
 	}
+
+
 
 	/// Starts execution of byte code, starting with the instruction at `index`
 	/// 
