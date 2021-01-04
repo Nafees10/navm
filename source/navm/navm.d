@@ -210,7 +210,7 @@ protected:
 	}
 
 	void makeArray(){
-		_stack.push(NaData(_stack.pop((_arg).intVal).dup));
+		_stack.push(NaData(_stack.pop(_arg.intVal).dup));
 	}
 	void arrayRefElement(){
 		NaData arrayRef = _stack.pop;
@@ -320,8 +320,8 @@ public:
 			NaInstruction("deref",0x20,1,1,&deref),
 			NaInstruction("pop",0x21,1,0,&pop),
 			NaInstruction("popN",0x22,true,255,0,&popN),
-			NaInstruction("jump",0x23,true,0,&jump),
-			NaInstruction("jumpIf",0x24,true,1,&jumpIf),
+			NaInstruction("jump",0x23,true,true,0,0,&jump),
+			NaInstruction("jumpIf",0x24,true,true,1,0,&jumpIf),
 			NaInstruction("makeArray",0x25,true,255,1,&makeArray),
 			NaInstruction("arrayRefElement",0x26,2,1,&arrayRefElement),
 			NaInstruction("arrayElement",0x27,2,1,&arrayElement),

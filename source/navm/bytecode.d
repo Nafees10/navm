@@ -87,10 +87,10 @@ public:
 			}
 			NaInstruction instInfo;
 			if (this.hasInstruction(name, instInfo)){
-				if (instInfo.needsArg && !_arguments[writeIndex].length)
+				if (instInfo.needsArg && !_arguments[i].length)
 					errors ~= "line#"~(i+1).to!string~' '~name~"  needs argument";
 				if (instInfo.argIsJumpPos){
-					string arg = _arguments[writeIndex].lowercase;
+					string arg = _arguments[i].lowercase;
 					if (jumpPos.keys.hasElement(arg))
 						_arguments[writeIndex] = jumpPos[arg].to!string;
 					else
@@ -299,7 +299,7 @@ public struct NaInstruction{
 		this.pointer = pointer;
 	}
 	/// constructor, for no push but with arg as jump pos, and pop
-	this (string name, integer code, bool argIsJumpPos, integer popCount, void delegate() pointer){
+	/*this (string name, integer code, bool argIsJumpPos, integer popCount, void delegate() pointer){
 		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.needsArg = true;
@@ -307,7 +307,7 @@ public struct NaInstruction{
 		this.pushCount = 0;
 		this._popCount = cast(ubyte)popCount;
 		this.pointer = pointer;
-	}
+	}*/
 	/// full constructor but arg is not jump position
 	this (string name, integer code, bool needsArg, integer popCount, integer pushCount, void delegate() pointer){
 		this.name = name.lowercase;
