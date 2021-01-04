@@ -360,7 +360,10 @@ public:
 	string[] load(string[] byteCode){
 		NaBytecode bcode = new NaBytecode(_instructionTable.dup);
 		string[] r = bcode.readByteCode(byteCode);
-		if (r.length || {r = bcode.resolve; return r.length;})
+		if (r.length)
+			return r;
+		r = bcode.resolve();
+		if (r.length)
 			return r;
 		_instructions = bcode.getBytecodePointers();
 		_arguments = bcode.getArgumentsNaData();

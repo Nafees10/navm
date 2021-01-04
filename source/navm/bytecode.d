@@ -171,7 +171,7 @@ public:
 					continue;
 				}
 				string error = "";
-				if (this.addInstruction(lineWords[0],
+				if (!this.addInstruction(lineWords[0],
 					lineWords.length>1 && lineWords[1].length ? lineWords[1] : "", error))
 					errors ~= error;
 			}
