@@ -76,10 +76,14 @@ Pops n number of values from stack
 ---
 
 ## Jumps
-* _`Jump [jump positionIdentifier]`_  
-Jump execution to instruction at `jump position`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
-* _`JumpIf [jump positionIdentifier]`_  
-Pops `bool` from stack. If it is `true`, jumps execution to instruction at `jump position`. **Be careful using this, make sure you have used `Pop` to clear stack of unneeded elements**
+* _`Jump [jump position]`_  
+Jump execution to instruction at `jump position`.
+* _`JumpIf [jump position]`_  
+Pops `bool` from stack. If it is `true`, jumps execution to instruction at `jump position`.
+* _`JumpStack [jump position]`_  
+Jump execution to `jump position`. Pushes current instruction pointer to jump stack so it can jump back.
+* _`JumpBack`_  
+Jump execution back to last pointer pushed to jump stack. `terminate` if jump stack is empty.
 
 ---
 
