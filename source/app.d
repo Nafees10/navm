@@ -42,13 +42,11 @@ version(demo){
 		}
 
 		if (!hasError){
-			// execute the onLoad first
-			vm.executeOnLoad();
 			StopWatch sw;
 			sw.start;
 			// execute the function with id=0 (function defined first in bytecode), 
 			// start with empty stack ([]). Put whatever you want to be on stack in second argument
-			vm.execute(0, []);
+			vm.execute(0);
 			sw.stop;
 			writeln("Execution finished in: ",sw.peek.total!"msecs", " msecs");
 		}
