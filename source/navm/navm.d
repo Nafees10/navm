@@ -18,13 +18,19 @@ public alias readData = navm.bytecode.readData;
 /// the VM
 class NaVM{
 private:
-	NaInstruction[] _instructionTable;
+	/// for storing a stack frame in stack
+	struct StackFrame{
+		void delegate()* instruction;
+		NaData* argument;
+	}
+	NaInstruction[] _instructionTable; /// what instructions are what
 	void delegate()[] _instructions; /// instructions of loaded byte code
 	NaData[] _arguments; /// argument of each instruction
 	NaData _arg; /// argument of current instruct
 	void delegate()* _nextInstruction; /// pointer to next instruction
 	NaData* _nextArgument; /// pointer to next instruction's arguments
 	NaStack _stack; /// as the name says, stack
+	Stack!StackFrame _jumpStack; /// for storing pointers before jumping
 	NaData _returnVal; /// return value 
 	
 	ExternFunction[] _externFunctions; /// external functions 
@@ -188,6 +194,21 @@ protected:
 			_nextArgument = &(_arguments)[_arg.intVal] - 1;
 		}
 	}
+	void jumpStack(){
+		_jumpStack.push(StackFrame(_nextInstruction, _nextArgument));
+		_nextInstruction = &(_instructions)[_arg.intVal] - 1;
+		_nextArgument = &(_arguments)[_arg.intVal] - 1;
+	}
+	void jumpBack(){
+		StackFrame frame;
+		if (_jumpStack.count){
+			frame = _jumpStack.pop;
+			_nextInstruction = frame.instruction;
+			_nextArgument = frame.argument;
+			return;
+		}
+		_nextInstruction = &(_instructions)[$-1] + 1;
+	}
 
 	void makeArray(){
 		_stack.push(NaData(_stack.pop((_arg).intVal).dup));
@@ -267,7 +288,7 @@ public:
 	/// constructor
 	/// 
 	/// External Functions get added here
-	this(ExternFunction[] externalFunctions){
+	this(ExternFunction[] externalFunctions, uinteger stackLength = 65536){
 		_externFunctions = externalFunctions.dup;
 		// prepare instruction table
 		_instructionTable = [
@@ -324,10 +345,14 @@ public:
 			NaInstruction("return",0x38,1,0,&returnVal),
 			NaInstruction("terminate",0x39,1,0,&terminate),
 		];
+		// prepare stack
+		_stack = new NaStack(stackLength);
+		_jumpStack = new Stack!StackFrame;
 	}
 	/// destructor
 	~this(){
-
+		.destroy(_stack);
+		.destroy(_jumpStack);
 	}
 	/// Loads bytecode into VM
 	/// 
@@ -344,19 +369,18 @@ public:
 		return [];
 	}
 
-
-
 	/// Starts execution of byte code, starting with the instruction at `index`
 	/// 
 	/// Returns: what the function returned, or `NaData(0)`
 	NaData execute(uinteger index){
 		if (!_instructions.length)
 			return NaData(0);
-		_stack = new NaStack(1024);
+		if (_stack.count)
+			_stack.pop(_stack.count);
 		_returnVal = NaData(0);
 		_nextInstruction = &(_instructions[0]);
 		_nextArgument = &(_arguments[0]);
-		void delegate()* lastInst = &_instructions[$-1]+1;
+		const void delegate()* lastInst = &_instructions[$-1]+1;
 		do{
 			(*_nextInstruction)();
 			_nextInstruction++;
