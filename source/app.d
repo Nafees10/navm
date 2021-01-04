@@ -7,25 +7,27 @@ version(demo){
 
 
 	void main(string[] args){
-		NaData writelnInt(NaData[] args){
-			foreach(arg; args){
+		if (args.length < 2)
+			args = [args[0], "sample"];
+		NaData writelnInt(NaData[] _args){
+			foreach(arg; _args){
 				writeln(arg.intVal);
 			}
 			return NaData();
 		}
-		NaData writelnDbl(NaData[] args){
-			foreach (arg; args){
+		NaData writelnDbl(NaData[] _args){
+			foreach (arg; _args){
 				writeln(arg.doubleVal);
 			}
 			return NaData();
 		}
-		NaData writeString(NaData[] args){
-			foreach (arg; args){
+		NaData writeString(NaData[] _args){
+			foreach (arg; _args){
 				write(arg.strVal);
 			}
 			return NaData();
 		}
-		NaData readString(NaData[] args){
+		NaData readString(NaData[]){
 			string s = readln;
 			s.length --; // remove \n char from end of string
 			return NaData(s);
@@ -34,14 +36,12 @@ version(demo){
 		NaVM vm = new NaVM([&writelnInt, &writelnDbl, &writeString, &readString]);
 		// load the bytecode
 		bool hasError = false;
-		try{
-			vm.load(fileToArray(args[1]));
-		}catch (Exception e){
-			hasError = true;
-			writeln("Error in bytecode:\n", e.msg);
-		}
-
-		if (!hasError){
+		string[] errors = vm.load(fileToArray(args[1]));
+		if (errors.length){
+			writeln("Errors in byte code:");
+			foreach (err; errors)
+				writeln(err);
+		}else{
 			StopWatch sw;
 			sw.start;
 			// execute the function with id=0 (function defined first in bytecode), 
