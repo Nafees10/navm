@@ -1,7 +1,7 @@
 ## Calling external functions:
 
-* _`Call [function id - integer>=0]`_  
-Pops `n (integer>=0)`, then pops `n` number of elements as function arguments. Calls a function with the id `function id`. Pushes the return value to stack, if no meaningful data is returned by functions, it pushes a `NaData()`.
+* _`Call [arg count- integer>=0]`_  
+Pops `function id (integer>=0)`, then pops `arg count` number of elements as function arguments. Calls a function with the id `function id`. Pushes the return value to stack, if no meaningful data is returned by functions, it pushes a `NaData()`.
 
 ## Arithmetic operators
 
@@ -46,11 +46,11 @@ Pops `A (integer)`, then `B (integer)`. Pushes `true (bool)` if `A >= B`, else, 
 Pops `A (double)`, then `B (double)`. Pushes `true (bool)` if `A > B`, else, pushes `false (bool)`
 * _`IsGreaterSameDouble`_  
 Pops `A (double)`, then `B (double)`. Pushes `true (bool)` if `A >= B`, else, pushes `false (bool)`
-* _`NotBool`_  
+* _`Not`_  
 Pops `A (bool)`. Pushes `!A`
-* _`AndBool`_  
+* _`And`_  
 Pops `A (bool)` and then `B (bool)`. Pushes `A && B`
-* _`OrBool`_  
+* _`Or`_  
 Pops `A (bool)` and then `B (bool)`. Pushes `A || B`
 
 ---
@@ -126,11 +126,13 @@ Pops a double from stack. Pushes string representation of it.
 Pops a string, reads integer from it, pushes the integer.
 * _`StringToDouble`_  
 Pops a string, reads a double from it, pushes the double.
+* _`StringToBool`_  
+Pops a string, pushes `true (bool)` if it is `"true"`, otherwise pushes `false (bool)`.
 
 ---
 
 ## Misc.
-* _`ReturnVal`_  
+* _`Return`_  
 Pops a value from stack, sets it as the return value.**Does NOT terminate execution**
 * _`Terminate`_  
 Terminates execution.
