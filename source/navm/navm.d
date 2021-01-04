@@ -39,8 +39,8 @@ protected:
 
 	void call(){
 		_stack.push(
-			_externFunctions[_arg.intVal](
-				_stack.pop(_stack.pop().intVal)
+			_externFunctions[_stack.pop.intVal](
+				_stack.pop(_arg.intVal)
 				)
 			);
 	}
@@ -385,6 +385,7 @@ public:
 		_nextArgument = &(_arguments[0]);
 		const void delegate()* lastInst = &_instructions[$-1]+1;
 		do{
+			_arg = *_nextArgument;
 			(*_nextInstruction)();
 			_nextInstruction++;
 			_nextArgument++;
