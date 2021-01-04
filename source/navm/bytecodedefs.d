@@ -262,24 +262,43 @@ public struct NaInstruction{
 		this.pushCount = 0;
 		this._popCount = 0;
 	}
-	/// constructor, for instruction with arg
-	this (string name, integer code, bool argIsJumpPos, void delegate() pointer){
+	/// constructor, for instruction with no arg, but pop and push
+	this(string name, integer code, integer popCount, integer pushCount, void delegate() pointer){
 		this.name = name.lowercase;
 		this.code = cast(ushort)code;
-		this.argIsJumpPos = argIsJumpPos;
+		this.needsArg = false;
+		this.pushCount = cast(ubyte)pushCount;
+		this._popCount = cast(ubyte)popCount;
 		this.pointer = pointer;
+	}
+	/// constructor, for no push but with arg as jump pos, and pop
+	this (string name, integer code, bool argIsJumpPos, integer popCount, void delegate() pointer){
+		this.name = name.lowercase;
+		this.code = cast(ushort)code;
 		this.needsArg = true;
+		this.argIsJumpPos = argIsJumpPos;
 		this.pushCount = 0;
-		this._popCount = 0;
+		this._popCount = cast(ubyte)popCount;
+		this.pointer = pointer;
+	}
+	/// full constructor but arg is not jump position
+	this (string name, integer code, bool needsArg, integer popCount, integer pushCount, void delegate() pointer){
+		this.name = name.lowercase;
+		this.code = cast(ushort)code;
+		this.needsArg = needsArg;
+		this.argIsJumpPos = false;
+		this.pushCount = cast(ubyte)pushCount;
+		this._popCount = cast(ubyte)popCount;
+		this.pointer = pointer;
 	}
 	/// full constructor
-	this (string name, integer code, bool needsArg, bool argIsJumpPos, ubyte pushCount, ubyte popCount, void delegate() pointer){
+	this (string name, integer code, bool needsArg, bool argIsJumpPos, integer popCount, integer pushCount, void delegate() pointer){
 		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.needsArg = needsArg;
 		this.argIsJumpPos = argIsJumpPos;
-		this.pushCount = pushCount;
-		this._popCount = popCount;
+		this.pushCount = cast(ubyte)pushCount;
+		this._popCount = cast(ubyte)popCount;
 		this.pointer = pointer;
 	}
 }
