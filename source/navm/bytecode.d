@@ -91,9 +91,10 @@ public:
 					errors ~= "line#"~(i+1).to!string~' '~name~"  needs argument";
 				if (instInfo.argIsJumpPos){
 					string arg = _arguments[writeIndex].lowercase;
-					if (arg !in jumpPos)
+					if (jumpPos.keys.hasElement(arg))
+						_arguments[writeIndex] = jumpPos[arg].to!string;
+					else
 						errors ~= "line#"~(i+1).to!string~' '~arg~" is not a valid jump position";
-					_arguments[writeIndex] = jumpPos[arg].to!string;
 				}
 			}else
 				errors ~= "line#"~(i+1).to!string~" instruction does not exist";
