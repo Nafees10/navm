@@ -1,7 +1,6 @@
 module navm.navm;
 
 import navm.defs;
-import navm.bytecodedefs;
 import navm.bytecode;
 
 import std.conv : to;
