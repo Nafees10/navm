@@ -110,8 +110,20 @@ public:
 	NaData* readPtr(uinteger index){
 		return &_stackArray[index];
 	}
+	/// Returns: element at currentIndex-index
+	NaData readRelative(uinteger index){
+		return *(_peekPtr - index);
+	}
+	/// Returns: pointer to element at currentIndex-index;
+	NaData* readPtrRelative(uinteger index){
+		return _peekPtr - index;
+	}
 	/// Writes a value to an index on the stackArray (possible because the stack is actually a stack)
 	void write(uinteger index, NaData value){
 		_stackArray[index] = value;
+	}
+	/// Writes a value to `currentIndex-index`
+	void writeRelative(uinteger index, NaData value){
+		*(_peekPtr - index) = value;
 	}
 }

@@ -25,9 +25,8 @@ private:
 	NaInstruction[] _instructionTable; /// what instructions are what
 	void delegate()[] _instructions; /// instructions of loaded byte code
 	NaData[] _arguments; /// argument of each instruction
-	NaData _arg; /// argument of current instruct
-	void delegate()* _nextInstruction; /// pointer to next instruction
-	NaData* _nextArgument; /// pointer to next instruction's arguments
+	void delegate()* _inst; /// pointer to next instruction
+	NaData* _arg; /// pointer to next instruction's arguments
 	NaStack _stack; /// as the name says, stack
 	Stack!StackFrame _jumpStack; /// for storing pointers before jumping
 	NaData _returnVal; /// return value 
@@ -159,16 +158,16 @@ protected:
 	}
 
 	void push(){
-		_stack.push(_arg);
+		_stack.push(*_arg);
 	}
 	void pushFrom(){
-		_stack.push(_stack.read(_arg.intVal));
+		_stack.push(_stack.readRelative(_arg.intVal));
 	}
 	void pushRefFrom(){
-		_stack.push(NaData(_stack.readPtr(_arg.intVal)));
+		_stack.push(NaData(_stack.readPtrRelative(_arg.intVal)));
 	}
 	void writeTo(){
-		_stack.write(_arg.intVal,_stack.pop);
+		_stack.writeRelative(_arg.intVal,_stack.pop);
 	}
 	void writeToRef(){
 		// Left side is evaluated first
@@ -184,29 +183,29 @@ protected:
 		_stack.pop(_arg.intVal);
 	}
 	void jump(){
-		_nextInstruction = &(_instructions)[_arg.intVal] - 1;
-		_nextArgument = &(_arguments)[_arg.intVal] - 1;
+		_inst = &(_instructions)[_arg.intVal] - 1;
+		_arg = &(_arguments)[_arg.intVal] - 1;
 	}
 	void jumpIf(){
 		if (_stack.pop.boolVal == true){
-			_nextInstruction = &(_instructions)[_arg.intVal] - 1;
-			_nextArgument = &(_arguments)[_arg.intVal] - 1;
+			_inst = &(_instructions)[_arg.intVal] - 1;
+			_arg = &(_arguments)[_arg.intVal] - 1;
 		}
 	}
 	void jumpStack(){
-		_jumpStack.push(StackFrame(_nextInstruction, _nextArgument));
-		_nextInstruction = &(_instructions)[_arg.intVal] - 1;
-		_nextArgument = &(_arguments)[_arg.intVal] - 1;
+		_jumpStack.push(StackFrame(_inst, _arg));
+		_inst = &(_instructions)[_arg.intVal] - 1;
+		_arg = &(_arguments)[_arg.intVal] - 1;
 	}
 	void jumpBack(){
 		StackFrame frame;
 		if (_jumpStack.count){
 			frame = _jumpStack.pop;
-			_nextInstruction = frame.instruction;
-			_nextArgument = frame.argument;
+			_inst = frame.instruction;
+			_arg = frame.argument;
 			return;
 		}
-		_nextInstruction = &(_instructions)[$-1] + 1;
+		_inst = &(_instructions)[$-1] + 1;
 	}
 
 	void makeArray(){
@@ -281,7 +280,7 @@ protected:
 		_returnVal = _stack.pop;
 	}
 	void terminate(){
-		_nextInstruction = &(_instructions)[$-1] + 1;
+		_inst = &(_instructions)[$-1] + 1;
 	}
 public:
 	/// constructor
@@ -372,6 +371,10 @@ public:
 			return ["unknown error in NaBytecode.getArgumentsNaData"];
 		return [];
 	}
+	/// ditto
+	/*string[] load(NaBytecode byteCode){
+
+	}*/
 
 	/// Starts execution of byte code, starting with the instruction at `index`
 	/// 
@@ -382,15 +385,14 @@ public:
 		if (_stack.count)
 			_stack.pop(_stack.count);
 		_returnVal = NaData(0);
-		_nextInstruction = &(_instructions[0]);
-		_nextArgument = &(_arguments[0]);
+		_inst = &(_instructions[0]);
+		_arg = &(_arguments[0]);
 		const void delegate()* lastInst = &_instructions[$-1]+1;
 		do{
-			_arg = *_nextArgument;
-			(*_nextInstruction)();
-			_nextInstruction++;
-			_nextArgument++;
-		}while (_nextInstruction < lastInst);
+			(*_inst)();
+			_inst++;
+			_arg++;
+		}while (_inst < lastInst);
 		return _returnVal;
 	}
 }
