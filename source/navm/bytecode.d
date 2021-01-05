@@ -212,7 +212,7 @@ public:
 			_stackLengthMax = _stackLength > _stackLengthMax ? _stackLength : _stackLengthMax;
 			return true;
 		}
-		error = "instruction does not exist";
+		error = "instruction "~instName~" does not exist";
 		return false;
 	}
 	/// ditto
