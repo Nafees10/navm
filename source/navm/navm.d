@@ -188,7 +188,7 @@ protected:
 		_nextArgument = &(_arguments)[_arg.intVal] - 1;
 	}
 	void jumpIf(){
-		if (_stack.pop.intVal == 1){
+		if (_stack.pop.boolVal == true){
 			_nextInstruction = &(_instructions)[_arg.intVal] - 1;
 			_nextArgument = &(_arguments)[_arg.intVal] - 1;
 		}
@@ -322,6 +322,8 @@ public:
 			NaInstruction("popN",0x22,true,255,0,&popN),
 			NaInstruction("jump",0x23,true,true,0,0,&jump),
 			NaInstruction("jumpIf",0x24,true,true,1,0,&jumpIf),
+			NaInstruction("jumpStack",0x3A,true,true,0,0,&jumpStack),
+			NaInstruction("jumpBack",0x3B,&jumpBack),
 			NaInstruction("makeArray",0x25,true,255,1,&makeArray),
 			NaInstruction("arrayRefElement",0x26,2,1,&arrayRefElement),
 			NaInstruction("arrayElement",0x27,2,1,&arrayElement),
