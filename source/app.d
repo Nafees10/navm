@@ -4,6 +4,7 @@ version(demo){
 
 	import utils.misc : fileToArray;
 	import std.datetime.stopwatch;
+	import std.conv : to;
 
 
 	void main(string[] args){
@@ -28,8 +29,9 @@ version(demo){
 			return NaData();
 		}
 		NaData readString(NaData[]){
-			string s = readln;
-			s.length --; // remove \n char from end of string
+			dstring s = (readln).to!dstring;
+			if (s[$-1] == '\n')
+				s = s[0..$-1];
 			return NaData(s);
 		}
 		// ready the VM with these 4 external functions.
