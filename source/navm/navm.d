@@ -17,19 +17,13 @@ public alias readData = navm.bytecode.readData;
 /// the VM
 class NaVM{
 private:
-	/// for storing a stack frame in stack
-	struct StackFrame{
-		void delegate()* instruction;
-		NaData* argument;
-	}
 	NaInstruction[] _instructionTable; /// what instructions are what
 	void delegate()[] _instructions; /// instructions of loaded byte code
 	NaData[] _arguments; /// argument of each instruction
 	void delegate()* _inst; /// pointer to next instruction
 	NaData* _arg; /// pointer to next instruction's arguments
-	NaStack _stack; /// as the name says, stack
-	Stack!StackFrame _jumpStack; /// for storing pointers before jumping
-	NaData _returnVal; /// return value 
+	ArrayStack!NaData _stack; /// as the name says, stack
+	ArrayStack!StackFrame _jumpStack; /// for storing pointers before jumping
 	
 	ExternFunction[] _externFunctions; /// external functions 
 protected:
@@ -276,9 +270,6 @@ protected:
 		_stack.push(NaData(to!double(_stack.pop.strVal)));
 	}
 
-	void returnVal(){
-		_returnVal = _stack.pop;
-	}
 	void terminate(){
 		_inst = &(_instructions)[$-1] + 1;
 	}
@@ -342,12 +333,11 @@ public:
 			NaInstruction("doubleToString",0x35,1,1,&doubleToString),
 			NaInstruction("stringToInt",0x36,1,1,&stringToInt),
 			NaInstruction("stringToDouble",0x37,1,1,&stringToDouble),
-			NaInstruction("return",0x38,1,0,&returnVal),
-			NaInstruction("terminate",0x39,1,0,&terminate),
+			NaInstruction("terminate",0x38,1,0,&terminate),
 		];
 		// prepare stack
-		_stack = new NaStack(stackLength);
-		_jumpStack = new Stack!StackFrame;
+		_stack = new ArrayStack!NaData(stackLength);
+		_jumpStack = new ArrayStack!StackFrame;
 	}
 	/// destructor
 	~this(){
@@ -384,7 +374,6 @@ public:
 			return NaData(0);
 		if (_stack.count)
 			_stack.pop(_stack.count);
-		_returnVal = NaData(0);
 		_inst = &(_instructions[0]);
 		_arg = &(_arguments[0]);
 		const void delegate()* lastInst = &_instructions[$-1]+1;
@@ -393,6 +382,8 @@ public:
 			_inst++;
 			_arg++;
 		}while (_inst < lastInst);
-		return _returnVal;
+		if (_stack.count)
+			return _stack.pop;
+		return NaData();
 	}
 }
