@@ -2,7 +2,7 @@ version(demo){
 	import std.stdio;
 	import navm.navm;
 
-	import utils.misc : fileToArray;
+	import utils.misc;
 	import std.datetime.stopwatch;
 	import std.conv : to;
 
@@ -44,13 +44,26 @@ version(demo){
 			foreach (err; errors)
 				writeln(err);
 		}else{
+			immutable uinteger count = args.length > 2 && args[2].isNum ? args[2].to!uinteger : 1;
 			StopWatch sw;
-			sw.start;
-			// execute the function with id=0 (function defined first in bytecode), 
-			// start with empty stack ([]). Put whatever you want to be on stack in second argument
-			vm.execute(0);
-			sw.stop;
-			writeln("Execution finished in: ",sw.peek.total!"msecs", " msecs");
+			uinteger[] times;
+			times.length = count;
+			uinteger min,max,avg;
+			min = uinteger.max;
+			foreach (i; 0 .. count){
+				sw.start;
+				vm.execute(0); // start execution at instruction at index=0
+				sw.stop;
+				times[i] = sw.peek.total!"msecs";
+				sw.reset;
+				writeln("Execution finished in: ",times[i], " msecs");
+				min = times[i] < min ? times[i] : min;
+				max = times[i] > max ? times[i] : max;
+				avg += times[i];
+			}
+			avg = avg / count;
+			writeln("min\tmax\tavg");
+			writeln(min,'\t',max,'\t',avg);
 		}
 	}
 }
