@@ -136,8 +136,6 @@ Pops a string, pushes `true (bool)` if it is `"true"`, otherwise pushes `false (
 ---
 
 ## Misc.
-* _`Return`_  
-Pops a value from stack, sets it as the return value.**Does NOT terminate execution**
 * _`Terminate`_  
 Terminates execution.
 
