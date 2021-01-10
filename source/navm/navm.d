@@ -25,7 +25,7 @@ private:
 	ArrayStack!NaData _stack; /// as the name says, stack
 	ArrayStack!StackFrame _jumpStack; /// for storing pointers before jumping
 	
-	ExternFunction[] _externFunctions; /// external functions 
+	ExternFunction[] _externFunctions; /// external functions
 protected:
 	// instructions:
 

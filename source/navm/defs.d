@@ -51,12 +51,12 @@ public union NaData{
 		return newVal;
 	}
 	/// Setter for strVal
-	@property char[] strVal(dstring newVal){
+	@property dchar[] strVal(dstring newVal){
 		arrayVal.length = newVal.length;
 		foreach (i, ch; newVal){
 			arrayVal[i].intVal = cast(integer)ch;
 		}
-		return cast(char[])newVal;
+		return cast(dchar[])newVal;
 	}
 }
 
