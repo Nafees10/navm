@@ -37,7 +37,6 @@ version(demo){
 		// ready the VM with these 4 external functions.
 		NaVM vm = new NaVM([&writelnInt, &writelnDbl, &writeString, &readString]);
 		// load the bytecode
-		bool hasError = false;
 		string[] errors = vm.load(fileToArray(args[1]));
 		if (errors.length){
 			writeln("Errors in byte code:");
