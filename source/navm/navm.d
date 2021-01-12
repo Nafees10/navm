@@ -16,13 +16,13 @@ public alias readData = navm.bytecode.readData;
 class NaVM{
 private:
 	NaInstruction[] _instructionTable; /// what instructions are what
+protected:
 	void delegate()[] _instructions; /// instructions of loaded byte code
 	NaData[] _arguments; /// argument of each instruction
 	void delegate()* _inst; /// pointer to next instruction
 	NaData* _arg; /// pointer to next instruction's arguments
 	ArrayStack!NaData _stack; /// as the name says, stack
 	ArrayStack!StackFrame _jumpStack; /// for storing pointers before jumping
-protected:
 	// instructions:
 
 	void mathAddInt(){
