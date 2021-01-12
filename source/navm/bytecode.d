@@ -143,7 +143,9 @@ public:
 	}
 	/// Call `resolve` before this.
 	/// 
-	/// Returns: arguments for each instruction as NaData, or [] if error
+	/// Returns: arguments for each instruction NaData[]
+	/// 
+	/// Throws: Exception in case of error in argument
 	NaData[] getArgumentsNaData(){
 		NaData[] r;
 		r.length = _arguments.length;
@@ -151,8 +153,8 @@ public:
 			try{
 				r[i] = readData(arg);
 			}catch (Exception e){
-				r = [];
-				break;
+				e.msg = "Line#"~(i+1).to!string~' '~e.msg;
+				throw e;
 			}
 		}
 		return r;
@@ -298,16 +300,6 @@ public struct NaInstruction{
 		this._popCount = cast(ubyte)popCount;
 		this.pointer = pointer;
 	}
-	/// constructor, for no push but with arg as jump pos, and pop
-	/*this (string name, integer code, bool argIsJumpPos, integer popCount, void delegate() pointer){
-		this.name = name.lowercase;
-		this.code = cast(ushort)code;
-		this.needsArg = true;
-		this.argIsJumpPos = argIsJumpPos;
-		this.pushCount = 0;
-		this._popCount = cast(ubyte)popCount;
-		this.pointer = pointer;
-	}*/
 	/// full constructor but arg is not jump position
 	this (string name, integer code, bool needsArg, integer popCount, integer pushCount, void delegate() pointer){
 		this.name = name.lowercase;
