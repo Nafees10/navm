@@ -6,7 +6,7 @@ import navm.bytecode;
 import std.conv : to;
 
 import utils.lists;
-import utils.misc : uinteger, integer;
+import utils.misc;
 
 /// external function
 public alias ExternFunction = NaData delegate(NaData[]);
@@ -277,7 +277,7 @@ public:
 	/// constructor
 	/// 
 	/// External Functions get added here
-	this(ExternFunction[] externalFunctions, uinteger stackLength = 65536){
+	this(ExternFunction[] externalFunctions, uinteger stackLength = 65_536){
 		_externFunctions = externalFunctions.dup;
 		// prepare instruction table, forget codes, will do them in a loop after
 		_instructionTable = [
@@ -382,6 +382,34 @@ public:
 			return [msg];
 		}
 		return [];
+	}
+
+	/// Adds a new instruction
+	/// 
+	/// Returns: true on success, false if not (pointer might be null, code might be already in use, name might already be in use)
+	bool addInstruction(NaInstruction instruction, ref string error){
+		if (instruction.pointer is null){
+			error = "instruction pointer cannot be null";
+			return false;
+		}
+		instruction.name = instruction.name.lowercase();
+		foreach (inst; _instructionTable){
+			if (instruction.name == inst.name){
+				error = "instruction name, "~inst.name~", already exists";
+				return false;
+			}
+			if (instruction.code == inst.code){
+				error = "instruction code, "~inst.code.to!string~", already exists";
+				return false;
+			}
+		}
+		_instructionTable ~= instruction;
+		return true;
+	}
+	/// ditto
+	bool addInstruction(NaInstruction instruction){
+		string error;
+		return addInstruction(instruction, error);
 	}
 
 	/// Starts execution of byte code, starting with the instruction at `index`
