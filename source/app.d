@@ -9,22 +9,26 @@ version(demo){
 	/// inherited VM with instruction added that we need
 	class VM : NaVM{
 	protected:
-		void writeStr(){
-			write(_stack.pop.strVal);
-		}
 		void writeInt(){
 			write(_stack.pop.intVal);
 		}
 		void writeDouble(){
 			write(_stack.pop.doubleVal);
 		}
+		void writeStr(){
+			write(_stack.pop.strVal);
+		}
+		void writeChar(){
+			write(_stack.pop.dcharVal);
+		}
 	public:
 		/// constructor
 		this(){
 			super();
 			addInstruction(NaInstruction("writeInt",0xF0,1,0,&writeInt));
-			addInstruction(NaInstruction("writeStr",0xF1,1,0,&writeStr));
-			addInstruction(NaInstruction("writeDouble",0xF2,1,0,&writeDouble));
+			addInstruction(NaInstruction("writeDouble",0xF1,1,0,&writeDouble));
+			addInstruction(NaInstruction("writeStr",0xF2,1,0,&writeStr));
+			addInstruction(NaInstruction("writeChar",0xF3,1,0,&writeChar));
 		}
 	}
 
@@ -32,7 +36,7 @@ version(demo){
 	void main(string[] args){
 		if (args.length < 2)
 			args = [args[0], "sample"];
-			
+
 		NaVM vm = new VM();
 		// load the bytecode
 		string[] errors = vm.load(fileToArray(args[1]));
