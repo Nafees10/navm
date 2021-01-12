@@ -359,15 +359,30 @@ public:
 		if (r.length)
 			return r;
 		_instructions = bcode.getBytecodePointers();
-		_arguments = bcode.getArgumentsNaData();
-		if (!_arguments.length)
-			return ["unknown error in NaBytecode.getArgumentsNaData"];
+		try{
+			_arguments = bcode.getArgumentsNaData();
+		}catch (Exception e){
+			string msg = e.msg;
+			.destroy(e);
+			return [msg];
+		}
 		return [];
 	}
 	/// ditto
-	/*string[] load(NaBytecode byteCode){
-
-	}*/
+	string[] load(NaBytecode byteCode){
+		string[] r = byteCode.resolve();
+		if (r.length)
+			return r;
+		_instructions = byteCode.getBytecodePointers();
+		try{
+			_arguments = byteCode.getArgumentsNaData();
+		}catch (Exception e){
+			string msg = e.msg;
+			.destroy(e);
+			return [msg];
+		}
+		return [];
+	}
 
 	/// Starts execution of byte code, starting with the instruction at `index`
 	/// 
