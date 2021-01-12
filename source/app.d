@@ -6,40 +6,34 @@ version(demo){
 	import std.datetime.stopwatch;
 	import std.conv : to;
 
+	/// inherited VM with instruction added that we need
+	class VM : NaVM{
+	protected:
+		void writeStr(){
+			write(_stack.pop.strVal);
+		}
+		void writeInt(){
+			write(_stack.pop.intVal);
+		}
+		void writeDouble(){
+			write(_stack.pop.doubleVal);
+		}
+	public:
+		/// constructor
+		this(){
+			super();
+			addInstruction(NaInstruction("writeInt",0xF0,1,0,&writeInt));
+			addInstruction(NaInstruction("writeStr",0xF1,1,0,&writeStr));
+			addInstruction(NaInstruction("writeDouble",0xF2,1,0,&writeDouble));
+		}
+	}
+
 
 	void main(string[] args){
 		if (args.length < 2)
 			args = [args[0], "sample"];
-		NaData writelnInt(NaData[] _args){
-			foreach(arg; _args){
-				writeln(arg.intVal);
-			}
-			return NaData();
-		}
-		NaData writelnDbl(NaData[] _args){
-			foreach (arg; _args){
-				writeln(arg.doubleVal);
-			}
-			return NaData();
-		}
-		NaData writeString(NaData[] _args){
-			foreach (arg; _args){
-				write(arg.strVal);
-			}
-			return NaData();
-		}
-		NaData readString(NaData[]){
-			dstring s = (readln).to!dstring;
-			if (s[$-1] == '\n')
-				s = s[0..$-1];
-			return NaData(s);
-		}
-		void dummyInstruction(){
-			writeln("dummy instruction called");
-		}
-		// ready the VM with these 4 external functions.
-		NaVM vm = new NaVM([&writelnInt, &writelnDbl, &writeString, &readString]);
-		vm.addInstruction(NaInstruction("dummyInstruction", 0xFF,false,false,0,0,&dummyInstruction));
+			
+		NaVM vm = new VM();
 		// load the bytecode
 		string[] errors = vm.load(fileToArray(args[1]));
 		if (errors.length){
