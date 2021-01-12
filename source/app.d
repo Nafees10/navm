@@ -34,8 +34,12 @@ version(demo){
 				s = s[0..$-1];
 			return NaData(s);
 		}
+		void dummyInstruction(){
+			writeln("dummy instruction called");
+		}
 		// ready the VM with these 4 external functions.
 		NaVM vm = new NaVM([&writelnInt, &writelnDbl, &writeString, &readString]);
+		vm.addInstruction(NaInstruction("dummyInstruction", 0xFF,false,false,0,0,&dummyInstruction));
 		// load the bytecode
 		string[] errors = vm.load(fileToArray(args[1]));
 		if (errors.length){
