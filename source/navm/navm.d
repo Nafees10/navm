@@ -8,8 +8,6 @@ import std.conv : to;
 import utils.lists;
 import utils.misc;
 
-/// external function
-public alias ExternFunction = NaData delegate(NaData[]);
 public alias NaData = navm.defs.NaData;
 public alias NaInstruction = navm.bytecode.NaInstruction;
 public alias readData = navm.bytecode.readData;
@@ -24,18 +22,8 @@ private:
 	NaData* _arg; /// pointer to next instruction's arguments
 	ArrayStack!NaData _stack; /// as the name says, stack
 	ArrayStack!StackFrame _jumpStack; /// for storing pointers before jumping
-	
-	ExternFunction[] _externFunctions; /// external functions
 protected:
 	// instructions:
-
-	void call(){
-		_stack.push(
-			_externFunctions[_stack.pop.intVal](
-				_stack.pop(_arg.intVal)
-				)
-			);
-	}
 
 	void mathAddInt(){
 		_stack.push(
@@ -275,13 +263,9 @@ protected:
 	}
 public:
 	/// constructor
-	/// 
-	/// External Functions get added here
-	this(ExternFunction[] externalFunctions, uinteger stackLength = 65_536){
-		_externFunctions = externalFunctions.dup;
+	this(uinteger stackLength = 65_536){
 		// prepare instruction table, forget codes, will do them in a loop after
 		_instructionTable = [
-			NaInstruction("call",0,255,1,&call),
 			NaInstruction("mathAddInt",0,2,1,&mathAddInt),
 			NaInstruction("mathSubtractInt",0,2,1,&mathSubtractInt),
 			NaInstruction("mathMultiplyInt",0,2,1,&mathMultiplyInt),

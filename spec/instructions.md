@@ -1,8 +1,3 @@
-## Calling external functions:
-
-* _`Call [arg count- integer>=0]`_  
-Pops `function id (integer>=0)`, then pops `arg count` number of elements as function arguments. Calls a function with the id `function id`. Pushes the return value to stack, if no meaningful data is returned by functions, it pushes a `NaData()`.
-
 ## Arithmetic operators
 
 ### For integers
