@@ -21,6 +21,7 @@ protected:
 	NaData[] _arguments; /// argument of each instruction
 	void delegate()* _inst; /// pointer to next instruction
 	NaData* _arg; /// pointer to next instruction's arguments
+	uinteger _stackIndex; /// stack index relative to which some instructions will pushFrom/writeTo
 	ArrayStack!NaData _stack; /// as the name says, stack
 	ArrayStack!StackFrame _jumpStack; /// for storing pointers before jumping
 	// instructions:
@@ -142,15 +143,25 @@ protected:
 	void push(){
 		_stack.push(*_arg);
 	}
+	void pushFromAbs(){
+		_stack.push(_stack.read(_arg.intVal));
+	}
+	void pushRefFromAbs(){
+		_stack.push(NaData(_stack.readPtr(_arg.intVal)));
+	}
+	void writeToAbs(){
+		_stack.write(_arg.intVal,_stack.pop);
+	}
 	void pushFrom(){
-		_stack.push(_stack.readRelative(_arg.intVal));
+		_stack.push(_stack.read(_arg.intVal + _stackIndex));
 	}
 	void pushRefFrom(){
-		_stack.push(NaData(_stack.readPtrRelative(_arg.intVal)));
+		_stack.push(NaData(_stack.readPtr(_arg.intVal + _stackIndex)));
 	}
 	void writeTo(){
-		_stack.writeRelative(_arg.intVal,_stack.pop);
+		_stack.write(_arg.intVal + _stackIndex, _stack.pop);
 	}
+	
 	void writeToRef(){
 		// Left side is evaluated first
 		*(_stack.pop.ptrVal) = _stack.pop;
@@ -174,17 +185,18 @@ protected:
 			_arg = &(_arguments)[_arg.intVal] - 1;
 		}
 	}
-	void jumpStack(){
-		_jumpStack.push(StackFrame(_inst, _arg));
+	void jumpFrame(){
+		_jumpStack.push(StackFrame(_inst, _arg, _stackIndex));
 		_inst = &(_instructions)[_arg.intVal] - 1;
 		_arg = &(_arguments)[_arg.intVal] - 1;
+		_stackIndex = _stack.count;
 	}
 	void jumpBack(){
-		StackFrame frame;
 		if (_jumpStack.count){
-			frame = _jumpStack.pop;
+			StackFrame frame = _jumpStack.pop;
 			_inst = frame.instruction;
 			_arg = frame.argument;
+			_stackIndex = frame.stackIndex;
 			return;
 		}
 		_inst = &(_instructions)[$-1] + 1;
@@ -290,13 +302,16 @@ public:
 			NaInstruction("pushFrom",0,true,0,1,&pushFrom),
 			NaInstruction("pushRefFrom",0,true,0,1,&pushRefFrom),
 			NaInstruction("writeTo",0,true,1,0,&writeTo),
+			NaInstruction("pushFromAbs",0,true,0,1,&pushFromAbs),
+			NaInstruction("pushRefFromAbs",0,true,0,1,&pushRefFromAbs),
+			NaInstruction("writeToAbs",0,true,1,0,&writeToAbs),
 			NaInstruction("writeToRef",0,2,0,&writeToRef),
 			NaInstruction("deref",0,1,1,&deref),
 			NaInstruction("pop",0,1,0,&pop),
 			NaInstruction("popN",0,true,255,0,&popN),
 			NaInstruction("jump",0,true,true,0,0,&jump),
 			NaInstruction("jumpIf",0,true,true,1,0,&jumpIf),
-			NaInstruction("jumpStack",0,true,true,0,0,&jumpStack),
+			NaInstruction("jumpFrame",0,true,true,0,0,&jumpFrame),
 			NaInstruction("jumpBack",0,&jumpBack),
 			NaInstruction("makeArray",0,true,255,1,&makeArray),
 			NaInstruction("arrayRefElement",0,2,1,&arrayRefElement),
