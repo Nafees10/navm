@@ -2,55 +2,69 @@ version(demo){
 	import std.stdio;
 	import navm.navm;
 
-	import utils.misc : fileToArray;
+	import utils.misc;
 	import std.datetime.stopwatch;
+	import std.conv : to;
+
+	/// inherited VM with instruction added that we need
+	class VM : NaVM{
+	protected:
+		void writeInt(){
+			write(_stack.pop.intVal);
+		}
+		void writeDouble(){
+			write(_stack.pop.doubleVal);
+		}
+		void writeStr(){
+			write(_stack.pop.strVal);
+		}
+		void writeChar(){
+			write(_stack.pop.dcharVal);
+		}
+	public:
+		/// constructor
+		this(){
+			super();
+			addInstruction(NaInstruction("writeInt",0xF0,1,0,&writeInt));
+			addInstruction(NaInstruction("writeDouble",0xF1,1,0,&writeDouble));
+			addInstruction(NaInstruction("writeStr",0xF2,1,0,&writeStr));
+			addInstruction(NaInstruction("writeChar",0xF3,1,0,&writeChar));
+		}
+	}
 
 
 	void main(string[] args){
-		NaData writelnInt(NaData[] args){
-			foreach(arg; args){
-				writeln(arg.intVal);
-			}
-			return NaData();
-		}
-		NaData writelnDbl(NaData[] args){
-			foreach (arg; args){
-				writeln(arg.doubleVal);
-			}
-			return NaData();
-		}
-		NaData writeString(NaData[] args){
-			foreach (arg; args){
-				write(arg.strVal);
-			}
-			return NaData();
-		}
-		NaData readString(NaData[] args){
-			string s = readln;
-			s.length --; // remove \n char from end of string
-			return NaData(s);
-		}
-		// ready the VM with these 4 external functions.
-		NaVM vm = new NaVM([&writelnInt, &writelnDbl, &writeString, &readString]);
-		// load the bytecode
-		bool hasError = false;
-		try{
-			vm.load(fileToArray(args[1]));
-		}catch (Exception e){
-			hasError = true;
-			writeln("Error in bytecode:\n", e.msg);
-		}
+		if (args.length < 2)
+			args = [args[0], "sample"];
 
-		if (!hasError){
-			// execute the onLoad first
-			vm.executeOnLoad();
+		NaVM vm = new VM();
+		// load the bytecode
+		string[] errors = vm.load(fileToArray(args[1]));
+		if (errors.length){
+			writeln("Errors in byte code:");
+			foreach (err; errors)
+				writeln(err);
+		}else{
+			immutable uinteger count = args.length > 2 && args[2].isNum ? args[2].to!uinteger : 1;
 			StopWatch sw;
-			sw.start;
-			// execute the function with id=0 (function defined first in bytecode), 
-			// start with empty stack ([]). Put whatever you want to be on stack in second argument
-			vm.execute(0, []);
-			sw.stop;
-			writeln("Execution finished in: ",sw.peek.total!"msecs", " msecs");
+			uinteger[] times;
+			times.length = count;
+			uinteger min,max,avg;
+			min = uinteger.max;
+			foreach (i; 0 .. count){
+				sw.start;
+				vm.execute(0); // start execution at instruction at index=0
+				sw.stop;
+				times[i] = sw.peek.total!"msecs";
+				sw.reset;
+				writeln("Execution finished in: ",times[i], " msecs");
+				min = times[i] < min ? times[i] : min;
+				max = times[i] > max ? times[i] : max;
+				avg += times[i];
+			}
+			avg = avg / count;
+			writeln("min\tmax\tavg");
+			writeln(min,'\t',max,'\t',avg);
 		}
 	}
 }

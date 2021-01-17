@@ -1,5 +1,2 @@
-def 2
-	push "Hello World!"
-	push "\n"
-	executeFunctionExternal 2 2
-	pop
+push "Hello World\n"
+writeStr

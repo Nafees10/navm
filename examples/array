@@ -1,62 +1,81 @@
-def 8 # 8 is just made up, I'm just assuming it doesn't need more than 8.
-	push [] # array is at stack[0]
-	push 0 # counter at stack[1]
-	push 5 # we're making it 5 elements long
+jump main
+printArray:
+	pushFrom -1 # array ref, at 0
+	push 0 # count at 1
+	pushFrom 0
+	deref
+	arrayLength # array length at 2
+
+	printArrayLoop0Start:
+		# if condition
+		pushFrom 1
+		pushFrom 2
+		isGreaterInt
+		Not
+		jumpIf printArrayEnd
+		
+		# get that element
+		pushFrom 1
+		pushFrom 0
+		arrayRefElement
+		deref
+		writeInt
+		push '\n'
+		writeChar
+
+		# i ++
+		pushFrom 1
+		push 1
+		mathAddInt
+		writeTo 1
+
+		# loop over
+		jump printArrayLoop0Start
+	
+	printArrayEnd:
+	jumpBack
+
+fillArray:
+	pushFrom -1 # array at 0
+	push 0 # counter at 1
+	pushFrom 0
+	deref
+	arrayLength # array length at 2
+
+	fillArrayLoop0Start:
+		pushFrom 1
+		pushFrom 2
+		isGreaterInt
+		Not
+		JumpIf fillArrayEnd
+		
+		pushFrom 1
+			pushFrom 1
+			pushFrom 0
+		arrayRefElement
+		writeToRef
+
+		pushFrom 1
+		push 1
+		mathAddInt
+		writeTo 1
+
+		jump fillArrayLoop0Start
+
+
+	fillArrayEnd:
+	jumpBack
+
+main:
+	push []
+	push 10
 	pushRefFrom 0
 	arrayLengthSet
-	# display length
-		push "Array Length: "
-		# get length
-			pushFrom 0
-			arrayLength
-			intToString
-		push "\n"
-		executeFunctionExternal 2 3
-		pop
 	
-	# fill it with 0,1,2,3,4 - use element at stack[1] as counter
-	jumpBackToHere:
-	pushFrom 1 # this one is value for writeTo
-		pushFrom 1 # this one is index for arrayRefElement
-		pushRefFrom 0 # and this is ref to array for arrayRefElement
-		ArrayRefElement
-	writeToRef
-	# increment counter
-	pushFrom 1
-	push 1
-	mathAddInt
-	writeTo 1
-	# check if counter < 5
-	pushFrom 1
-	push 5
-	isGreaterInt
-	JumpIf jumpBackToHere
+	pushRefFrom 0
+	jumpFrame fillArray
+	pop # pop the ref
 	
-	# now write it's contents, lets just use a function for that
-	pushFrom 0
-	executeFunction 1 1
-	
-	
-def 8 # again, it **probably** doesn't need more than 8
-	# the array to print is already at stack[0], passed as an argument
-	push 0 # this is a counter, at stack[1]
-	pushFrom 0
-	arrayLength # this puts array length at stack[2]
-	
-	jumpBackPosition:
-	pushFrom 1
-	pushFrom 0
-	arrayElement
-	deref
-	executeFunctionExternal 0 1
+	pushRefFrom 0
+	jumpFrame printArray
 	pop
-	# increment counter
-	pushFrom 1
-	push 1
-	mathAddInt
-	writeTo 1
-	# check if counter < length
-	pushFrom 1
-	pushFrom 2
-	isGreaterInt
-	jumpIf jumpBackPosition

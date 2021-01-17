@@ -10,7 +10,7 @@ These instructions will get you a copy of NaVM with its very basic instuctions, 
 Remember, NaVM is not built to be a standalone application, it's meant to be used as a library (originally built
 for QScript, but everyone's free to use it).  
 
-See `source/app.d` to see how to add external functions, and use it in your program.  
+See `source/app.d` to see how to add new instructions, & execute byte codes.
   
 See `spec/syntax.md` and `spec/instructions.md` for NaVM's syntax and a list of instructions you can use.  
 
@@ -20,33 +20,30 @@ See `examples/*` for some example byte codes. These can be run using the demo bu
 You need to have these present on your machine:
 
 1. dub
-2. dlang compiler (only dmd is tested)
-3. Internet connection (for dub to fetch NaVM and its dependencies)
+2. dlang compiler (`dmd` works)
 
 ### Building
 Run:
-```
+```bash
 dub fetch navm
 ```
 to download this package, and then run:
-```
+```bash
 dub build navm -b=release -c=demo
 ```
 to fetch dependencies and build NaVM.  
 Following this, you will have the NaVM binary (named `demo`) with very basic functionality.  
 
 You can now run NaVM bytecode using:  
-```
+```bash
 ~/.dub/packages/navm-*/navm/demo path/to/bytecodefile
 ```
 
-
-This binary also has 4 external functions:
-
-* ID: 0, call using *`ExecuteFunctionExternal 0 n`* where n is number of integers to pop from stack and writeln(int) to terminal
-* ID: 1, call using *`ExecuteFunctionExternal 1 n`* where n is number of doubles (floats) to pop from stack and writeln(double) to terminal
-* ID: 2, call using *`ExecuteFunctionExternal 2 n`* where n is number of strings to pop from stack and write to terminal
-* ID: 3, call using *`ExecuteFunctionExternal 3 0`* reads a line from stdin, pushes it to stack
+The demo program contains 4 additional instructions:
+* `writeInt` - pops 1 integer from stack, and writes it to stdio.
+* `writeDouble` - pops 1 double from stack, and writes it to stdio.
+* `writeChar` - pops 1 char from stack, and writes it to stdio.
+* `writeStr` - pops 1 string (array of char) from stack, and writes it to stdio.
 
 ---
 

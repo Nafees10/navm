@@ -1,64 +1,30 @@
 module navm.navm;
 
 import navm.defs;
-import navm.bytecodedefs;
 import navm.bytecode;
 
 import std.conv : to;
 
 import utils.lists;
-import utils.misc : uinteger, integer;
+import utils.misc;
 
-alias ExternFunction = navm.defs.ExternFunction;
-alias NaData = navm.defs.NaData;
-alias Instruction = navm.bytecodedefs.Instruction;
-alias NaFunction = navm.bytecodedefs.NaFunction;
-alias readData = navm.bytecode.readData;
-
+public alias NaData = navm.defs.NaData;
+public alias NaInstruction = navm.bytecode.NaInstruction;
+public alias readData = navm.bytecode.readData;
 
 /// the VM
 class NaVM{
 private:
-	void delegate()[][] _functions; /// instructions of functions loaded
-	uinteger[] _functionsStackLength;
-	NaData[][][] _functionsArguments; /// arguments of each functions' each instruction
-
-	void delegate()[] _onloadInstructions; /// instructions for onLoad function
-	uinteger _onloadStackLength; /// stack length of onLoad function
-	NaData[][] _onloadArguments; /// arguments for isntructions of onLoad function
-
-	bool _onloadExists; /// if onLoad function exists
-	bool _onloadExecuted; /// if onLoad has been executed
-
-	void delegate()[]* _currentFunction; /// instructions of function currently being executed
-	NaData[][]* _currentArguments; /// arguments of instructions of function currently being executed
-
-	NaData[] _globalVars; /// stores global variables for a bytecode
-	
-	void delegate()* _instruction; /// pointer to next instruction
-	NaData[]* _arguments; /// pointer to next instruction's arguments
-	NaStack _stack; /// as the name says, stack
-	NaData _returnVal; /// return value of current function
-	
-	ExternFunction[] _externFunctions; /// external functions 
+	NaInstruction[] _instructionTable; /// what instructions are what
 protected:
+	void delegate()[] _instructions; /// instructions of loaded byte code
+	NaData[] _arguments; /// argument of each instruction
+	void delegate()* _inst; /// pointer to next instruction
+	NaData* _arg; /// pointer to next instruction's arguments
+	uinteger _stackIndex; /// stack index relative to which some instructions will pushFrom/writeTo
+	ArrayStack!NaData _stack; /// as the name says, stack
+	ArrayStack!StackFrame _jumpStack; /// for storing pointers before jumping
 	// instructions:
-
-	void executeExternalFunction(){
-		_stack.push(
-			_externFunctions[(*_arguments)[0].intVal](
-				_stack.pop((*_arguments)[1].intVal)
-				)
-			);
-	}
-	void executeFunction(){
-		_stack.push(
-			this.execute(
-				(*_arguments)[0].intVal,
-				_stack.pop((*_arguments)[1].intVal)
-				)
-			);
-	}
 
 	void mathAddInt(){
 		_stack.push(
@@ -113,17 +79,17 @@ protected:
 	}
 
 	void isSame(){
-		_stack.push(NaData(cast(integer)(_stack.pop.intVal == _stack.pop.intVal)));
+		_stack.push(NaData(_stack.pop.intVal == _stack.pop.intVal));
 	}
 	void isSameArray(){
 		NaData[] a = _stack.pop.arrayVal, b = _stack.pop.arrayVal;
-		NaData r = NaData(0);
+		NaData r = NaData(false);
 		if (a.length == b.length){
-			r = NaData(1);
+			r = NaData(true);
 			NaData* aPtr = &a[0], bPtr = &b[0];
 			for (uinteger i = 0; i < a.length; i++){
 				if ((*aPtr).intVal != (*bPtr).intVal){
-					r = NaData(0);
+					r = NaData(false);
 					break;
 				}
 				aPtr ++;
@@ -134,13 +100,13 @@ protected:
 	}
 	void isSameArrayRef(){
 		NaData[] a = _stack.pop.ptrVal.arrayVal, b = _stack.pop.ptrVal.arrayVal;
-		NaData r = NaData(0);
+		NaData r = NaData(false);
 		if (a.length == b.length){
-			r = NaData(1);
+			r = NaData(true);
 			NaData* aPtr = &a[0], bPtr = &b[0];
 			for (uinteger i = 0; i < a.length; i++){
 				if ((*aPtr).intVal != (*bPtr).intVal){
-					r = NaData(0);
+					r = NaData(false);
 					break;
 				}
 				aPtr ++;
@@ -151,41 +117,51 @@ protected:
 	}
 
 	void isGreaterInt(){
-		_stack.push(NaData(cast(integer)(_stack.pop.intVal > _stack.pop.intVal)));
+		_stack.push(NaData(_stack.pop.intVal > _stack.pop.intVal));
 	}
 	void isGreaterSameInt(){
-		_stack.push(NaData(cast(integer)(_stack.pop.intVal >= _stack.pop.intVal)));
+		_stack.push(NaData(_stack.pop.intVal >= _stack.pop.intVal));
 	}
 
 	void isGreaterDouble(){
-		_stack.push(NaData(cast(integer)(_stack.pop.doubleVal > _stack.pop.doubleVal)));
+		_stack.push(NaData(_stack.pop.doubleVal > _stack.pop.doubleVal));
 	}
 	void isGreaterSameDouble(){
-		_stack.push(NaData(cast(integer)(_stack.pop.doubleVal >= _stack.pop.doubleVal)));
+		_stack.push(NaData(_stack.pop.doubleVal >= _stack.pop.doubleVal));
 	}
 
 	void binaryNot(){
-		_stack.push(NaData(cast(integer)(!_stack.pop.intVal)));
+		_stack.push(NaData(!_stack.pop.boolVal));
 	}
 	void binaryAnd(){
-		_stack.push(NaData(cast(integer)(_stack.pop.intVal && _stack.pop.intVal)));
+		_stack.push(NaData(_stack.pop.boolVal && _stack.pop.boolVal));
 	}
 	void binaryOr(){
-		_stack.push(NaData(cast(integer)(_stack.pop.intVal || _stack.pop.intVal)));
+		_stack.push(NaData(_stack.pop.boolVal || _stack.pop.boolVal));
 	}
 
 	void push(){
-		_stack.push(_arguments[0]);
+		_stack.push(*_arg);
+	}
+	void pushFromAbs(){
+		_stack.push(_stack.read(_arg.intVal));
+	}
+	void pushRefFromAbs(){
+		_stack.push(NaData(_stack.readPtr(_arg.intVal)));
+	}
+	void writeToAbs(){
+		_stack.write(_arg.intVal,_stack.pop);
 	}
 	void pushFrom(){
-		_stack.push(_stack.read((*_arguments)[0].intVal));
+		_stack.push(_stack.read(_arg.intVal + _stackIndex));
 	}
 	void pushRefFrom(){
-		_stack.push(NaData(_stack.readPtr((*_arguments)[0].intVal)));
+		_stack.push(NaData(_stack.readPtr(_arg.intVal + _stackIndex)));
 	}
 	void writeTo(){
-		_stack.write((*_arguments)[0].intVal,_stack.pop);
+		_stack.write(_arg.intVal + _stackIndex, _stack.pop);
 	}
+	
 	void writeToRef(){
 		// Left side is evaluated first
 		*(_stack.pop.ptrVal) = _stack.pop;
@@ -197,21 +173,37 @@ protected:
 		_stack.pop;
 	}
 	void popN(){
-		_stack.pop((*_arguments)[0].intVal);
+		_stack.pop(_arg.intVal);
 	}
 	void jump(){
-		_instruction = &(*_currentFunction)[(*_arguments)[0].intVal] - 1;
-		_arguments = &(*_currentArguments)[(*_arguments)[0].intVal] - 1;
+		_inst = &(_instructions)[_arg.intVal] - 1;
+		_arg = &(_arguments)[_arg.intVal] - 1;
 	}
 	void jumpIf(){
-		if (_stack.pop.intVal == 1){
-			_instruction = &(*_currentFunction)[(*_arguments)[0].intVal] - 1;
-			_arguments = &(*_currentArguments)[(*_arguments)[0].intVal] - 1;
+		if (_stack.pop.boolVal == true){
+			_inst = &(_instructions)[_arg.intVal] - 1;
+			_arg = &(_arguments)[_arg.intVal] - 1;
 		}
+	}
+	void jumpFrame(){
+		_jumpStack.push(StackFrame(_inst, _arg, _stackIndex));
+		_inst = &(_instructions)[_arg.intVal] - 1;
+		_arg = &(_arguments)[_arg.intVal] - 1;
+		_stackIndex = _stack.count;
+	}
+	void jumpBack(){
+		if (_jumpStack.count){
+			StackFrame frame = _jumpStack.pop;
+			_inst = frame.instruction;
+			_arg = frame.argument;
+			_stackIndex = frame.stackIndex;
+			return;
+		}
+		_inst = &(_instructions)[$-1] + 1;
 	}
 
 	void makeArray(){
-		_stack.push(NaData(_stack.pop((*_arguments)[0].intVal).dup));
+		_stack.push(NaData(_stack.pop(_arg.intVal).dup));
 	}
 	void arrayRefElement(){
 		NaData arrayRef = _stack.pop;
@@ -232,19 +224,19 @@ protected:
 		_stack.push(NaData((_stack.pop.arrayVal ~ _stack.pop.arrayVal).dup));
 	}
 	void appendElement(){
-		/// ~= evaluates right side first unfortunately
+		/// ~= evaluates right side first unfortunately, so no one liner :(
 		NaData arrayPtr = _stack.pop;
 		arrayPtr.ptrVal.arrayVal ~= _stack.pop;
 	}
 	void appendArrayRef(){
-		/// ~= evaluates right side first unfortunately
+		/// ~= evaluates right side first unfortunately, so no one liner :(
 		NaData arrayPtr = _stack.pop;
-		arrayPtr.ptrVal.arrayVal ~= (*(_stack.pop.ptrVal)).arrayVal.dup;
+		arrayPtr.ptrVal.arrayVal ~= (*(_stack.pop.ptrVal)).arrayVal;
 	}
 	void appendArray(){
 		/// ~= evaluates right side first unfortunately
 		NaData arrayPtr = _stack.pop;
-		arrayPtr.ptrVal.arrayVal ~= _stack.pop.arrayVal.dup;
+		arrayPtr.ptrVal.arrayVal ~= _stack.pop.arrayVal;
 	}
 	void copyArray(){
 		_stack.push(NaData(_stack.pop.arrayVal.dup));
@@ -257,13 +249,19 @@ protected:
 		_stack.push(NaData(to!double(_stack.pop.intVal)));
 	}
 	void intToString(){
-		_stack.push(NaData(to!string(_stack.pop.intVal)));
+		_stack.push(NaData(to!dstring(_stack.pop.intVal)));
+	}
+	void boolToString(){
+		_stack.push(NaData((_stack.pop.boolVal).to!dstring));
+	}
+	void stringToBool(){
+		_stack.push(NaData(_stack.pop.strVal == "true" ? true : false));
 	}
 	void doubleToInt(){
 		_stack.push(NaData(to!integer(_stack.pop.doubleVal)));
 	}
 	void doubleToString(){
-		_stack.push(NaData(to!string(_stack.pop.doubleVal)));
+		_stack.push(NaData(to!dstring(_stack.pop.doubleVal)));
 	}
 	void stringToInt(){
 		_stack.push(NaData(to!integer(_stack.pop.strVal)));
@@ -272,238 +270,165 @@ protected:
 		_stack.push(NaData(to!double(_stack.pop.strVal)));
 	}
 
-	void globalVarCount(){
-		_globalVars.length = (*_arguments)[0].intVal;
-		foreach (i; 0 .. _globalVars.length)
-			_globalVars[i].intVal = 0;
-	}
-	void globalVarGet(){
-		_stack.push(_globalVars[(*_arguments)[0].intVal]);
-	}
-	void globalVarGetRef(){
-		_stack.push(NaData(&_globalVars[(*_arguments)[0].intVal]));
-	}
-	void globalVarSet(){
-		_globalVars[(*_arguments)[0].intVal] = _stack.pop;
-	}
-
-	void returnVal(){
-		_returnVal = _stack.pop;
-	}
 	void terminate(){
-		_instruction = &(*_currentFunction)[$-1] + 1;
+		_inst = &(_instructions)[$-1] + 1;
 	}
 public:
 	/// constructor
-	/// 
-	/// External Functions get added here
-	this(ExternFunction[] externalFunctions){
-		_externFunctions = externalFunctions.dup;
+	this(uinteger stackLength = 65_536){
+		// prepare instruction table, forget codes, will do them in a loop after
+		_instructionTable = [
+			NaInstruction("mathAddInt",0,2,1,&mathAddInt),
+			NaInstruction("mathSubtractInt",0,2,1,&mathSubtractInt),
+			NaInstruction("mathMultiplyInt",0,2,1,&mathMultiplyInt),
+			NaInstruction("mathDivideInt",0,2,1,&mathDivideInt),
+			NaInstruction("mathModInt",0,2,1,&mathModInt),
+			NaInstruction("mathAddDouble",0,2,1,&mathAddDouble),
+			NaInstruction("mathSubtractDouble",0,2,1,&mathSubtractDouble),
+			NaInstruction("mathMultiplyDouble",0,2,1,&mathMultiplyDouble),
+			NaInstruction("mathDivideDouble",0,2,1,&mathDivideDouble),
+			NaInstruction("mathModDouble",0,2,1,&mathModDouble),
+			NaInstruction("isSame",0,2,1,&isSame),
+			NaInstruction("isSameArray",0,2,1,&isSameArray),
+			NaInstruction("isSameArrayRef",0,2,1,&isSameArrayRef),
+			NaInstruction("isGreaterInt",0,2,1,&isGreaterInt),
+			NaInstruction("isGreaterSameInt",0,2,1,&isGreaterSameInt),
+			NaInstruction("isGreaterDouble",0,2,1,&isGreaterDouble),
+			NaInstruction("isGreaterSameDouble",0,2,1,&isGreaterSameDouble),
+			NaInstruction("not",0,1,1,&binaryNot),
+			NaInstruction("and",0,2,1,&binaryAnd),
+			NaInstruction("or",0,2,1,&binaryOr),
+			NaInstruction("push",0,true,0,1,&push),
+			NaInstruction("pushFrom",0,true,0,1,&pushFrom),
+			NaInstruction("pushRefFrom",0,true,0,1,&pushRefFrom),
+			NaInstruction("writeTo",0,true,1,0,&writeTo),
+			NaInstruction("pushFromAbs",0,true,0,1,&pushFromAbs),
+			NaInstruction("pushRefFromAbs",0,true,0,1,&pushRefFromAbs),
+			NaInstruction("writeToAbs",0,true,1,0,&writeToAbs),
+			NaInstruction("writeToRef",0,2,0,&writeToRef),
+			NaInstruction("deref",0,1,1,&deref),
+			NaInstruction("pop",0,1,0,&pop),
+			NaInstruction("popN",0,true,255,0,&popN),
+			NaInstruction("jump",0,true,true,0,0,&jump),
+			NaInstruction("jumpIf",0,true,true,1,0,&jumpIf),
+			NaInstruction("jumpFrame",0,true,true,0,0,&jumpFrame),
+			NaInstruction("jumpBack",0,&jumpBack),
+			NaInstruction("makeArray",0,true,255,1,&makeArray),
+			NaInstruction("arrayRefElement",0,2,1,&arrayRefElement),
+			NaInstruction("arrayElement",0,2,1,&arrayElement),
+			NaInstruction("arrayLength",0,1,1,&arrayLength),
+			NaInstruction("arrayLengthSet",0,2,0,&arrayLengthSet),
+			NaInstruction("concatenate",0,2,1,&concatenate),
+			NaInstruction("appendElement",0,2,0,&appendElement),
+			NaInstruction("appendArrayRef",0,2,0,&appendArrayRef),
+			NaInstruction("appendArray",0,2,0,&appendArray),
+			NaInstruction("copyArray",0,1,1,&copyArray),
+			NaInstruction("copyarrayRef",0,1,1,&copyArrayRef),
+			NaInstruction("intToDouble",0,1,1,&intToDouble),
+			NaInstruction("intToString",0,1,1,&intToString),
+			NaInstruction("boolToString",0,1,1,&boolToString),
+			NaInstruction("stringToBool",0,1,1,&stringToBool),
+			NaInstruction("doubleToInt",0,1,1,&doubleToInt),
+			NaInstruction("doubleToString",0,1,1,&doubleToString),
+			NaInstruction("stringToInt",0,1,1,&stringToInt),
+			NaInstruction("stringToDouble",0,1,1,&stringToDouble),
+			NaInstruction("terminate",0,1,0,&terminate),
+		];
+		// now assign codes
+		foreach (i; 0 .. _instructionTable.length)
+			_instructionTable[i].code = cast(ushort)i;
+		// prepare stack
+		_stack = new ArrayStack!NaData(stackLength);
+		_jumpStack = new ArrayStack!StackFrame;
 	}
 	/// destructor
 	~this(){
-
+		.destroy(_stack);
+		.destroy(_jumpStack);
 	}
-	/// Loads functions into VM, prepares them for execution
+	/// Loads bytecode into VM
 	/// 
-	/// Returns: true if there was no error, false in the following cases:  
-	/// * More than 1 function is of type onLoad  
-	/// * In some function, .instruction.length != .arguments.length  
-	/// * Invalid instruction used  
-	bool load(NaFunction[] functions){
-		void delegate()[Instruction] map = [
-			Instruction.ExecuteFunctionExternal : &executeExternalFunction,
-			Instruction.ExecuteFunction : &executeFunction,
-
-			Instruction.MathAddInt : &mathAddInt,
-			Instruction.MathSubtractInt : &mathSubtractInt,
-			Instruction.MathMultiplyInt : &mathMultiplyInt,
-			Instruction.MathDivideInt : &mathDivideInt,
-			Instruction.MathModInt : &mathModInt,
-
-			Instruction.MathAddDouble : &mathAddDouble,
-			Instruction.MathSubtractDouble : &mathSubtractDouble,
-			Instruction.MathMultiplyDouble : &mathMultiplyDouble,
-			Instruction.MathDivideDouble : &mathDivideDouble,
-			Instruction.MathModDouble : &mathModDouble,
-
-			Instruction.IsSame : &isSame,
-			Instruction.IsSameArray : &isSameArray,
-			Instruction.IsSameArrayRef : &isSameArrayRef,
-
-			Instruction.IsGreaterInt : &isGreaterInt,
-			Instruction.IsGreaterSameInt : &isGreaterSameInt,
-
-			Instruction.IsGreaterDouble : &isGreaterDouble,
-			Instruction.IsGreaterSameDouble : &isGreaterSameDouble,
-
-			Instruction.And : &binaryAnd,
-			Instruction.Not : &binaryNot,
-			Instruction.Or : &binaryOr,
-
-			Instruction.Push : &push,
-			Instruction.PushFrom : &pushFrom,
-			Instruction.PushRefFrom : &pushRefFrom,
-			Instruction.WriteTo : &writeTo,
-			Instruction.WriteToRef : &writeToRef,
-			Instruction.Deref : &deref,
-			Instruction.Pop : &pop,
-			Instruction.PopN : &popN,
-			Instruction.Jump : &jump,
-			Instruction.JumpIf : &jumpIf,
-
-			Instruction.MakeArray : &makeArray,
-			Instruction.ArrayRefElement : &arrayRefElement,
-			Instruction.ArrayElement : &arrayElement,
-			Instruction.ArrayLength : &arrayLength,
-			Instruction.ArrayLengthSet : &arrayLengthSet,
-			Instruction.Concatenate : &concatenate,
-			Instruction.AppendElement : &appendElement,
-			Instruction.AppendArrayRef : &appendArrayRef,
-			Instruction.AppendArray : &appendArray,
-			Instruction.CopyArray : &copyArray,
-			Instruction.CopyArrayRef : &copyArrayRef,
-
-			Instruction.IntToDouble : &intToDouble,
-			Instruction.IntToString : &intToString,
-			Instruction.DoubleToInt : &doubleToInt,
-			Instruction.DoubleToString : &doubleToString,
-			Instruction.StringToInt : &stringToInt,
-			Instruction.StringToDouble : &stringToDouble,
-
-			Instruction.GlobalVarCount : &globalVarCount,
-			Instruction.GlobalVarGet : &globalVarGet,
-			Instruction.GlobalVarGetRef : &globalVarGetRef,
-			Instruction.GlobalVarSet : &globalVarSet,
-
-			Instruction.ReturnVal : &returnVal,
-			Instruction.Terminate : &terminate,
-		];
-		// clear existing stuff
-		_functions = [];
-		_functionsArguments = [];
-		_functionsStackLength = [];
-		_onloadInstructions = [];
-		_onloadArguments = [];
-		_onloadStackLength = 0;
-		_onloadExecuted = false;
-		_onloadExists = false;
-		// search for onLoad functions
-		foreach (i, func; functions){
-			if (func.type == NaFunction.Type.OnLoad){
-				functions = functions.dup; // going to modify it, so copy
-				// check if some other is onLoad too
-				foreach (j; i + 1 .. functions.length)
-					if (functions[j].type == NaFunction.Type.OnLoad)
-						return false;
-				_onloadExists = true;
-				_onloadExecuted = false;
-				if (func.instructions.length != func.arguments.length)
-					return false;
-				_onloadInstructions.length = func.instructions.length;
-				_onloadArguments.length = func.arguments.length;
-				_onloadStackLength = func.stackLength;
-				foreach (index, instruction; func.instructions){
-					if (instruction !in map)
-						return false;
-					_onloadInstructions[index] = map[instruction];
-					_onloadArguments[index] = func.arguments[index].dup;
-				}
-				functions = functions[0 .. i].dup ~ functions[i+1 .. $].dup;
-				break;
-			}
+	/// Returns: errors in a string[], or [] if no errors
+	string[] load(string[] byteCode){
+		NaBytecode bcode = new NaBytecode(_instructionTable.dup);
+		string[] r = bcode.readByteCode(byteCode);
+		if (r.length)
+			return r;
+		r = bcode.resolve();
+		if (r.length)
+			return r;
+		_instructions = bcode.getBytecodePointers();
+		try{
+			_arguments = bcode.getArgumentsNaData();
+		}catch (Exception e){
+			string msg = e.msg;
+			.destroy(e);
+			return [msg];
 		}
-		_functions.length = functions.length;
-		_functionsArguments.length = functions.length;
-		_functionsStackLength.length = functions.length;
-		foreach(i, func; functions){
-			_functions[i].length = func.instructions.length;
-			_functionsArguments[i].length = func.arguments.length;
-			_functionsStackLength[i] = func.stackLength;
-			// make sure each instruction has args (arrays must match)
-			if (func.instructions.length != func.arguments.length)
+		return [];
+	}
+	/// ditto
+	string[] load(NaBytecode byteCode){
+		string[] r = byteCode.resolve();
+		if (r.length)
+			return r;
+		_instructions = byteCode.getBytecodePointers();
+		try{
+			_arguments = byteCode.getArgumentsNaData();
+		}catch (Exception e){
+			string msg = e.msg;
+			.destroy(e);
+			return [msg];
+		}
+		return [];
+	}
+
+	/// Adds a new instruction
+	/// 
+	/// Returns: true on success, false if not (pointer might be null, code might be already in use, name might already be in use)
+	bool addInstruction(NaInstruction instruction, ref string error){
+		if (instruction.pointer is null){
+			error = "instruction pointer cannot be null";
+			return false;
+		}
+		instruction.name = instruction.name.lowercase();
+		foreach (inst; _instructionTable){
+			if (instruction.name == inst.name){
+				error = "instruction name, "~inst.name~", already exists";
 				return false;
-			foreach(index, instruction; func.instructions){
-				if (instruction ! in map)
-					return false;
-				_functions[i][index] = map[instruction];
-				_functionsArguments[i][index] = func.arguments[index].dup;
+			}
+			if (instruction.code == inst.code){
+				error = "instruction code, "~inst.code.to!string~", already exists";
+				return false;
 			}
 		}
+		_instructionTable ~= instruction;
 		return true;
 	}
-
-	/// Loads byte code
-	/// 
-	/// Throws: Exception in case of an error in byte code
-	void load(string[] code){
-		if (!this.load(readByteCode(code)))
-			throw new Exception("unexpected error in NaVM.load(NaFunction[])");
+	/// ditto
+	bool addInstruction(NaInstruction instruction){
+		string error;
+		return addInstruction(instruction, error);
 	}
 
-	/// Calls the onLoad function if present, and not executed since bytecode loading
-	void executeOnLoad(){
-		if (_onloadExists && !_onloadExecuted){
-			_onloadExecuted = true;
-			// start
-			_currentFunction = &_onloadInstructions;
-			_currentArguments = &_onloadArguments;
-			_stack = new NaStack(_onloadStackLength);
-			_instruction = &(*_currentFunction)[0];
-			_arguments = &(*_currentArguments)[0];
-			void delegate()* end = &(*_currentFunction)[$-1];
-			end ++;
-			while (_instruction < end){
-				(*_instruction)();
-				_instruction++;
-				_arguments++;
-			}
-			_stack.destroy();
-			_currentFunction = null;
-			_currentArguments = null;
-			_instruction = null;
-			_arguments = null;
-		}
-	}
-
-
-	/// Calls a function from bytecode. Before calling this, make sure you have called `this.executeOnLoad` to init the bytecode
+	/// Starts execution of byte code, starting with the instruction at `index`
 	/// 
-	/// Returns: what that function returned
-	NaData execute(uinteger functionId, NaData[] arguments){
-		// save state of previous function
-		void delegate()[]* prevFunction = _currentFunction;
-		NaData[][]* prevFunctionArguments = _currentArguments;
-		void delegate()* prevInstruction = _instruction;
-		NaData[]* prevArguments = _arguments;
-		NaStack prevStack = _stack;
-		NaData prevReturnVal = _returnVal;
-		// prepare for this one
-		_stack = new NaStack(_functionsStackLength[functionId]);
-		_currentFunction = &_functions[functionId];
-		_currentArguments = &_functionsArguments[functionId];
-		_instruction = &(*_currentFunction)[0];
-		_arguments = &(*_currentArguments)[0];
-		_returnVal = NaData();
-		void delegate()* end = &(*_currentFunction)[$-1];
-		end++;// so i can use < instead of <=
-		// push args
-		_stack.push(arguments);
-		// start executing
-		while (_instruction < end){
-			(*_instruction)();
-			_instruction++;
-			_arguments++;
-		}
-		NaData r = _returnVal;
-		// restore prev state
-		_currentFunction = prevFunction;
-		_currentArguments = prevFunctionArguments;
-		_instruction = prevInstruction;
-		_arguments = prevArguments;
-		_stack.destroy;
-		_stack = prevStack;
-		_returnVal = prevReturnVal;
-		return r;
+	/// Returns: what the function returned, or `NaData(0)`
+	NaData execute(uinteger index){
+		if (!_instructions.length)
+			return NaData(0);
+		if (_stack.count)
+			_stack.pop(_stack.count);
+		_inst = &(_instructions[0]);
+		_arg = &(_arguments[0]);
+		const void delegate()* lastInst = &_instructions[$-1]+1;
+		do{
+			(*_inst)();
+			_inst++;
+			_arg++;
+		}while (_inst < lastInst);
+		if (_stack.count)
+			return _stack.pop;
+		return NaData();
 	}
 }

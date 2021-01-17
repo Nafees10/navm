@@ -5,11 +5,13 @@ import utils.misc;
 /// to store data from script at runtime
 public union NaData{
 	union{
+		bool boolVal; /// boolean value
+		dchar dcharVal; /// dchar value
 		integer intVal; /// integer value
 		double doubleVal; /// double/float value
 		NaData* ptrVal; /// to store references
+		NaData[] arrayVal; /// array value
 	}
-	NaData[] arrayVal; /// array value
 	/// constructor
 	/// data can be any of the type which it can store
 	this (T)(T data){
@@ -21,104 +23,113 @@ public union NaData{
 			arrayVal = data;
 		}else static if (is (T == NaData*)){
 			ptrVal = data;
-		}else static if (is (T == char)){
-			intVal = cast(integer)data;
-		}else static if (is (T == char[]) || is (T == string)){
+		}else static if (is (T == dchar)){
+			dcharVal = data;
+		}else static if (is (T == dchar[]) || is (T == dstring)){
 			strVal = data;
+		}else static if (is (T == bool)){
+			boolVal = data;
 		}else{
 			throw new Exception("cannot store "~T.stringof~" in NaData");
 		}
 	}
-	/// Returns: character value stored in intVal
-	@property char charVal(){
-		return cast(char)intVal;
-	}
-	/// Setter for charVal
-	@property char charVal(char newVal){
-		return intVal = cast(integer)newVal;
-	}
 	/// Returns: string value stored as NaData[] (in arrayVal)
-	@property char[] strVal(){
-		char[] r;
+	@property dchar[] strVal(){
+		dchar[] r;
 		r.length = arrayVal.length;
 		foreach (i, ch; arrayVal){
-			r[i] = cast(char)(ch.intVal);
+			r[i] = ch.dcharVal;
 		}
 		return r;
 	}
 	/// Setter for strVal
-	@property char[] strVal(char[] newVal){
+	@property dchar[] strVal(dchar[] newVal){
 		arrayVal.length = newVal.length;
 		foreach (i, ch; newVal){
-			arrayVal[i].intVal = cast(integer)ch;
+			arrayVal[i].dcharVal = ch;
 		}
 		return newVal;
 	}
 	/// Setter for strVal
-	@property char[] strVal(string newVal){
+	@property dchar[] strVal(dstring newVal){
 		arrayVal.length = newVal.length;
 		foreach (i, ch; newVal){
 			arrayVal[i].intVal = cast(integer)ch;
 		}
-		return cast(char[])newVal;
+		return cast(dchar[])newVal;
 	}
 }
 
-/// Definition of external function
-public alias ExternFunction = NaData delegate(NaData[]);
+/// for storing a stack frame in stack
+struct StackFrame{
+	void delegate()* instruction; /// instruction
+	NaData* argument; /// argument for that instruction
+	uinteger stackIndex; /// stack index relative to which some instructions will pushFrom/writeTo
+}
 
-/// Fixed max-length stack (not using utils.lists.Stack because that one isnt optimized to be fast as much as this should be)
-///
-/// Be aware that no bound checking is done here, so be careful
-package class NaStack{
+/// a simple array based stack
+/// 
+/// no bound checking is done, so be careful
+public class ArrayStack(T){
 private:
-	/// the actual stack
-	NaData[] _stackArray;
-	/// pointer of the next element that'll be written to next
-	NaData* _peekPtr;
+	T[] _array;
+	T* _peekPtr;
 public:
-	this(uinteger length=64){
-		_stackArray.length = length;
-		_peekPtr = _stackArray.ptr;
+	/// constructor (set the stack length here)
+	this(uinteger length=65_536){
+		_array.length = length;
+		_peekPtr = _array.ptr;
+	}
+	/// Pops an element from stack
+	/// 
+	/// Returns: popped element
+	T pop(){
+		_peekPtr --;
+		return *_peekPtr;
+	}
+	/// pushes an element to stack
+	void push(T element){
+		*_peekPtr = element;
+		_peekPtr++;
+	}
+	/// number of elements in stack
+	@property uinteger count(){
+		return cast(uinteger)(_peekPtr - _array.ptr);
 	}
 	/// Reads n number of elements from stack, in reverse order (i.e: [nth-last pushed, (n-1)th-last pushed, ..., last pushed])
 	/// 
 	/// Returns: the elements read
-	NaData[] pop(uinteger n){
+	T[] pop(uinteger n){
 		_peekPtr -= n;
 		return _peekPtr[0 .. n];
 	}
-	/// Reads the last element pushed to stack
-	///
-	/// Returns: the element pop-ed
-	NaData pop(){
-		_peekPtr --;
-		return *_peekPtr;
-	}
 	/// pushes elements to stack. First in array is pushed first
-	void push(NaData[] elements){
+	void push(T[] elements){
 		_peekPtr[0 .. elements.length] = elements;
 		_peekPtr += elements.length;
 	}
-	/// pushes an element to stack
-	void push(NaData element){
-		*_peekPtr = element;
-		_peekPtr ++;
+	/// Returns: element at currentIndex-index
+	T readRelative(uinteger index){
+		return *(_peekPtr - index);
 	}
-	/// Returns: number of elements present
-	@property uinteger count(){
-		return cast(uinteger)(_peekPtr - _stackArray.ptr);
+	/// Returns: element at index
+	T read(uinteger index){
+		return _array[index];
 	}
-	/// Returns: the element at an index (this is possible as the stack is actually an array)
-	NaData read(uinteger index){
-		return _stackArray[index];
+	/// Returns: pointer to element at currentIndex-index;
+	T* readPtrRelative(uinteger index){
+		return _peekPtr - index;
 	}
-	/// Returns: pointer to element at an index (same as this.read, but returns a pointer)
-	NaData* readPtr(uinteger index){
-		return &_stackArray[index];
+	/// Returns: pointer to element at index
+	T* readPtr(uinteger index){
+		return &(_array[index]);
 	}
-	/// Writes a value to an index on the stackArray (possible because the stack is actually a stack)
-	void write(uinteger index, NaData value){
-		_stackArray[index] = value;
+	/// Writes a value to `currentIndex-index`
+	void writeRelative(uinteger index, T value){
+		*(_peekPtr - index) = value;
+	}
+	/// Writes a value to index
+	void write(uinteger index, T value){
+		_array[index] = value;
 	}
 }
