@@ -275,9 +275,6 @@ public struct NaInstruction{
 	void delegate() pointer; /// pointer to the delegate behind this instruction
 	/// Returns: number of elements it will pop
 	ubyte popCount(NaData arg){
-		// sry bout this, but this last minute hack is needed..
-		if (name == "call")
-			return cast(ubyte)(arg.intVal+1);
 		if (_popCount < 255)
 			return _popCount;
 		return cast(ubyte)(arg.intVal);
