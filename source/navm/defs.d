@@ -64,6 +64,7 @@ public union NaData{
 struct StackFrame{
 	void delegate()* instruction; /// instruction
 	NaData* argument; /// argument for that instruction
+	uinteger stackIndex; /// stack index relative to which some instructions will pushFrom/writeTo
 }
 
 /// a simple array based stack
@@ -111,12 +112,24 @@ public:
 	T readRelative(uinteger index){
 		return *(_peekPtr - index);
 	}
+	/// Returns: element at index
+	T read(uinteger index){
+		return _array[index];
+	}
 	/// Returns: pointer to element at currentIndex-index;
 	T* readPtrRelative(uinteger index){
 		return _peekPtr - index;
 	}
+	/// Returns: pointer to element at index
+	T* readPtr(uinteger index){
+		return &(_array[index]);
+	}
 	/// Writes a value to `currentIndex-index`
 	void writeRelative(uinteger index, T value){
 		*(_peekPtr - index) = value;
+	}
+	/// Writes a value to index
+	void write(uinteger index, T value){
+		_array[index] = value;
 	}
 }
