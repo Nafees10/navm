@@ -53,12 +53,18 @@ Pops `A (bool)` and then `B (bool)`. Pushes `A || B`
 ## Stack
 * _`Push [arg0 - any data type]`_  
 Pushes `arg0` to stack
+* _`PushFromAbs [index - integer>=0]`_  
+Reads value at `index` on stack, pushes it, without removing original.
+* _`PushRefFromAbs [index - integer>=0]`_  
+Pushes reference to value at `index` on stack, without removing original.
+* _`WriteToAbs [index - integer>=0]`_  
+Pops a value from stack, writes it to `index` on stack.
 * _`PushFrom [index - integer>=0]`_  
-Reads value at `stack.peek - index` on stack, pushes it, without removing original.
+Reads value at `_stackIndex + index` on stack, pushes it, without removing original.
 * _`PushRefFrom [index - integer>=0]`_  
-Pushes reference to value at `stack.peek - index` on stack, without removing original.
+Pushes reference to value at `_stackIndex + index` on stack, without removing original.
 * _`WriteTo [index - integer>=0]`_  
-Pops a value from stack, writes it to `stack.peek - index` on stack.
+Pops a value from stack, writes it to `_stackIndex + index` on stack.
 * _`WriteToRef`_  
 Pops a reference, then pops a value. Writes value to reference.
 * _`Deref`_  
@@ -75,10 +81,11 @@ Pops n number of values from stack
 Jump execution to instruction at `jump position`.
 * _`JumpIf [jump position]`_  
 Pops `bool` from stack. If it is `true`, jumps execution to instruction at `jump position`.
-* _`JumpStack [jump position]`_  
-Jump execution to `jump position`. Pushes current instruction pointer to jump stack so it can jump back.
+* _`JumpFrame [jump position]`_  
+Jump execution to `jump position`. Pushes current frame to a separate stack, so `jumpBack` can be used to jump back.
+Also changes `_stackIndex` to `_stack.count`.
 * _`JumpBack`_  
-Jump execution back to last pointer pushed to jump stack. `terminate` if jump stack is empty.
+Jump execution back to last pointer pushed to jump stack, & restores last frame pushed. `terminate`s if jump stack is empty.
 
 ---
 
