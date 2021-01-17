@@ -1,0 +1,81 @@
+jump main
+printArray:
+	pushFrom -1 # array ref, at 0
+	push 0 # count at 1
+	pushFrom 0
+	deref
+	arrayLength # array length at 2
+
+	printArrayLoop0Start:
+		# if condition
+		pushFrom 1
+		pushFrom 2
+		isGreaterInt
+		Not
+		jumpIf printArrayEnd
+		
+		# get that element
+		pushFrom 1
+		pushFrom 0
+		arrayRefElement
+		deref
+		writeInt
+		push '\n'
+		writeChar
+
+		# i ++
+		pushFrom 1
+		push 1
+		mathAddInt
+		writeTo 1
+
+		# loop over
+		jump printArrayLoop0Start
+	
+	printArrayEnd:
+	jumpBack
+
+fillArray:
+	pushFrom -1 # array at 0
+	push 0 # counter at 1
+	pushFrom 0
+	deref
+	arrayLength # array length at 2
+
+	fillArrayLoop0Start:
+		pushFrom 1
+		pushFrom 2
+		isGreaterInt
+		Not
+		JumpIf fillArrayEnd
+		
+		pushFrom 1
+			pushFrom 1
+			pushFrom 0
+		arrayRefElement
+		writeToRef
+
+		pushFrom 1
+		push 1
+		mathAddInt
+		writeTo 1
+
+		jump fillArrayLoop0Start
+
+
+	fillArrayEnd:
+	jumpBack
+
+main:
+	push []
+	push 10
+	pushRefFrom 0
+	arrayLengthSet
+	
+	pushRefFrom 0
+	jumpFrame fillArray
+	pop # pop the ref
+	
+	pushRefFrom 0
+	jumpFrame printArray
+	pop
