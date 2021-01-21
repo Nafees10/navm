@@ -26,12 +26,8 @@ You need to have these present on your machine:
 Run:
 ```bash
 dub fetch navm
-```
-to download this package, and then run:
-```bash
 dub build navm -b=release -c=demo
 ```
-to fetch dependencies and build NaVM.  
 Following this, you will have the NaVM binary (named `demo`) with very basic functionality.  
 
 You can now run NaVM bytecode using:  
