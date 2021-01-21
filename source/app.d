@@ -63,8 +63,10 @@ version(demo){
 				avg += times[i];
 			}
 			avg = avg / count;
-			writeln("min\tmax\tavg");
-			writeln(min,'\t',max,'\t',avg);
+			if (count > 1){
+				writeln("min\tmax\tavg");
+				writeln(min,'\t',max,'\t',avg);
+			}
 		}
 	}
 }
