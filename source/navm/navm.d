@@ -175,15 +175,15 @@ protected:
 	void popN(){
 		_stack.pop(_arg.intVal);
 	}
+	void doIf(){
+		if (_stack.pop.boolVal == false){
+			_inst++;
+			_arg++;
+		}
+	}
 	void jump(){
 		_inst = &(_instructions)[_arg.intVal] - 1;
 		_arg = &(_arguments)[_arg.intVal] - 1;
-	}
-	void jumpIf(){
-		if (_stack.pop.boolVal == true){
-			_inst = &(_instructions)[_arg.intVal] - 1;
-			_arg = &(_arguments)[_arg.intVal] - 1;
-		}
 	}
 	void jumpFrame(){
 		_jumpStack.push(StackFrame(_inst, _arg, _stackIndex));
@@ -309,8 +309,8 @@ public:
 			NaInstruction("deref",0,1,1,&deref),
 			NaInstruction("pop",0,1,0,&pop),
 			NaInstruction("popN",0,true,255,0,&popN),
+			NaInstruction("if",0,true,true,1,0,&doIf),
 			NaInstruction("jump",0,true,true,0,0,&jump),
-			NaInstruction("jumpIf",0,true,true,1,0,&jumpIf),
 			NaInstruction("jumpFrame",0,true,true,0,0,&jumpFrame),
 			NaInstruction("jumpBack",0,&jumpBack),
 			NaInstruction("makeArray",0,true,255,1,&makeArray),
