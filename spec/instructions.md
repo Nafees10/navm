@@ -77,10 +77,10 @@ Pops n number of values from stack
 ---
 
 ## Jumps
+* _`if`_  
+Pops `bool` from stack. The next instruction is only executed if the popped value `==true`.
 * _`Jump [jump position]`_  
 Jump execution to instruction at `jump position`.
-* _`JumpIf [jump position]`_  
-Pops `bool` from stack. If it is `true`, jumps execution to instruction at `jump position`.
 * _`JumpFrame [jump position]`_  
 Jump execution to `jump position`. Pushes current frame to a separate stack, so `jumpBack` can be used to jump back.
 Also changes `_stackIndex` to `_stack.count`.
