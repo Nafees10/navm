@@ -1,6 +1,6 @@
 # NaVM syntax
 
-_Note that you don't need to use this syntax to execute byte code using NaVM. You can programmatically construct programs as the `NaBytecode` struct._  
+_Note that you don't need to use this syntax to execute byte code using NaVM. You can programmatically construct programs as the `NaBytecode` class._  
 
 ## Instructions
 Instructions are executed from top to bottom, and jumps can be used to jump to other instructions.  
@@ -30,7 +30,7 @@ someJumpPosition:
 jumpIf someJumpPosition
 ```
 
-Jump positions are **not** case sensitive
+Jump positions are also **not** case sensitive
 
 ## Whitespace
-Whitespace can be either tab(s) or space(s), and is ignored, so whitespace is not necessary
+Whitespace can be either tab(s) or space(s), and is ignored.
