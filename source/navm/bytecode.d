@@ -165,7 +165,7 @@ public:
 	string[] readByteCode(string[] input){
 		string[] errors;
 		immutable string[][] words = cast(immutable string[][])input.removeWhitespace.readWords();
-		foreach (lineWords; words){
+		foreach (i, lineWords; words){
 			if (!lineWords.length)
 				continue;
 			if (lineWords[0].length){
@@ -176,7 +176,7 @@ public:
 				string error = "";
 				if (!this.addInstruction(lineWords[0],
 					lineWords.length>1 && lineWords[1].length ? lineWords[1] : "", error))
-					errors ~= error;
+					errors ~= "line#"~(i+1).to!string~':'~error;
 			}
 		}
 		return errors;
@@ -382,7 +382,7 @@ public NaData readData(string strData){
 		r.dcharVal = strData[0];
 		return r;
 	}
-	return NaData();
+	throw new Exception("invalid data");
 }
 
 /// Removes whitespace from a string. And the remaining whitespace is only of one type. e.g: whitespace is ' ' & '\t', 
@@ -431,7 +431,7 @@ unittest{
 	assert ("#  # \t \t".removeWhitespace == "");
 }
 
-/// Removes whitespace from multiple strings. IF a string is whitespace only, its excluded from output
+/// Removes whitespace from multiple strings.
 /// 
 /// Returns: string[] with minimal whitespace
 string[] removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string[] input){
@@ -439,10 +439,8 @@ string[] removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string
 	uinteger writeIndex = 0;
 	for (uinteger i = 0; i < input.length; i ++){
 		const string line = input[i].removeWhitespace;
-		if (line.length > 0){
-			input[writeIndex] = line;
-			writeIndex ++;
-		}
+		input[writeIndex] = line;
+		writeIndex ++;
 	}
 	input.length = writeIndex;
 	return input;
@@ -490,9 +488,7 @@ private string[][] readWords(string[] input){
 				words.append(line[readFrom .. i + 1]);
 			}
 		}
-		string[] currentWords = words.toArray;
-		if (currentWords.length)
-			lines.append(currentWords);
+		lines.append(words.toArray);
 		words.clear;
 	}
 	.destroy(words);
