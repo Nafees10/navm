@@ -342,6 +342,8 @@ public NaData readData(string strData){
 		return NaData(to!integer(strData));
 	if (strData.isNum(true))
 		return NaData(to!double(strData));
+	if (["true", "false"].hasElement(strData))
+		return NaData(strData == "true");
 	// now checking for arrays
 	if (strData[0] == '['){
 		NaData r = NaData(cast(NaData[])[]);
