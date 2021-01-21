@@ -414,7 +414,7 @@ public:
 	/// Starts execution of byte code, starting with the instruction at `index`
 	/// 
 	/// Returns: what the function returned, or `NaData(0)`
-	NaData execute(uinteger index){
+	NaData execute(uinteger index = 0){
 		if (!_instructions.length)
 			return NaData(0);
 		if (_stack.count)
@@ -429,6 +429,6 @@ public:
 		}while (_inst < lastInst);
 		if (_stack.count)
 			return _stack.pop;
-		return NaData();
+		return NaData(0);
 	}
 }
