@@ -309,7 +309,7 @@ public:
 			NaInstruction("deref",0,1,1,&deref),
 			NaInstruction("pop",0,1,0,&pop),
 			NaInstruction("popN",0,true,255,0,&popN),
-			NaInstruction("if",0,true,true,1,0,&doIf),
+			NaInstruction("if",0,1,0,&doIf),
 			NaInstruction("jump",0,true,true,0,0,&jump),
 			NaInstruction("jumpFrame",0,true,true,0,0,&jumpFrame),
 			NaInstruction("jumpBack",0,&jumpBack),
