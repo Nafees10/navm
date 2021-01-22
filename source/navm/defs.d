@@ -47,7 +47,7 @@ public union NaData{
 	@property NaData[] arrayVal(NaData[] newVal){
 		NaData[] array = NaData(newVal.length) ~ newVal;
 		ptrVal = array.ptr + 1;
-		return newVal;
+		return array[1 .. $];
 	}
 	/// Returns: array length.
 	/// 
