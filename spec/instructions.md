@@ -139,4 +139,7 @@ Terminates execution.
 * `string` is a `dstring`
 * `char` is a `dchar`
 * `bool` is the same as a D `bool`
-* arrays are `NaData[]` (stored in `NaData.arrayVal`).
+* arrays are stored as the pointer to their first element.  
+Arrays are actually `[lengthOfRestOfArray, firstElement, secondElement, ...]`.  
+in this example, `NaData.ptrVal = &firstElement;`  
+So to read length, you can either increment `ptrVal` by `-1`, or use `NaData.arrayValLength`
