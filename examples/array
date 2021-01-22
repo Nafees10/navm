@@ -1,81 +1,68 @@
 jump main
 printArray:
-	pushFrom -1 # array ref, at 0
-	push 0 # count at 1
+	pushFrom -1 #		array at 0
 	pushFrom 0
-	deref
-	arrayLength # array length at 2
-
-	printArrayLoop0Start:
-		# if condition
-		pushFrom 1
+	arrayLength #		length at 1
+	push 0 #			counter at 2
+	
+	printLoopStart:
+	# condition
 		pushFrom 2
-		isGreaterInt
-		Not
-		jumpIf printArrayEnd
-		
-		# get that element
 		pushFrom 1
+		isSame
+		if
+		Jump printLoopEnd
+		
+		pushFrom 2
 		pushFrom 0
-		arrayRefElement
-		deref
+		incRef
+		Deref
 		writeInt
 		push '\n'
 		writeChar
-
-		# i ++
-		pushFrom 1
-		push 1
-		mathAddInt
-		writeTo 1
-
-		# loop over
-		jump printArrayLoop0Start
-	
-	printArrayEnd:
-	jumpBack
-
-fillArray:
-	pushFrom -1 # array at 0
-	push 0 # counter at 1
-	pushFrom 0
-	deref
-	arrayLength # array length at 2
-
-	fillArrayLoop0Start:
-		pushFrom 1
-		pushFrom 2
-		isGreaterInt
-		Not
-		JumpIf fillArrayEnd
 		
-		pushFrom 1
-			pushFrom 1
-			pushFrom 0
-		arrayRefElement
-		writeToRef
-
-		pushFrom 1
+		pushFrom 2
 		push 1
 		mathAddInt
-		writeTo 1
-
-		jump fillArrayLoop0Start
-
-
-	fillArrayEnd:
+		WriteTo 2
+		
+		jump printLoopStart
+		
+	printLoopEnd:
+	popN 3
 	jumpBack
+fillArray:
+	pushFrom -1 #		array at 0
+	pushFrom 0
+	arrayLength #		length at 1
+	push 0 #			counter at 2
+	
+	fillLoopStart:
+	# condition
+		pushFrom 2
+		pushFrom 1
+		isSame
+		if
+		Jump fillLoopEnd
 
+		pushFrom 2 # value to write
+		pushFrom 2
+		pushFrom 0
+		incRef # ref to write to
+		writeToRef
+		
+		pushFrom 2
+		push 1
+		mathAddInt
+		WriteTo 2
+		
+		jump fillLoopStart
+		
+	fillLoopEnd:
+	popN 3
+	jumpBack
 main:
-	push []
 	push 10
-	pushRefFrom 0
-	arrayLengthSet
-	
-	pushRefFrom 0
+	makeArray
 	jumpFrame fillArray
-	pop # pop the ref
-	
-	pushRefFrom 0
 	jumpFrame printArray
-	pop
