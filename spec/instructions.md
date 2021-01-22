@@ -65,14 +65,20 @@ Reads value at `_stackIndex + index` on stack, pushes it, without removing origi
 Pushes reference to value at `_stackIndex + index` on stack, without removing original.
 * _`WriteTo [index - integer>=0]`_  
 Pops a value from stack, writes it to `_stackIndex + index` on stack.
-* _`WriteToRef`_  
-Pops a reference, then pops a value. Writes value to reference.
-* _`Deref`_  
-Pops a reference from stack. Pushes the value being referenced
 * _`Pop`_  
 Pops 1 value from stack
 * _`PopN [n - integer>=0]`_  
 Pops n number of values from stack
+
+---
+
+## References
+* _`WriteToRef`_  
+Pops a reference, then pops a value. Writes value to reference.
+* _`Deref`_  
+Pops a reference from stack. Pushes the value being referenced
+* _`IncRef`_  
+Pops a reference, then an integer (can be negative). Adds integer to reference, pushes reference back.
 
 ---
 
@@ -90,30 +96,15 @@ Jump execution back to last pointer pushed to jump stack, & restores last frame 
 ---
 
 ## Arrays
-* _`MakeArray [n - integer>0]`_  
-Pops `n` number of elements from stack, puts them in an array (in the order they were added to stack). Pushes array to stack.
-* _`ArrayRefElement`_  
-Pops a reference to array, then an `index (integer>=0)`. Pushes reference-to-element at `index` on array.
-* _`ArrayElement`_  
-Pops an array, then an `index (integer>=0)`. Pushes reference-to-element at `index` on array.
+
+_NOTE: array reference refers to the reference to the array's first element._
+
+* _`MakeArray`_  
+Pops n (`integer >= 0`), creates an array of length `n`. Pushes its reference to stack.
 * _`ArrayLength`_  
-Pops an array. Pushes length of array (`integer>=0`) to stack.
+Pops a reference-to-array. Pushes length of array (`integer>=0`) to stack.
 * _`ArrayLengthSet`_  
-Pops a reference to array, then `length (integer>=0)`. Sets length of array to `length`
-* _`Concatenate`_  
-Pops an array `a1` _(not reference)_, then pops another array `a2`. Pushes new array `a1 ~ a2`.
-* _`AppendElement`_  
-Pops a reference to array, then an element. Appends element at end of array.
-* _`AppendArrayRef`_  
-Pops reference to array `r1`, pops another `r2`. Then does `*r1 = *r1 ~ *r2`
-* _`AppendArray`_  
-Pops reference to array `r1`, then pops an array _(not reference)_. Then does `*r1 = *r1 ~ r2`
-* _`copyArray`_  
-Pops an array, makes a copy of it, pushes the copy to stack. Any changes made to copy won't reflect on original.  
-**Will only work on 1 dimensional arrays.**
-* _`copyArrayRef`_  
-Pops a ref-to-array, makes a copy of array, pushes to stack. Any changes made to copy won't reflect on original.  
-**Will only work on 1 dimensional arrays.**
+Pops a reference-to-array, then `length (integer>=0)`. Creates a new array of length, and copies elements from previous array. Pushes reference of new array.
 
 ---
 

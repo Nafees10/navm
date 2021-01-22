@@ -10,7 +10,6 @@ public union NaData{
 		integer intVal; /// integer value
 		double doubleVal; /// double/float value
 		NaData* ptrVal; /// to store references
-		NaData[] arrayVal; /// array value
 	}
 	/// constructor
 	/// data can be any of the type which it can store
@@ -26,17 +25,50 @@ public union NaData{
 		}else static if (is (T == dchar)){
 			dcharVal = data;
 		}else static if (is (T == dchar[]) || is (T == dstring)){
-			strVal = data;
+			strVal = cast(dchar[])data;
 		}else static if (is (T == bool)){
 			boolVal = data;
 		}else{
 			throw new Exception("cannot store "~T.stringof~" in NaData");
 		}
 	}
+	/// makes this NaData into an array
+	void makeArray(uinteger length){
+		NaData[] array;
+		array.length = length+1;
+		array[0].intVal = length;
+		ptrVal = array.ptr+1;
+	}
+	/// Returns: array value, read from ptrVal
+	@property NaData[] arrayVal(){
+		return ptrVal[0 .. (*(ptrVal-1)).intVal];
+	}
+	/// ditto
+	@property NaData[] arrayVal(NaData[] newVal){
+		NaData[] array = NaData(newVal.length) ~ newVal;
+		ptrVal = array.ptr + 1;
+		return newVal;
+	}
+	/// Returns: array length.
+	/// 
+	/// Do NOT use this to initialize array, use `makeArray`
+	@property uinteger arrayValLength(){
+		return (*(ptrVal - 1)).intVal;
+	}
+	/// ditto
+	@property uinteger arrayValLength(uinteger length){
+		NaData[] array;
+		array.length = length + 1;
+		array[0].intVal = length;
+		immutable uinteger sliceLength = length > arrayValLength ? arrayValLength : length;
+		array[1 .. sliceLength+1] = arrayVal[0 .. sliceLength];
+		ptrVal = array.ptr+1;
+		return length;
+	}
 	/// Returns: string value stored as NaData[] (in arrayVal)
 	@property dchar[] strVal(){
 		dchar[] r;
-		r.length = arrayVal.length;
+		r.length = arrayValLength;
 		foreach (i, ch; arrayVal){
 			r[i] = ch.dcharVal;
 		}
@@ -44,19 +76,11 @@ public union NaData{
 	}
 	/// Setter for strVal
 	@property dchar[] strVal(dchar[] newVal){
-		arrayVal.length = newVal.length;
+		makeArray(newVal.length);
 		foreach (i, ch; newVal){
 			arrayVal[i].dcharVal = ch;
 		}
 		return newVal;
-	}
-	/// Setter for strVal
-	@property dchar[] strVal(dstring newVal){
-		arrayVal.length = newVal.length;
-		foreach (i, ch; newVal){
-			arrayVal[i].intVal = cast(integer)ch;
-		}
-		return cast(dchar[])newVal;
 	}
 }
 
