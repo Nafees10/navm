@@ -67,8 +67,19 @@ public:
 			string name = _instructions[i];
 			if (name.length && name[$-1] == ':'){
 				name = name[0 .. $-1];
-				if (name in jumpPos){
+				if (name.lowercase in jumpPos){
 					errors ~= "line#"~(i+1).to!string~' '~name~" as jump postion declared multiple times";
+					continue;
+				}
+				// check if its the last line
+				bool isLastLine = true;
+				foreach (j; i .. _instructions.length){
+					if (!_instructions[j].length || _instructions[j][$-1] == ':')
+						continue;
+					isLastLine = false;
+				}
+				if (isLastLine){
+					errors ~= "line#"~(i+1).to!string~" jump position at last line is now allowed, follow it by an instruction";
 					continue;
 				}
 				jumpPos[name.lowercase] = instIndex;
