@@ -368,7 +368,7 @@ public NaData readData(string strData){
 	if (strData[0] == '\"'){
 		// assume the whole thing is string, no need to find string end index
 		NaData r;
-		r.strVal = strReplaceSpecial(strData[1 .. $-1]).to!dstring;
+		r.strVal = cast(dchar[])strReplaceSpecial(strData[1 .. $-1]).to!dstring;
 		return r;
 	}
 	if (strData[0] == '\''){
