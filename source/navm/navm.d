@@ -161,7 +161,13 @@ protected:
 	void writeTo(){
 		_stack.write(_arg.intVal + _stackIndex, _stack.pop);
 	}
-	
+	void pop(){
+		_stack.pop;
+	}
+	void popN(){
+		_stack.pop(_arg.intVal);
+	}
+
 	void writeToRef(){
 		// Left side is evaluated first
 		*(_stack.pop.ptrVal) = _stack.pop;
@@ -169,12 +175,10 @@ protected:
 	void deref(){
 		_stack.push(*(_stack.pop.ptrVal));
 	}
-	void pop(){
-		_stack.pop;
+	void incRef(){
+		_stack.push(NaData(_stack.pop.ptrVal + _stack.pop.intVal));
 	}
-	void popN(){
-		_stack.pop(_arg.intVal);
-	}
+
 	void doIf(){
 		if (_stack.pop.boolVal == false){
 			_inst++;
@@ -203,46 +207,17 @@ protected:
 	}
 
 	void makeArray(){
-		_stack.push(NaData(_stack.pop(_arg.intVal).dup));
-	}
-	void arrayRefElement(){
-		NaData arrayRef = _stack.pop;
-		_stack.push(NaData(&((*(arrayRef.ptrVal)).arrayVal[_stack.pop.intVal])));
-	}
-	void arrayElement(){
-		NaData array = _stack.pop;
-		_stack.push(NaData(&(array.arrayVal[_stack.pop.intVal])));
+		NaData array;
+		array.makeArray(_stack.pop.intVal);
+		_stack.push(array);
 	}
 	void arrayLength(){
-		_stack.push(NaData(_stack.pop.arrayVal.length));
+		_stack.push(NaData(_stack.pop.arrayValLength));
 	}
 	void arrayLengthSet(){
-		/// Left side evaluated first
-		(*(_stack.pop.ptrVal)).arrayVal.length = _stack.pop.intVal;
-	}
-	void concatenate(){
-		_stack.push(NaData((_stack.pop.arrayVal ~ _stack.pop.arrayVal).dup));
-	}
-	void appendElement(){
-		/// ~= evaluates right side first unfortunately, so no one liner :(
-		NaData arrayPtr = _stack.pop;
-		arrayPtr.ptrVal.arrayVal ~= _stack.pop;
-	}
-	void appendArrayRef(){
-		/// ~= evaluates right side first unfortunately, so no one liner :(
-		NaData arrayPtr = _stack.pop;
-		arrayPtr.ptrVal.arrayVal ~= (*(_stack.pop.ptrVal)).arrayVal;
-	}
-	void appendArray(){
-		/// ~= evaluates right side first unfortunately
-		NaData arrayPtr = _stack.pop;
-		arrayPtr.ptrVal.arrayVal ~= _stack.pop.arrayVal;
-	}
-	void copyArray(){
-		_stack.push(NaData(_stack.pop.arrayVal.dup));
-	}
-	void copyArrayRef(){
-		_stack.push(NaData((*(_stack.pop.ptrVal)).arrayVal.dup));
+		NaData array = _stack.pop;
+		array.arrayValLength = _stack.pop.intVal;
+		_stack.push(array);
 	}
 
 	void intToDouble(){
@@ -305,25 +280,18 @@ public:
 			NaInstruction("pushFromAbs",0,true,0,1,&pushFromAbs),
 			NaInstruction("pushRefFromAbs",0,true,0,1,&pushRefFromAbs),
 			NaInstruction("writeToAbs",0,true,1,0,&writeToAbs),
-			NaInstruction("writeToRef",0,2,0,&writeToRef),
-			NaInstruction("deref",0,1,1,&deref),
 			NaInstruction("pop",0,1,0,&pop),
 			NaInstruction("popN",0,true,255,0,&popN),
+			NaInstruction("writeToRef",0,2,0,&writeToRef),
+			NaInstruction("deref",0,1,1,&deref),
+			NaInstruction("incRef",0,2,1,&incRef),
 			NaInstruction("if",0,1,0,&doIf),
 			NaInstruction("jump",0,true,true,0,0,&jump),
 			NaInstruction("jumpFrame",0,true,true,0,0,&jumpFrame),
 			NaInstruction("jumpBack",0,&jumpBack),
-			NaInstruction("makeArray",0,true,255,1,&makeArray),
-			NaInstruction("arrayRefElement",0,2,1,&arrayRefElement),
-			NaInstruction("arrayElement",0,2,1,&arrayElement),
+			NaInstruction("makeArray",0,1,1,&makeArray),
 			NaInstruction("arrayLength",0,1,1,&arrayLength),
-			NaInstruction("arrayLengthSet",0,2,0,&arrayLengthSet),
-			NaInstruction("concatenate",0,2,1,&concatenate),
-			NaInstruction("appendElement",0,2,0,&appendElement),
-			NaInstruction("appendArrayRef",0,2,0,&appendArrayRef),
-			NaInstruction("appendArray",0,2,0,&appendArray),
-			NaInstruction("copyArray",0,1,1,&copyArray),
-			NaInstruction("copyarrayRef",0,1,1,&copyArrayRef),
+			NaInstruction("arrayLengthSet",0,2,1,&arrayLengthSet),
 			NaInstruction("intToDouble",0,1,1,&intToDouble),
 			NaInstruction("intToString",0,1,1,&intToString),
 			NaInstruction("boolToString",0,1,1,&boolToString),
