@@ -71,6 +71,10 @@ public:
 					errors ~= "line#"~(i+1).to!string~' '~name~" as jump postion declared multiple times";
 					continue;
 				}
+				if (name.isNum(true)){
+					errors ~= "line#"~(i+1).to!string~' '~name~" is an invalid jump position, cannot be digits only.";
+					continue;
+				}
 				// check if its the last line
 				bool isLastLine = true;
 				foreach (j; i .. _instructions.length){
@@ -102,7 +106,9 @@ public:
 					errors ~= "line#"~(i+1).to!string~' '~name~"  needs argument";
 				if (instInfo.argIsJumpPos){
 					string arg = _arguments[i].lowercase;
-					if (jumpPos.keys.hasElement(arg))
+					if (arg.isNum(false)){ // skip it if its an integer already
+						_arguments[writeIndex] = arg;
+					}else if (jumpPos.keys.hasElement(arg))
 						_arguments[writeIndex] = jumpPos[arg].to!string;
 					else
 						errors ~= "line#"~(i+1).to!string~' '~arg~" is not a valid jump position";
