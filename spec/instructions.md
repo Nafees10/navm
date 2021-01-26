@@ -28,11 +28,7 @@ Pops `A (double)`, then `B (double)`. Pushes `A % B (double)` to stack.
 
 ## Comparison Operators
 * _`IsSame`_  
-Pops 2 values from stack, pushes `true (bool)` to stack if both have same value, else, pushes `false (bool)`.
-* _`IsSameArray`_  
-Pops 2 arrays from stack (arrays, not referece to array). Pushes `true (bool)` to stack if both are same (length, and elements), else, pushes `false (bool)`. **Will only work on 1 dimensional arrays.**
-* _`IsSameArrayRef`_  
-Pops 2 references to arrays from stack. Pushes `true (bool)` to stack if both are same (length, and elements), else, pushes `false (bool)`. **Will only work on 1 dimensional arrays.**
+Pops 2 values from stack, pushes `true (bool)` to stack if both have same value, else, pushes `false (bool)`. **Does not work for arrays**
 * _`IsGreaterInt`_  
 Pops `A (integer)`, then `B (integer)`. Pushes `true (bool)` if `A > B`, else, pushes `false (bool)`
 * _`IsGreaterSameInt`_  
@@ -105,6 +101,8 @@ Pops n (`integer >= 0`), creates an array of length `n`. Pushes its reference to
 Pops a reference-to-array. Pushes length of array (`integer>=0`) to stack.
 * _`ArrayLengthSet`_  
 Pops a reference-to-array, then `length (integer>=0)`. Creates a new array of length, and copies elements from previous array. Pushes reference of new array.
+* _`isSameArray`_  
+Pops 2 array references. Pushes `true (bool)` to stack if both have same length and elements. **Only works for 1 dimensional arrays**.
 
 ---
 
@@ -125,21 +123,3 @@ Pops a string, reads integer from it, pushes the integer.
 Pops a string, reads a double from it, pushes the double.
 * _`StringToBool`_  
 Pops a string, pushes `true (bool)` if it is `"true"`, otherwise pushes `false (bool)`.
-
----
-
-## Misc.
-* _`Terminate`_  
-Terminates execution.
-
---
-
-## D equivalent of data types in NaVM
-* `integer` is a `long` or `int` depending on whether it is compiled for 64bit or 32bit.  or you could use `integer` from `misc.d` from package `utils`.
-* `string` is a `dstring`
-* `char` is a `dchar`
-* `bool` is the same as a D `bool`
-* arrays are stored as the pointer to their first element.  
-Arrays are actually `[lengthOfRestOfArray, firstElement, secondElement, ...]`.  
-in this example, `NaData.ptrVal = &firstElement;`  
-So to read length, you can either increment `ptrVal` by `-1`, or use `NaData.arrayValLength`
