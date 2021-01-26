@@ -33,17 +33,3 @@ A jump position must be followed by at least 1 instruction, i.e: a jump position
 
 ## Whitespace
 Whitespace can be either tab(s) or space(s), and is ignored.
-
----
-
-# NaData
-
-## D equivalent of data types in NaVM
-* `integer` is a `long` or `int` depending on whether it is compiled for 64bit or 32bit.  or you could use `integer` from `misc.d` from package `utils`.
-* `string` is a `dstring`
-* `char` is a `dchar`
-* `bool` is the same as a D `bool`
-* arrays are stored as the pointer to their first element.  
-Arrays are actually `[lengthOfRestOfArray, firstElement, secondElement, ...]`.  
-in this example, `NaData.ptrVal = &firstElement;`  
-So to read length, you can either increment `ptrVal` by `-1`, or use `NaData.arrayValLength`
