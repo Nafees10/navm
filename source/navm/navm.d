@@ -81,41 +81,6 @@ protected:
 	void isSame(){
 		_stack.push(NaData(_stack.pop.intVal == _stack.pop.intVal));
 	}
-	void isSameArray(){
-		NaData[] a = _stack.pop.arrayVal, b = _stack.pop.arrayVal;
-		NaData r = NaData(false);
-		if (a.length == b.length){
-			r = NaData(true);
-			NaData* aPtr = &a[0], bPtr = &b[0];
-			for (uinteger i = 0; i < a.length; i++){
-				if ((*aPtr).intVal != (*bPtr).intVal){
-					r = NaData(false);
-					break;
-				}
-				aPtr ++;
-				bPtr ++;
-			}
-		}
-		_stack.push(r);
-	}
-	void isSameArrayRef(){
-		NaData[] a = _stack.pop.ptrVal.arrayVal, b = _stack.pop.ptrVal.arrayVal;
-		NaData r = NaData(false);
-		if (a.length == b.length){
-			r = NaData(true);
-			NaData* aPtr = &a[0], bPtr = &b[0];
-			for (uinteger i = 0; i < a.length; i++){
-				if ((*aPtr).intVal != (*bPtr).intVal){
-					r = NaData(false);
-					break;
-				}
-				aPtr ++;
-				bPtr ++;
-			}
-		}
-		_stack.push(r);
-	}
-
 	void isGreaterInt(){
 		_stack.push(NaData(_stack.pop.intVal > _stack.pop.intVal));
 	}
@@ -219,6 +184,23 @@ protected:
 		array.arrayValLength = _stack.pop.intVal;
 		_stack.push(array);
 	}
+	void isSameArray(){
+		NaData[] a = _stack.pop.arrayVal, b = _stack.pop.arrayVal;
+		if (a.length != b.length){
+			_stack.push(NaData(false));
+			return;
+		}
+		NaData* aPtr = a.ptr, bPtr = b.ptr, aEnd = aPtr + a.length;
+		for (; aPtr < aEnd; ){
+			if (aPtr.intVal != bPtr.intVal){
+				_stack.push(NaData(false));
+				return;
+			}
+			aPtr ++;
+			bPtr ++;
+		}
+		_stack.push(NaData(true));
+	}
 
 	void intToDouble(){
 		_stack.push(NaData(to!double(_stack.pop.intVal)));
@@ -244,10 +226,6 @@ protected:
 	void stringToDouble(){
 		_stack.push(NaData(to!double(_stack.pop.strVal)));
 	}
-
-	void terminate(){
-		_inst = &(_instructions)[$-1] + 1;
-	}
 public:
 	/// constructor
 	this(uinteger stackLength = 65_536){
@@ -264,8 +242,6 @@ public:
 			NaInstruction("mathDivideDouble",0,2,1,&mathDivideDouble),
 			NaInstruction("mathModDouble",0,2,1,&mathModDouble),
 			NaInstruction("isSame",0,2,1,&isSame),
-			NaInstruction("isSameArray",0,2,1,&isSameArray),
-			NaInstruction("isSameArrayRef",0,2,1,&isSameArrayRef),
 			NaInstruction("isGreaterInt",0,2,1,&isGreaterInt),
 			NaInstruction("isGreaterSameInt",0,2,1,&isGreaterSameInt),
 			NaInstruction("isGreaterDouble",0,2,1,&isGreaterDouble),
@@ -292,6 +268,7 @@ public:
 			NaInstruction("makeArray",0,1,1,&makeArray),
 			NaInstruction("arrayLength",0,1,1,&arrayLength),
 			NaInstruction("arrayLengthSet",0,2,1,&arrayLengthSet),
+			NaInstruction("isSameArray",0,2,1,&isSameArray),
 			NaInstruction("intToDouble",0,1,1,&intToDouble),
 			NaInstruction("intToString",0,1,1,&intToString),
 			NaInstruction("boolToString",0,1,1,&boolToString),
@@ -300,7 +277,6 @@ public:
 			NaInstruction("doubleToString",0,1,1,&doubleToString),
 			NaInstruction("stringToInt",0,1,1,&stringToInt),
 			NaInstruction("stringToDouble",0,1,1,&stringToDouble),
-			NaInstruction("terminate",0,1,0,&terminate),
 		];
 		// now assign codes
 		foreach (i; 0 .. _instructionTable.length)
