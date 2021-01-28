@@ -87,7 +87,8 @@ Jump execution to instruction at `jump position`.
 Jump execution to `jump position`. Pushes current frame to a separate stack, so `jumpBack` can be used to jump back.
 Also changes `_stackIndex` to `_stack.count`.
 * _`JumpBack`_  
-Jump execution back to last pointer pushed to jump stack, & restores last frame pushed. `terminate`s if jump stack is empty.
+Jump execution back to last pointer pushed to jump stack, & restores last frame pushed. terminates execution if jump stack empty.  
+Also restores stack's peek pointer.
 
 ---
 

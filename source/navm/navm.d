@@ -166,6 +166,7 @@ protected:
 			_inst = frame.instruction;
 			_arg = frame.argument;
 			_stackIndex = frame.stackIndex;
+			_stack.peek(_stackIndex-1);
 			return;
 		}
 		_inst = &(_instructions)[$-1] + 1;
