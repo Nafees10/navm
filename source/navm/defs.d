@@ -132,28 +132,20 @@ public:
 		_peekPtr[0 .. elements.length] = elements;
 		_peekPtr += elements.length;
 	}
-	/// Returns: element at currentIndex-index
-	T readRelative(uinteger index){
-		return *(_peekPtr - index);
-	}
 	/// Returns: element at index
 	T read(uinteger index){
 		return _array[index];
-	}
-	/// Returns: pointer to element at currentIndex-index;
-	T* readPtrRelative(uinteger index){
-		return _peekPtr - index;
 	}
 	/// Returns: pointer to element at index
 	T* readPtr(uinteger index){
 		return &(_array[index]);
 	}
-	/// Writes a value to `currentIndex-index`
-	void writeRelative(uinteger index, T value){
-		*(_peekPtr - index) = value;
-	}
 	/// Writes a value to index
 	void write(uinteger index, T value){
 		_array[index] = value;
+	}
+	/// Moves peek pointer to index
+	void peek(uinteger index){
+		_peekPtr = _array.ptr + index;
 	}
 }
