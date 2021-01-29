@@ -165,8 +165,8 @@ protected:
 			StackFrame frame = _jumpStack.pop;
 			_inst = frame.instruction;
 			_arg = frame.argument;
+			_stack.peek(_stackIndex);
 			_stackIndex = frame.stackIndex;
-			_stack.peek(_stackIndex-1);
 			return;
 		}
 		_inst = &(_instructions)[$-1] + 1;
