@@ -1,70 +1,62 @@
-jump main
-printArray:
-	pushFrom -1 #		array at 0
+push 10
+makeArray
+jumpFrame fillArray
+jumpFrame printArray
+jumpBack
+
+fillArray:
+	pushFrom -1 # array at 0
 	pushFrom 0
-	arrayLength #		length at 1
-	push 0 #			counter at 2
-	
-	printLoopStart:
-	# condition
+	arrayLength # length at 1
+	push 0 # counter at 2
+
+	loop0Start:
 		pushFrom 2
 		pushFrom 1
 		isSame
-		if
-		Jump printLoopEnd
-		
+		If
+		Jump loop0End
+
+		pushFrom 2
 		pushFrom 2
 		pushFrom 0
 		incRef
-		Deref
-		writeInt
-		push '\n'
-		writeChar
-		
+		writeToRef
+
 		pushFrom 2
 		push 1
 		mathAddInt
 		WriteTo 2
-		
-		jump printLoopStart
-		
-	printLoopEnd:
-	popN 3
+
+		Jump loop0Start
+	loop0End:
 	jumpBack
-fillArray:
-	pushFrom -1 #		array at 0
+printArray:
+	pushFrom -1 # array at 0
 	pushFrom 0
-	arrayLength #		length at 1
-	push 0 #			counter at 2
-	
-	fillLoopStart:
-	# condition
+	arrayLength # length at 1
+	push 0 # counter at 2
+
+	loop1Start:
 		pushFrom 2
 		pushFrom 1
 		isSame
-		if
-		Jump fillLoopEnd
+		If
+		Jump loop1End
 
-		pushFrom 2 # value to write
 		pushFrom 2
 		pushFrom 0
-		incRef # ref to write to
-		writeToRef
-		
+		incRef
+		deref
+		writeInt
+		push '\n'
+		writeChar
+
 		pushFrom 2
 		push 1
 		mathAddInt
 		WriteTo 2
-		
-		jump fillLoopStart
-		
-	fillLoopEnd:
-	popN 3
-	jumpBack
-main:
-	push 10
-	makeArray
-	jumpFrame fillArray
-	jumpFrame printArray
-	popN 1 # pop the array
+
+		Jump loop1Start
+	loop1End:
 	jumpBack
