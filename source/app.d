@@ -21,6 +21,12 @@ version(demo){
 		void writeChar(){
 			write(_stack.pop.dcharVal);
 		}
+		void printDebug(){
+			writeln("DEBUG INFO:");
+			writeln("\t_stack.count:\t\t",_stack.count);
+			writeln("\t_stackIndex:\t\t", _stackIndex);
+			writeln("\t_jumpStack.count:\t", _jumpStack.count);
+		}
 	public:
 		/// constructor
 		this(){
@@ -29,6 +35,7 @@ version(demo){
 			addInstruction(NaInstruction("writeDouble",0xF1,1,0,&writeDouble));
 			addInstruction(NaInstruction("writeStr",0xF2,1,0,&writeStr));
 			addInstruction(NaInstruction("writeChar",0xF3,1,0,&writeChar));
+			addInstruction(NaInstruction("printDebug",0xF4,&printDebug));
 		}
 	}
 
