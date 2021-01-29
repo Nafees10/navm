@@ -37,6 +37,7 @@ The demo program contains 4 additional instructions:
 * `writeDouble` - pops 1 double from stack, and writes it to stdio.
 * `writeChar` - pops 1 char from stack, and writes it to stdio.
 * `writeStr` - pops 1 string from stack, and writes it to stdio.
+* `printDebug` - prints how many elements are in stack, and `_stackIndex` to stdio.
 
 ---
 
