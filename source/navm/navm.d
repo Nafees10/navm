@@ -360,12 +360,12 @@ public:
 	/// 
 	/// Returns: what the function returned, or `NaData(0)`
 	NaData execute(uinteger index = 0){
-		if (!_instructions.length)
+		if (index >= _instructions.length)
 			return NaData(0);
 		if (_stack.count)
 			_stack.pop(_stack.count);
-		_inst = &(_instructions[0]);
-		_arg = &(_arguments[0]);
+		_inst = &(_instructions[index]);
+		_arg = &(_arguments[index]);
 		const void delegate()* lastInst = &_instructions[$-1]+1;
 		do{
 			(*_inst)();
