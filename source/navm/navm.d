@@ -361,11 +361,9 @@ public:
 			_stack.pop(_stack.count);
 	}
 	/// Starts execution of byte code, starting with the instruction at `index`
-	/// 
-	/// Returns: what the function returned, or `NaData(0)`
-	NaData execute(uinteger index = 0){
+	void execute(uinteger index = 0){
 		if (index >= _instructions.length)
-			return NaData(0);
+			return;
 		_inst = &(_instructions[index]);
 		_arg = &(_arguments[index]);
 		const void delegate()* lastInst = &_instructions[$-1]+1;
@@ -374,6 +372,5 @@ public:
 			_inst++;
 			_arg++;
 		}while (_inst < lastInst);
-		return NaData(0);
 	}
 }
