@@ -327,7 +327,10 @@ public:
 		}
 		return [];
 	}
-
+	/// a copy of the instructions table
+	@property NaInstruction[] instructionTable(){
+		return _instructionTable.dup;
+	}
 	/// Adds a new instruction
 	/// 
 	/// Returns: true on success, false if not (pointer might be null, code might be already in use, name might already be in use)
