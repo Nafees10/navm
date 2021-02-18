@@ -75,17 +75,6 @@ public:
 					errors ~= "line#"~(i+1).to!string~' '~name~" is an invalid jump position, cannot be digits only.";
 					continue;
 				}
-				// check if its the last line
-				bool isLastLine = true;
-				foreach (j; i .. _instructions.length){
-					if (!_instructions[j].length || _instructions[j][$-1] == ':')
-						continue;
-					isLastLine = false;
-				}
-				if (isLastLine){
-					errors ~= "line#"~(i+1).to!string~" jump position at last line is now allowed, follow it by an instruction";
-					continue;
-				}
 				jumpPos[name.lowercase] = instIndex;
 				continue;
 			}
