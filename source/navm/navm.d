@@ -151,13 +151,13 @@ protected:
 		}
 	}
 	void jump(){
-		_inst = &(_instructions)[_arg.intVal] - 1;
-		_arg = &(_arguments)[_arg.intVal] - 1;
+		_inst = (_instructions.ptr + _arg.intVal) -1;
+		_arg = (_arguments.ptr + _arg.intVal) -1;
 	}
 	void jumpFrame(){
 		_jumpStack.push(StackFrame(_inst, _arg, _stackIndex));
-		_inst = &(_instructions)[_arg.intVal] - 1;
-		_arg = &(_arguments)[_arg.intVal] - 1;
+		_inst = (_instructions.ptr + _arg.intVal) -1;
+		_arg = (_arguments.ptr + _arg.intVal) -1;
 		_stackIndex = _stack.count;
 	}
 	void jumpBack(){
