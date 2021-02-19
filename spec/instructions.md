@@ -33,10 +33,18 @@ Pops 2 values from stack, pushes `true (bool)` to stack if both have same value,
 Pops `A (integer)`, then `B (integer)`. Pushes `true (bool)` if `A > B`, else, pushes `false (bool)`
 * _`IsGreaterSameInt`_  
 Pops `A (integer)`, then `B (integer)`. Pushes `true (bool)` if `A >= B`, else, pushes `false (bool)`
+* _`IsLesserInt`_  
+Pops `A (integer)`, then `B (integer)`. Pushes `true (bool)` if `A < B`, else, pushes `false (bool)`
+* _`IsLesserSameInt`_  
+Pops `A (integer)`, then `B (integer)`. Pushes `true (bool)` if `A <= B`, else, pushes `false (bool)`
 * _`IsGreaterDouble`_  
 Pops `A (double)`, then `B (double)`. Pushes `true (bool)` if `A > B`, else, pushes `false (bool)`
 * _`IsGreaterSameDouble`_  
 Pops `A (double)`, then `B (double)`. Pushes `true (bool)` if `A >= B`, else, pushes `false (bool)`
+* _`IsLesserDouble`_  
+Pops `A (double)`, then `B (double)`. Pushes `true (bool)` if `A < B`, else, pushes `false (bool)`
+* _`IsLesserSameDouble`_  
+Pops `A (double)`, then `B (double)`. Pushes `true (bool)` if `A <= B`, else, pushes `false (bool)`
 * _`Not`_  
 Pops `A (bool)`. Pushes `!A`
 * _`And`_  

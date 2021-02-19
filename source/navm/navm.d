@@ -87,12 +87,24 @@ protected:
 	void isGreaterSameInt(){
 		_stack.push(NaData(_stack.pop.intVal >= _stack.pop.intVal));
 	}
+	void isLesserInt(){
+		_stack.push(NaData(_stack.pop.intVal < _stack.pop.intVal));
+	}
+	void isLesserSameInt(){
+		_stack.push(NaData(_stack.pop.intVal <= _stack.pop.intVal));
+	}
 
 	void isGreaterDouble(){
 		_stack.push(NaData(_stack.pop.doubleVal > _stack.pop.doubleVal));
 	}
 	void isGreaterSameDouble(){
 		_stack.push(NaData(_stack.pop.doubleVal >= _stack.pop.doubleVal));
+	}
+	void isLesserDouble(){
+		_stack.push(NaData(_stack.pop.doubleVal < _stack.pop.doubleVal));
+	}
+	void isLesserSameDouble(){
+		_stack.push(NaData(_stack.pop.doubleVal <= _stack.pop.doubleVal));
 	}
 
 	void binaryNot(){
@@ -245,8 +257,12 @@ public:
 			NaInstruction("isSame",0,2,1,&isSame),
 			NaInstruction("isGreaterInt",0,2,1,&isGreaterInt),
 			NaInstruction("isGreaterSameInt",0,2,1,&isGreaterSameInt),
+			NaInstruction("isLesserInt",0,2,1,&isLesserInt),
+			NaInstruction("isLesserSameInt",0,2,1,&isLesserSameInt),
 			NaInstruction("isGreaterDouble",0,2,1,&isGreaterDouble),
 			NaInstruction("isGreaterSameDouble",0,2,1,&isGreaterSameDouble),
+			NaInstruction("isLesserDouble",0,2,1,&isLesserDouble),
+			NaInstruction("isLesserSameDouble",0,2,1,&isLesserSameDouble),
 			NaInstruction("not",0,1,1,&binaryNot),
 			NaInstruction("and",0,2,1,&binaryAnd),
 			NaInstruction("or",0,2,1,&binaryOr),
