@@ -228,6 +228,11 @@ public:
 		string dummy;
 		return addInstruction(instName, argument, dummy);
 	}
+	/// ditto
+	bool addInstruction(string instName){
+		string dummy;
+		return addInstruction(instName, "", dummy);
+	}
 	/// adds a jump position
 	void addJumpPos(string name){
 		_instructions ~= name~':';
