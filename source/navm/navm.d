@@ -25,6 +25,17 @@ protected:
 	ArrayStack!NaData _stack; /// as the name says, stack
 	ArrayStack!StackFrame _jumpStack; /// for storing pointers before jumping
 
+	// functions to optimise certain instructions
+
+	/// optimise push*Abs and writeToAbs
+	void optimisePushWriteAbs(ArrayStack!NaData stack, ref NaData arg){
+		arg.ptrVal = stack.readPtrAbs(arg.intVal);
+	}
+	/// optimise jumps (so no need to do -1 later)
+	void optimiseJumpPos(ArrayStack!NaData, ref NaData arg){
+		arg.intVal = arg.intVal - 1;
+	}
+
 	// instructions:
 
 	void mathAddInt(){
@@ -122,13 +133,13 @@ protected:
 		_stack.push(*_arg);
 	}
 	void pushFromAbs(){
-		_stack.push(_stack.readAbs(_arg.intVal));
+		_stack.push(*(_arg.ptrVal));
 	}
 	void pushRefFromAbs(){
-		_stack.push(NaData(_stack.readPtrAbs(_arg.intVal)));
+		_stack.push(*_arg); // just a glorified push after optimise
 	}
 	void writeToAbs(){
-		_stack.writeAbs(_arg.intVal,_stack.pop);
+		*(_arg.ptrVal) = _stack.pop;
 	}
 	void pushFrom(){
 		_stack.push(_stack.read(_arg.intVal));
@@ -164,13 +175,13 @@ protected:
 		}
 	}
 	void jump(){
-		_inst = (_instructions.ptr + _arg.intVal) -1;
-		_arg = (_arguments.ptr + _arg.intVal) -1;
+		_inst = (_instructions.ptr + _arg.intVal)/* -1*/;
+		_arg = (_arguments.ptr + _arg.intVal)/* -1*/;
 	}
 	void jumpFrame(){
 		_jumpStack.push(StackFrame(_inst, _arg, _stackIndex));
-		_inst = (_instructions.ptr + _arg.intVal) -1;
-		_arg = (_arguments.ptr + _arg.intVal) -1;
+		_inst = (_instructions.ptr + _arg.intVal)/* -1*/;
+		_arg = (_arguments.ptr + _arg.intVal)/* -1*/;
 		_stackIndex = _stack.count;
 		_stack.setIndex(_stackIndex);
 	}
@@ -273,17 +284,17 @@ public:
 			NaInstruction("pushFrom",0,true,0,1,&pushFrom),
 			NaInstruction("pushRefFrom",0,true,0,1,&pushRefFrom),
 			NaInstruction("writeTo",0,true,1,0,&writeTo),
-			NaInstruction("pushFromAbs",0,true,0,1,&pushFromAbs),
-			NaInstruction("pushRefFromAbs",0,true,0,1,&pushRefFromAbs),
-			NaInstruction("writeToAbs",0,true,1,0,&writeToAbs),
+			NaInstruction("pushFromAbs",0,true,0,1,&pushFromAbs, &optimisePushWriteAbs),
+			NaInstruction("pushRefFromAbs",0,true,0,1,&pushRefFromAbs, &optimisePushWriteAbs),
+			NaInstruction("writeToAbs",0,true,1,0,&writeToAbs, &optimisePushWriteAbs),
 			NaInstruction("pop",0,1,0,&pop),
 			NaInstruction("popN",0,true,255,0,&popN),
 			NaInstruction("writeToRef",0,2,0,&writeToRef),
 			NaInstruction("deref",0,1,1,&deref),
 			NaInstruction("incRef",0,2,1,&incRef),
 			NaInstruction("if",0,1,0,&doIf),
-			NaInstruction("jump",0,true,true,0,0,&jump),
-			NaInstruction("jumpFrame",0,true,true,0,0,&jumpFrame),
+			NaInstruction("jump",0,true,true,0,0,&jump, &optimiseJumpPos),
+			NaInstruction("jumpFrame",0,true,true,0,0,&jumpFrame, &optimiseJumpPos),
 			NaInstruction("jumpBack",0,&jumpBack),
 			NaInstruction("makeArray",0,1,1,&makeArray),
 			NaInstruction("arrayLength",0,1,1,&arrayLength),
