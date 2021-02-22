@@ -98,19 +98,17 @@ public class ArrayStack(T){
 private:
 	T[] _array;
 	T* _peekPtr;
+	T* _curPtr;
 public:
 	/// constructor (set the stack length here)
 	this(uinteger length=65_536){
 		_array.length = length;
 		_peekPtr = _array.ptr;
+		_curPtr = _array.ptr;
 	}
-	/// the array being used as stack
-	@property ref T[] array(){
-		return _array;
-	}
-	/// ditto
-	@property ref T[] array(T[] newVal){
-		return _array = newVal;
+	/// the index which is treated at start of array
+	void setIndex(uinteger newInd){
+		_curPtr = _array.ptr + newInd;
 	}
 	/// Pops an element from stack
 	/// 
@@ -142,18 +140,30 @@ public:
 	}
 	/// Returns: element at index
 	T read(uinteger index){
-		return _array[index];
+		return _curPtr[index];
 	}
 	/// Returns: pointer to element at index
 	T* readPtr(uinteger index){
-		return &(_array[index]);
+		return &(_curPtr[index]);
 	}
 	/// Writes a value to index
 	void write(uinteger index, T value){
+		_curPtr[index] = value;
+	}
+	/// Returns: element at index
+	T readAbs(uinteger index){
+		return _array[index];
+	}
+	/// Returns: pointer to element at index
+	T* readPtrAbs(uinteger index){
+		return &(_array[index]);
+	}
+	/// Writes a value to index
+	void writeAbs(uinteger index, T value){
 		_array[index] = value;
 	}
 	/// Moves peek pointer to index
 	void peek(uinteger index){
-		_peekPtr = _array.ptr + index;
+		_peekPtr = _curPtr + index;
 	}
 }

@@ -121,22 +121,22 @@ protected:
 		_stack.push(*_arg);
 	}
 	void pushFromAbs(){
-		_stack.push(_stack.read(_arg.intVal));
+		_stack.push(_stack.readAbs(_arg.intVal));
 	}
 	void pushRefFromAbs(){
-		_stack.push(NaData(_stack.readPtr(_arg.intVal)));
+		_stack.push(NaData(_stack.readPtrAbs(_arg.intVal)));
 	}
 	void writeToAbs(){
-		_stack.write(_arg.intVal,_stack.pop);
+		_stack.writeAbs(_arg.intVal,_stack.pop);
 	}
 	void pushFrom(){
-		_stack.push(_stack.read(_arg.intVal + _stackIndex));
+		_stack.push(_stack.read(_arg.intVal));
 	}
 	void pushRefFrom(){
-		_stack.push(NaData(_stack.readPtr(_arg.intVal + _stackIndex)));
+		_stack.push(NaData(_stack.readPtr(_arg.intVal)));
 	}
 	void writeTo(){
-		_stack.write(_arg.intVal + _stackIndex, _stack.pop);
+		_stack.write(_arg.intVal, _stack.pop);
 	}
 	void pop(){
 		_stack.pop;
@@ -171,12 +171,14 @@ protected:
 		_inst = (_instructions.ptr + _arg.intVal) -1;
 		_arg = (_arguments.ptr + _arg.intVal) -1;
 		_stackIndex = _stack.count;
+		_stack.setIndex(_stackIndex);
 	}
 	void jumpBack(){
 		if (_jumpStack.count){
 			StackFrame frame = _jumpStack.pop;
 			_inst = frame.instruction;
 			_arg = frame.argument;
+			_stack.setIndex(frame.stackIndex);
 			_stack.peek(_stackIndex);
 			_stackIndex = frame.stackIndex;
 			return;
