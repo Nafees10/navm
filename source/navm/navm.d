@@ -24,6 +24,7 @@ protected:
 	uinteger _stackIndex; /// stack index relative to which some instructions will pushFrom/writeTo
 	ArrayStack!NaData _stack; /// as the name says, stack
 	ArrayStack!StackFrame _jumpStack; /// for storing pointers before jumping
+
 	// instructions:
 
 	void mathAddInt(){
@@ -317,32 +318,17 @@ public:
 		string[] r = bcode.readByteCode(byteCode);
 		if (r.length)
 			return r;
-		r = bcode.resolve();
-		if (r.length)
-			return r;
-		_instructions = bcode.getBytecodePointers();
-		try{
-			_arguments = bcode.getArgumentsNaData();
-		}catch (Exception e){
-			string msg = e.msg;
-			.destroy(e);
-			return [msg];
-		}
-		return [];
+		return this.load(bcode);
+		
 	}
 	/// ditto
-	string[] load(NaBytecode byteCode){
-		string[] r = byteCode.resolve();
+	string[] load(NaBytecode bcode){
+		string[] r = bcode.resolve();
 		if (r.length)
 			return r;
-		_instructions = byteCode.getBytecodePointers();
-		try{
-			_arguments = byteCode.getArgumentsNaData();
-		}catch (Exception e){
-			string msg = e.msg;
-			.destroy(e);
-			return [msg];
-		}
+		r = [bcode.getBytecode(_instructions, _arguments, _stack)];
+		if (r[0].length)
+			return r;
 		return [];
 	}
 	/// a copy of the instructions table
