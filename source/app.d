@@ -68,6 +68,7 @@ version(demo){
 				min = times[i] < min ? times[i] : min;
 				max = times[i] > max ? times[i] : max;
 				avg += times[i];
+				vm.clearStack();
 			}
 			avg = avg / count;
 			if (count > 1){
