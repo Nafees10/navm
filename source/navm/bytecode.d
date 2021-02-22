@@ -110,6 +110,49 @@ public:
 		_arguments.length = instCount;
 		return errors;
 	}
+	/// Returns: the bytecode with instructions and arguments separated. Both as string
+	string[2][] getBytecodeString(){
+		string[2][] r;
+		r.length = _instructions.length;
+		foreach (i; 0 .. r.length){
+			r[i][0] = _instructions[i];
+			r[i][1] = _arguments[i];
+		}
+		return r;
+	}
+	/// Prepares and gets bytecode for execution. Must call `resolve` before this 
+	/// Writes instructions pointers, or codes in `instructions` and arguments in `args`. 
+	/// `stack` is the stack that will be used to execute this bytecode.
+	/// 
+	/// Returns: empty string in case of success, or error
+	string getBytecode(T)(ref T[] instructions, ref NaData[] args, ArrayStack!NaData stack){
+		assert(is(T == ushort) || is(T == void delegate()),
+		"can only call NaBytecode.getBytecode with ref void delegate()[] OR ref ushort[]");
+		if (_arguments.length != _instructions.length)
+			return "invalid bytecode, arguments length != instructions length";
+		instructions.length = _instructions.length;
+		args.length = _arguments.length;
+		foreach (i; 0 .. _instructions.length){
+			NaInstruction instInfo;
+			if (!hasInstruction(_instructions[i], instInfo))
+				return _instructions[i]~" is not a valid instruction";
+			static if (is (T == ushort))
+				instructions[i] = instInfo.code;
+			else
+				instructions[i] = instInfo.pointer;
+			try{
+				args[i] = readData(_arguments[i]);
+			}catch (Exception e){
+				string r = "Error in reading argument "~_arguments[i]~" : "~e.msg;
+				.destroy(e);
+				return r;
+			}
+			if (instInfo.prepare){
+				instInfo.prepare(stack, args[i]);
+			}
+		}
+		return [];
+	}
 	/// Returns: the bytecode in a readable format
 	string[] getBytecodePretty(){
 		string[] r;
@@ -118,50 +161,6 @@ public:
 			r[i] = _instructions[i];
 			if (_arguments[i].length)
 				r[i] ~= "\t\t" ~ _arguments[i];
-		}
-		return r;
-	}
-	/// Call `resolve` before this or prepare for crashes
-	/// 
-	/// Returns: pointers for all instructions
-	void delegate()[] getBytecodePointers(){
-		void delegate()[] r;
-		r.length = _instructions.length;
-		foreach (i, inst; _instructions){
-			NaInstruction instInfo;
-			hasInstruction(inst, instInfo);
-			r[i] = instInfo.pointer;
-		}
-		return r;
-	}
-	/// Call `resolve` before this or prepare for crashes
-	/// 
-	/// Returns: codes for all instructions
-	ushort[] getBytecodeCodes(){
-		ushort[] r;
-		r.length = _instructions.length;
-		foreach (i, inst; _instructions){
-			NaInstruction instInfo;
-			hasInstruction(inst, instInfo);
-			r[i] = instInfo.code;
-		}
-		return r;
-	}
-	/// Call `resolve` before this.
-	/// 
-	/// Returns: arguments for each instruction NaData[]
-	/// 
-	/// Throws: Exception in case of error in argument
-	NaData[] getArgumentsNaData(){
-		NaData[] r;
-		r.length = _arguments.length;
-		foreach (i, arg; _arguments){
-			try{
-				r[i] = readData(arg);
-			}catch (Exception e){
-				e.msg = "Line#"~(i+1).to!string~' '~e.msg;
-				throw e;
-			}
 		}
 		return r;
 	}
@@ -242,48 +241,29 @@ public:
 	@property uinteger elementCount(){
 		return _stackLength;
 	}
-	/// adds a "bookmark" to the last element on stack, so later on, relative to current peek index, bookmark index
-	/// can be read.
-	/// 
-	/// Returns: bookmark id, or -1 if stack empty
-	integer addBookmark(){
-		if (_stackLength == 0)
-			return -1;
-		integer bookmarkId;
-		for (bookmarkId = 0; bookmarkId <= integer.max; bookmarkId ++)
-			if (bookmarkId !in _bookmarks)
-				break;
-		_bookmarks[bookmarkId] = _stackLength-1;
-		return bookmarkId;
-	}
-	/// removes a bookmark
-	/// 
-	/// Returns: true if successful, false if does not exists
-	bool removeBookmark(uinteger id){
-		if (id !in _bookmarks)
-			return false;
-		_bookmarks.remove(id);
-		return true;
-	}
-	/// gets relative index from current stack index to a bookmark
-	/// 
-	/// Returns: relative index, or integer.max if bookmark does not exist
-	integer bookmarkRelIndex(uinteger id){
-		if (id !in _bookmarks)
-			return integer.max;
-		return _stackLength.to!integer - (_bookmarks[id]+1).to!integer;
-	}
 }
 
 /// stores an data about available instruction
 public struct NaInstruction{
-	bool argIsJumpPos = false; /// if the argument to this instruction is a jump position
-	string name; /// name of instruction, in lowercase
-	ushort code = 0x0000; /// value when read as a ubyte
-	bool needsArg; /// if this instruction needs an argument
-	ubyte pushCount = 0; /// number of elements it will push to stack
-	private ubyte _popCount = 0; /// number of elements it will pop (if ==255, then the argument is the number of elements to pop)
-	void delegate() pointer; /// pointer to the delegate behind this instruction
+	/// if the argument to this instruction is a jump position
+	bool argIsJumpPos = false;
+	/// name of instruction, in lowercase
+	string name;
+	/// value when read as a ubyte
+	ushort code = 0x0000;
+	/// if this instruction needs an argument
+	bool needsArg;
+	/// number of elements it will push to stack
+	ubyte pushCount = 0;
+	/// number of elements it will pop (if ==255, then the argument is the number of elements to pop)
+	private ubyte _popCount = 0;
+	/// pointer to the delegate behind this instruction
+	void delegate() pointer;
+	/// Called before a bytecode is about to be executed. 
+	/// Use this function to modify the argument (or whatever) to optimise
+	/// ignored if null
+	/// First argument is stack, second is reference to the argument
+	void delegate(ArrayStack!NaData, ref NaData) prepare;
 	/// Returns: number of elements it will pop
 	ubyte popCount(NaData arg){
 		if (_popCount < 255)
@@ -291,25 +271,29 @@ public struct NaInstruction{
 		return cast(ubyte)(arg.intVal);
 	}
 	/// constructor, for instruction with no arg, no push/pop
-	this (string name, integer code, void delegate() pointer){
+	this (string name, integer code, void delegate() pointer, void delegate(ArrayStack!NaData, ref NaData) prepare=null){
 		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.pointer = pointer;
 		this.needsArg = false;
 		this.pushCount = 0;
 		this._popCount = 0;
+		this.prepare = prepare;
 	}
 	/// constructor, for instruction with no arg, but pop and push
-	this(string name, integer code, integer popCount, integer pushCount, void delegate() pointer){
+	this(string name, integer code, integer popCount, integer pushCount, void delegate() pointer,
+	void delegate(ArrayStack!NaData, ref NaData) prepare=null){
 		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.needsArg = false;
 		this.pushCount = cast(ubyte)pushCount;
 		this._popCount = cast(ubyte)popCount;
 		this.pointer = pointer;
+		this.prepare = prepare;
 	}
 	/// full constructor but arg is not jump position
-	this (string name, integer code, bool needsArg, integer popCount, integer pushCount, void delegate() pointer){
+	this (string name, integer code, bool needsArg, integer popCount, integer pushCount, void delegate() pointer,
+	void delegate(ArrayStack!NaData, ref NaData) prepare=null){
 		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.needsArg = needsArg;
@@ -317,9 +301,11 @@ public struct NaInstruction{
 		this.pushCount = cast(ubyte)pushCount;
 		this._popCount = cast(ubyte)popCount;
 		this.pointer = pointer;
+		this.prepare = prepare;
 	}
 	/// full constructor
-	this (string name, integer code, bool needsArg, bool argIsJumpPos, integer popCount, integer pushCount, void delegate() pointer){
+	this (string name, integer code, bool needsArg, bool argIsJumpPos, integer popCount, integer pushCount,
+	void delegate() pointer, void delegate(ArrayStack!NaData, ref NaData) prepare=null){
 		this.name = name.lowercase;
 		this.code = cast(ushort)code;
 		this.needsArg = needsArg;
@@ -327,6 +313,7 @@ public struct NaInstruction{
 		this.pushCount = cast(ubyte)pushCount;
 		this._popCount = cast(ubyte)popCount;
 		this.pointer = pointer;
+		this.prepare = prepare;
 	}
 }
 
