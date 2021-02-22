@@ -104,6 +104,14 @@ public:
 		_array.length = length;
 		_peekPtr = _array.ptr;
 	}
+	/// the array being used as stack
+	@property ref T[] array(){
+		return _array;
+	}
+	/// ditto
+	@property ref T[] array(T[] newVal){
+		return _array = newVal;
+	}
 	/// Pops an element from stack
 	/// 
 	/// Returns: popped element
