@@ -27,10 +27,6 @@ protected:
 
 	// functions to optimise certain instructions
 
-	/// optimise push*Abs and writeToAbs
-	void optimisePushWriteAbs(ArrayStack!NaData stack, ref NaData arg){
-		arg.ptrVal = stack.readPtrAbs(arg.intVal);
-	}
 	/// optimise jumps (so no need to do -1 later)
 	void optimiseJumpPos(ArrayStack!NaData, ref NaData arg){
 		arg.intVal = arg.intVal - 1;
@@ -133,13 +129,13 @@ protected:
 		_stack.push(*_arg);
 	}
 	void pushFromAbs(){
-		_stack.push(*(_arg.ptrVal));
+		_stack.push(_stack.readAbs(_arg.intVal));
 	}
 	void pushRefFromAbs(){
-		_stack.push(*_arg); // just a glorified push after optimise
+		_stack.push(NaData(_stack.readPtrAbs(_arg.intVal)));
 	}
 	void writeToAbs(){
-		*(_arg.ptrVal) = _stack.pop;
+		_stack.writeAbs(_arg.intVal,_stack.pop);
 	}
 	void pushFrom(){
 		_stack.push(_stack.read(_arg.intVal));
@@ -284,9 +280,9 @@ public:
 			NaInstruction("pushFrom",0,true,0,1,&pushFrom),
 			NaInstruction("pushRefFrom",0,true,0,1,&pushRefFrom),
 			NaInstruction("writeTo",0,true,1,0,&writeTo),
-			NaInstruction("pushFromAbs",0,true,0,1,&pushFromAbs, &optimisePushWriteAbs),
-			NaInstruction("pushRefFromAbs",0,true,0,1,&pushRefFromAbs, &optimisePushWriteAbs),
-			NaInstruction("writeToAbs",0,true,1,0,&writeToAbs, &optimisePushWriteAbs),
+			NaInstruction("pushFromAbs",0,true,0,1,&pushFromAbs),
+			NaInstruction("pushRefFromAbs",0,true,0,1,&pushRefFromAbs),
+			NaInstruction("writeToAbs",0,true,1,0,&writeToAbs),
 			NaInstruction("pop",0,1,0,&pop),
 			NaInstruction("popN",0,true,255,0,&popN),
 			NaInstruction("writeToRef",0,2,0,&writeToRef),
