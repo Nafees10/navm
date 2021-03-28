@@ -7,362 +7,124 @@ import utils.misc;
 
 import std.conv : to;
 
-/// Class used for storing/constructing bytecode
-public class NaBytecode{
+/// To store a single line of bytecode
+public struct Statement{
+	/// label, if any, otherwise, null or empty string
+	string label;
+	/// instruction name
+	string instName;
+	/// arguments, if any
+	string[] instArguments;
+	/// comment, if any
+	string comment;
+	/// constructor, for instruction + args + comment
+	this(string instName, string[] instArguments=[], string comment = ""){
+		this.instName = instName;
+		this.instArguments = instArguments.dup;
+		this.comment = comment;
+	}
+	/// constructor, for label + instruction
+	this(string label, string instName, string[] instArguments=[], string comment = ""){
+		this.label = label;
+		this.instName = instName;
+		this.instArguments = instArguments.dup;
+		this.comment = comment;
+	}
+
+}
+
+/// Stores bytecode that is almost ready to be used with NaVM
+class NaBytecode{
 private:
-	/// where the bytecode is actually stored
-	string[] _instructions;
-	string[] _arguments;
-	/// stores number of elements sitting on stack right now after the last added instruction would be executed
-	uinteger _stackLength;
-	/// stores max number of elements sitting on stack at any time
-	uinteger _stackLengthMax;
-	/// stores any elements that have been "bookmarked". Useful for keeping track of elements during constructing byte code
-	uinteger[uinteger] _bookmarks;
-	/// stores the instruction table
-	NaInstruction[] _instructionTable;
-public:
-	/// constructor
-	this(NaInstruction[] instructionTable){
-		_instructionTable = instructionTable.dup;
-	}
-	~this(){
-		// nothing to do
-	}
-	/// Returns: true if a NaInstruction exists in instruction table
-	bool hasInstruction(string name, ref NaInstruction instruction){
-		foreach (inst; _instructionTable){
-			if (name.lowercase == inst.name){
-				instruction = inst;
-				return true;
-			}
-		}
-		return false;
-	}
-	/// ditto
-	bool hasInstruction(string name){
-		NaInstruction dummy;
-		return hasInstruction(name, dummy);
-	}
-	/// adds an instruction to the instruction table
-	/// 
-	/// Returns: true if it was added, false if not due to name or code already used
-	bool addInstructionToTable(NaInstruction instruction){
-		foreach (inst; _instructionTable){
-			if (inst.name == instruction.name || inst.code == instruction.code)
-				return false;
-		}
-		_instructionTable ~= instruction;
-		return true;
-	}
-	/// goes over bytecode, checks if there are any errors, and converts jump positions to indexes
-	/// i.e: makes the byte code a bit more ready for execution
-	/// 
-	/// Returns: errors in a string[], or an empty array in case no errors
-	string[] resolve(){
-		string[] errors;
-		uinteger[string] jumpPos;
-		uinteger instCount = 0;
-		for (uinteger i=0, instIndex=0; i < _instructions.length; i ++){
-			string name = _instructions[i];
-			if (name.length && name[$-1] == ':'){
-				name = name[0 .. $-1];
-				if (name.lowercase in jumpPos){
-					errors ~= "line#"~(i+1).to!string~' '~name~" as jump postion declared multiple times";
-					continue;
-				}
-				if (name.isNum(true)){
-					errors ~= "line#"~(i+1).to!string~' '~name~" is an invalid jump position, cannot be digits only.";
-					continue;
-				}
-				jumpPos[name.lowercase] = instIndex;
-				continue;
-			}
-			instIndex ++;
-			instCount = instIndex;
-		}
-		for (uinteger i=0, writeIndex=0; i < _instructions.length; i ++){
-			string name = _instructions[i];
-			if (name.length && name[$-1] == ':')
-				continue;
-			if (writeIndex != i){
-				_instructions[writeIndex] = name;
-				_arguments[writeIndex] = _arguments[i];
-			}
-			NaInstruction instInfo;
-			if (this.hasInstruction(name, instInfo)){
-				if (instInfo.needsArg && !_arguments[i].length)
-					errors ~= "line#"~(i+1).to!string~' '~name~"  needs argument";
-				if (instInfo.argIsJumpPos){
-					string arg = _arguments[i].lowercase;
-					if (arg.isNum(false)){ // skip it if its an integer already
-						_arguments[writeIndex] = arg;
-					}else if (jumpPos.keys.hasElement(arg))
-						_arguments[writeIndex] = jumpPos[arg].to!string;
-					else
-						errors ~= "line#"~(i+1).to!string~' '~arg~" is not a valid jump position";
-				}
-			}else
-				errors ~= "line#"~(i+1).to!string~" instruction does not exist";
-			writeIndex ++;
-		}
-		_instructions.length = instCount;
-		_arguments.length = instCount;
-		return errors;
-	}
-	/// Returns: the bytecode with instructions and arguments separated. Both as string
-	string[2][] getBytecodeString(){
-		string[2][] r;
-		r.length = _instructions.length;
-		foreach (i; 0 .. r.length){
-			r[i][0] = _instructions[i];
-			r[i][1] = _arguments[i];
-		}
-		return r;
-	}
-	/// Prepares and gets bytecode for execution. Must call `resolve` before this 
-	/// Writes instructions pointers, or codes in `instructions` and arguments in `args`. 
-	/// `stack` is the stack that will be used to execute this bytecode.
-	/// 
-	/// Returns: empty string in case of success, or error
-	string getBytecode(T)(ref T[] instructions, ref NaData[] args, ArrayStack!NaData stack){
-		assert(is(T == ushort) || is(T == void delegate()),
-		"can only call NaBytecode.getBytecode with ref void delegate()[] OR ref ushort[]");
-		if (_arguments.length != _instructions.length)
-			return "invalid bytecode, arguments length != instructions length";
-		instructions.length = _instructions.length;
-		args.length = _arguments.length;
-		foreach (i; 0 .. _instructions.length){
-			NaInstruction instInfo;
-			if (!hasInstruction(_instructions[i], instInfo))
-				return _instructions[i]~" is not a valid instruction";
-			static if (is (T == ushort))
-				instructions[i] = instInfo.code;
-			else
-				instructions[i] = instInfo.pointer;
-			try{
-				args[i] = readData(_arguments[i]);
-			}catch (Exception e){
-				string r = "Error in reading argument "~_arguments[i]~" : "~e.msg;
-				.destroy(e);
-				return r;
-			}
-			if (instInfo.prepare){
-				instInfo.prepare(stack, args[i]);
-			}
-		}
-		return [];
-	}
-	/// Returns: the bytecode in a readable format
-	string[] getBytecodePretty(){
-		string[] r;
-		r.length = _instructions.length;
-		foreach (i, inst; _instructions){
-			r[i] = _instructions[i];
-			if (_arguments[i].length)
-				r[i] ~= "\t\t" ~ _arguments[i];
-		}
-		return r;
-	}
-	/// Reads from a string[] (follows spec/syntax.md)
-	/// 
-	/// Returns: errors in a string[], or [] if no errors
-	string[] readByteCode(string[] input){
-		string[] errors;
-		immutable string[][] words = cast(immutable string[][])input.removeWhitespace.readWords();
-		foreach (i, lineWords; words){
-			if (!lineWords.length)
-				continue;
-			if (lineWords[0].length){
-				if (lineWords[0][$-1] == ':'){
-					this.addJumpPos(lineWords[0][0..$-1]);
-					continue;
-				}
-				string error = "";
-				if (!this.addInstruction(lineWords[0],
-					lineWords.length>1 && lineWords[1].length ? lineWords[1] : "", error))
-					errors ~= "line#"~(i+1).to!string~':'~error;
-			}
-		}
-		return errors;
-	}
-	// functions for generating byte code
-	
-	/// appends an instruction
-	/// 
-	/// Returns: true if successful, false if not (writes error in `error`)
-	bool addInstruction(string instName, string argument, ref string error){
-		import navm.bytecode : removeWhitespace;
-		NaInstruction inst;
-		if (hasInstruction(instName, inst)){
-			if (inst.needsArg && !removeWhitespace(argument).length){
-				error = "instruction needs an argument";
-				return false;
-			}
-			NaData arg;
-			if (inst.needsArg && !inst.argIsJumpPos){
-				try{
-					arg = readData(argument);
-				}catch (Exception e){
-					error = "invalid argument: "~e.msg;
-					return false;
-				}
-				if (_stackLength < inst.popCount(arg)){
-					error = "stack does not have enough elements for instruction";
-					return false;
-				}
-			}
-			_instructions ~= instName;
-			_arguments ~= argument;
-			_stackLength -= inst.popCount(arg);
-			_stackLength += inst.pushCount;
-			_stackLengthMax = _stackLength > _stackLengthMax ? _stackLength : _stackLengthMax;
-			return true;
-		}
-		error = "instruction "~instName~" does not exist";
-		return false;
-	}
-	/// ditto
-	bool addInstruction(string instName, string argument){
-		string dummy;
-		return addInstruction(instName, argument, dummy);
-	}
-	/// ditto
-	bool addInstruction(string instName){
-		string dummy;
-		return addInstruction(instName, "", dummy);
-	}
-	/// adds a jump position
-	void addJumpPos(string name){
-		_instructions ~= name~':';
-		_arguments ~= "";
-	}
-	/// Returns: the number of elements on stack after executing the last added instruction
-	@property uinteger elementCount(){
-		return _stackLength;
-	}
+	ushort[] _instCodes; /// codes of instructions
+	NaData[] _instArgs; /// instruction arguments
+	uinteger[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
+	string[] _labelNames; /// label names
+}
+
+/// Possible types of arguments for instructions
+public enum NaInstArgType : ubyte{
+	Literal = 			0B00000001, /// any literal
+	LiteralInteger = 	0B00000011, /// integer, positive or negative
+	LiteralUInteger = 	0B00000111, /// integer, >=0, or could also be a binary or hexadecimal number
+	LiteralBoolean =	0B00001001, /// true or false
+	Label = 			0B00010000, /// a valid label (aka jump position)
+	Address = 			0B00100000, /// an address to an element on stack
 }
 
 /// stores an data about available instruction
-public struct NaInstruction{
-	/// if the argument to this instruction is a jump position
-	bool argIsJumpPos = false;
-	/// name of instruction, in lowercase
+public struct NaInst{
+	/// name of instruction, **in lowercase**
 	string name;
-	/// value when read as a ubyte
+	/// value when read as a ushort;
 	ushort code = 0x0000;
-	/// if this instruction needs an argument
-	bool needsArg;
+	/// what type of arguments are expected
+	NaInstArgType[] arguments;
 	/// number of elements it will push to stack
 	ubyte pushCount = 0;
-	/// number of elements it will pop (if ==255, then the argument is the number of elements to pop)
+	/// number of elements it will pop (if `_popCount>=128`, then `popCount = arguments[_popCount-128]`)
 	private ubyte _popCount = 0;
-	/// pointer to the delegate behind this instruction
-	void delegate() pointer;
-	/// Called before a bytecode is about to be executed. 
-	/// Use this function to modify the argument (or whatever) to optimise
-	/// ignored if null
-	/// First argument is stack, second is reference to the argument
-	void delegate(ArrayStack!NaData, ref NaData) prepare;
 	/// Returns: number of elements it will pop
-	ubyte popCount(NaData arg){
-		if (_popCount < 255)
+	ubyte popCount(NaData[] args){
+		if (_popCount < 128)
 			return _popCount;
-		return cast(ubyte)(arg.intVal);
+		return cast(ubyte)(args[_popCount - 128].intVal);
 	}
-	/// constructor, for instruction with no arg, no push/pop
-	this (string name, integer code, void delegate() pointer, void delegate(ArrayStack!NaData, ref NaData) prepare=null){
-		this.name = name.lowercase;
+	/// constructor
+	this (string name, uinteger code, ubyte popCount = 0, ubyte pushCount = 0, NaInstArgType[] arguments = []){
+		this.name = name;
 		this.code = cast(ushort)code;
-		this.pointer = pointer;
-		this.needsArg = false;
-		this.pushCount = 0;
-		this._popCount = 0;
-		this.prepare = prepare;
+		this._popCount = popCount;
+		this.pushCount = pushCount;
+		this.arguments = arguments.dup;
 	}
-	/// constructor, for instruction with no arg, but pop and push
-	this(string name, integer code, integer popCount, integer pushCount, void delegate() pointer,
-	void delegate(ArrayStack!NaData, ref NaData) prepare=null){
-		this.name = name.lowercase;
+	/// constructor, with no push/pop
+	this (string name, uinteger code, NaInstArgType[] arguments){
+		this.name = name;
 		this.code = cast(ushort)code;
-		this.needsArg = false;
-		this.pushCount = cast(ubyte)pushCount;
-		this._popCount = cast(ubyte)popCount;
-		this.pointer = pointer;
-		this.prepare = prepare;
-	}
-	/// full constructor but arg is not jump position
-	this (string name, integer code, bool needsArg, integer popCount, integer pushCount, void delegate() pointer,
-	void delegate(ArrayStack!NaData, ref NaData) prepare=null){
-		this.name = name.lowercase;
-		this.code = cast(ushort)code;
-		this.needsArg = needsArg;
-		this.argIsJumpPos = false;
-		this.pushCount = cast(ubyte)pushCount;
-		this._popCount = cast(ubyte)popCount;
-		this.pointer = pointer;
-		this.prepare = prepare;
-	}
-	/// full constructor
-	this (string name, integer code, bool needsArg, bool argIsJumpPos, integer popCount, integer pushCount,
-	void delegate() pointer, void delegate(ArrayStack!NaData, ref NaData) prepare=null){
-		this.name = name.lowercase;
-		this.code = cast(ushort)code;
-		this.needsArg = needsArg;
-		this.argIsJumpPos = argIsJumpPos;
-		this.pushCount = cast(ubyte)pushCount;
-		this._popCount = cast(ubyte)popCount;
-		this.pointer = pointer;
-		this.prepare = prepare;
+		this.arguments = arguments.dup;
 	}
 }
 
-/// Reads data from a string (which can be string, double, integer, or array of any of those types, or array of array...)
+/// Reads data from a string (which can be string, char, double, integer, bool)
 /// 
-/// Does not care if elements in array are of same type or not.
+/// Addresses are read as integers
 /// 
 /// Returns: the data in NaData
 /// 
 /// Throws: Exception if data is invalid
-public NaData readData(string strData){
-	static string readElement(string array, uinteger startIndex){
-		if (array[startIndex] == '[')
-			return array[startIndex .. bracketPos(cast(char[])array, startIndex)+1];
-		// search for ] or ,
-		uinteger i = startIndex;
-		while (i < array.length && ! [',',']'].hasElement(array[i]))
-			i ++;
-		return array[startIndex .. i];
-	}
+public NaData readData(string strData, ref NaInstArgType type){
 	if (strData.length == 0)
-		return NaData();
-	if (strData.isNum(false))
-		return NaData(to!integer(strData));
-	if (strData.isNum(true))
-		return NaData(to!double(strData));
-	if (["true", "false"].hasElement(strData))
+		throw new Exception("cannot read data from empty string");
+	if (["true", "false"].hasElement(strData)){
+		type = NaInstArgType.LiteralBoolean;
 		return NaData(strData == "true");
-	// now checking for arrays
-	if (strData[0] == '['){
-		NaData r = NaData(cast(NaData[])[]);
-		string[] elements = [];
-		for (uinteger i = 1, bracketEnd = bracketPos(cast(char[])strData, 0); i < bracketEnd; i ++){
-			if (strData[i] == ' ')
-				continue;
-			if (strData[i] != ']'){
-				elements ~= readElement(strData, i);
-				i += elements[$-1].length;
-				// skip till ','
-				while (![',',']'].hasElement(strData[i]))
-					i ++;
-			}
-		}
-		// now convert each of those elements to NaData
-		r.arrayVal = new NaData[elements.length];
-		foreach (i, element; elements)
-			r.arrayVal[i] = readData(element);
+	}
+	if (strData[0] == '@' && isNum(strData[1 .. $], false)){
+		type = NaInstArgType.Address;
+		return NaData(to!integer(strData[1 .. $]));
+	}
+	if (strData.isNum(false)){
+		NaData r = NaData(to!integer(strData));
+		if (r.intVal >= 0)
+			type = NaInstArgType.LiteralUInteger;
+		else
+			type = NaInstArgType.LiteralInteger;
 		return r;
 	}
+	if (strData.length >= 2){
+		if (strData[0] == '0' && (strData[1] == 'x' || strData[1] == 'B')){
+			type = NaInstArgType.LiteralUInteger;
+			if (strData.length == 2)
+				return NaData(0);
+			if (strData[1] == 'x')
+				return NaData(readHexadecimal(strData[2 .. $]));
+			return NaData(readBinary(strData[2 .. $]));
+		}
+	}
+	type = NaInstArgType.Literal;
+	if (strData.isNum(true))
+		return NaData(to!double(strData));
 	if (strData[0] == '\"'){
 		// assume the whole thing is string, no need to find string end index
 		NaData r;
@@ -380,7 +142,66 @@ public NaData readData(string strData){
 		r.dcharVal = strData[0];
 		return r;
 	}
-	throw new Exception("invalid data");
+	// well it can only be a label now
+	type = NaInstArgType.Label;
+	NaData r;
+	r.strVal = cast(dchar[])(strData.to!dstring);
+	return r;
+}
+
+/// Reads a hexadecimal number from string
+/// 
+/// Returns: the number in a uinteger
+/// 
+/// Throws: Exception in case string is not a hexadecimal number
+private uinteger readHexadecimal(string str){
+	import std.range : iota, array;
+	if (str.length == 0)
+		throw new Exception("cannot read hexadecimal number from empty string");
+	if (str.length > uinteger.sizeof * 2) // str.length / 2 = numberOfBytes 
+		throw new Exception("hexadecimal number is too big to store in uinteger");
+	static char[16] DIGITS = iota('0', '9'+1).array ~ iota('a', 'f'+1).array;
+	str = str.lowercase;
+	if (!(cast(char[])str).matchElements(DIGITS))
+		throw new Exception("invalid character in hexadecimal number");
+	uinteger r;
+	immutable uinteger lastInd = str.length - 1;
+	foreach (i, c; str){
+		r |= DIGITS.indexOf(c) << 4 * (lastInd-i);
+	}
+	return r;
+}
+/// 
+unittest{
+	assert("FF".readHexadecimal == 0xFF);
+	assert("F0".readHexadecimal == 0xF0);
+	assert("EF".readHexadecimal == 0xEF);
+	assert("A12F".readHexadecimal == 0xA12F);
+}
+
+/// Reads a binary number from string
+/// 
+/// Returns: the number in a uinteger
+/// 
+/// Throws: Exception in case string is not a binary number
+private uinteger readBinary(string str){
+	if (str.length == 0)
+		throw new Exception("cannot read binary number from empty string");
+	if (str.length > uinteger.sizeof * 8)
+		throw new Exception("binary number is too big to store in uinteger");
+	if (!(cast(char[])str).matchElements(['0','1']))
+		throw new Exception("invalid character in binary number");
+	uinteger r;
+	immutable uinteger lastInd = str.length-1;
+	foreach (i, c; str){
+		if (c == '1')
+			r |= 1 << (lastInd - i);
+	}
+	return r;
+}
+/// 
+unittest{
+	assert("01010101".readBinary == 0B01010101);
 }
 
 /// Removes whitespace from a string. And the remaining whitespace is only of one type. e.g: whitespace is ' ' & '\t', 
@@ -434,19 +255,14 @@ unittest{
 /// Returns: string[] with minimal whitespace
 string[] removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string[] input){
 	input = input.dup;
-	uinteger writeIndex = 0;
-	for (uinteger i = 0; i < input.length; i ++){
-		const string line = input[i].removeWhitespace;
-		input[writeIndex] = line;
-		writeIndex ++;
-	}
-	input.length = writeIndex;
+	foreach (i, line; input)
+		input[i] = line.removeWhitespace;
 	return input;
 }
 
 /// reads each line into words (separated by tab and space)
 /// 
-/// Returns: the words read (stuff inside square brackets is considerd a sinle word)
+/// Returns: the words read
 /// 
 /// Throws: Exception if incorrect syntax (in brackets usually)
 private string[][] readWords(string[] input){
@@ -454,17 +270,6 @@ private string[][] readWords(string[] input){
 	List!string words = new List!string;
 	foreach (line; input){
 		for (uinteger i = 0, readFrom = 0; i < line.length; i++){
-			if (line[i] == '['){
-				if (readFrom < i){
-					words.append(line[readFrom .. i]);
-					readFrom = i;
-				}
-				i = bracketPos(cast(char[])line, i);
-				words.append(line[readFrom .. i + 1]);
-				i ++; // skip the bracket end, the increment done by for will skip the space too
-				readFrom = i+1;
-				continue;
-			}
 			if (line[i] == '\"' || line[i] == '\''){
 				if (readFrom < i){
 					words.append(line[readFrom .. i]);
@@ -497,11 +302,12 @@ private string[][] readWords(string[] input){
 ///
 unittest{
 	assert(["potato potato",
-		"potato [asdf, sdfsdf, [0, 1, 2], 2] asd",
+		"potato asdadas asda asd",
 		"   \t",
 		"potato \"some String\" \'c\'"].readWords == [
 			["potato", "potato"],
-			["potato", "[asdf, sdfsdf, [0, 1, 2], 2]", "asd"],
+			["potato", "asdadas", "asda", "asd"],
+			[],
 			["potato","\"some String\"","\'c\'"]
 		]);
 }
