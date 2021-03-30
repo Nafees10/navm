@@ -204,117 +204,70 @@ unittest{
 	assert("01010101".readBinary == 0B01010101);
 }
 
-/// Removes whitespace from a string. And the remaining whitespace is only of one type. e.g: whitespace is ' ' & '\t', 
-/// it will replace '\t' with ' ' so less conditions are needed after this
+/// reads a string into substrings separated by whitespace. Strings are read as a whole
 /// 
-/// Returns: the string with minimal whitespace (just enough to separate identifiers)
-private string removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string line){
-	char[] r = [];
-	bool lastWasWhite = true;
-	for (uinteger i = 0; i < line.length; i ++){
-		if (line[i] == comment){
+/// Returns: substrings
+/// 
+/// Throws: Exception if string not closed
+private string[] separateWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string line){
+	string[] r;
+	for (uinteger i, readFrom; i < line.length; i++){
+		immutable char c = line[i];
+		if (c == comment){
+			if (readFrom < i)
+				r ~= line[readFrom .. i].dup;
 			break;
 		}
-		if (line[i] == '\"'){
-			integer endIndex = line.strEnd(i);
-			if (endIndex == -1)
-				throw new Exception("string not terminated");
-			r ~= line[i .. endIndex + 1];
+		if (c == '"' || c == '\''){
+			if (readFrom < i)
+				r ~= line[readFrom .. i].dup;
+			readFrom = i;
+			immutable integer endIndex = line.strEnd(i);
+			if (endIndex < 0)
+				throw new Exception("string not closed");
+			r ~= line[readFrom .. endIndex+1].dup;
+			readFrom = endIndex+1;
 			i = endIndex;
-			lastWasWhite = false;
 			continue;
 		}
-		if (whitespace.hasElement(line[i])){
-			if (!lastWasWhite){
-				r ~= whitespace[0];
-			}
-			lastWasWhite = true;
-		}else{
-			lastWasWhite = false;
-			r ~= line[i];
+		if (whitespace.hasElement(c)){
+			if (readFrom < i)
+				r ~= line[readFrom .. i].dup;
+			while (i < line.length && whitespace.hasElement(line[i]))
+				i ++;
+			readFrom = i;
+			i --; // back to whitespace, i++ in for(..;..;) exists
+			continue;
+		}
+		if (i+1 == line.length && readFrom < i){
+			r ~= line[readFrom .. $].dup;
 		}
 	}
-	if (r.length > 0 && whitespace.hasElement(r[$-1])){
-		r = r[0 .. $-1];
-	}
-	return cast(string)r;
-}
-/// 
-unittest{
-	assert("potato    potato".removeWhitespace == "potato potato");
-	assert("potato    \t\t".removeWhitespace == "potato");
-	assert("potato  \t  \t  potato  \t#comment".removeWhitespace == "potato potato");
-	assert ("   ".removeWhitespace == "");
-	assert ("   \t \t".removeWhitespace == "");
-	assert ("  # \t \t".removeWhitespace == "");
-	assert ("#  # \t \t".removeWhitespace == "");
-}
-
-/// Removes whitespace from multiple strings.
-/// 
-/// Returns: string[] with minimal whitespace
-string[] removeWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string[] input){
-	input = input.dup;
-	foreach (i, line; input)
-		input[i] = line.removeWhitespace;
-	return input;
-}
-
-/// reads each line into words (separated by tab and space)
-/// 
-/// Returns: the words read
-/// 
-/// Throws: Exception if incorrect syntax (in brackets usually)
-private string[][] readWords(string[] input){
-	List!(string[]) lines = new List!(string[]);
-	List!string words = new List!string;
-	foreach (line; input){
-		for (uinteger i = 0, readFrom = 0; i < line.length; i++){
-			if (line[i] == '\"' || line[i] == '\''){
-				if (readFrom < i){
-					words.append(line[readFrom .. i]);
-					readFrom = i;
-				}
-				immutable integer endIndex = line[i] == '\"' ? strEnd(line,i) : strEnd!('\\','\'')(line, i);
-				if (endIndex == -1)
-					throw new Exception("string not terminated");
-				i = endIndex;
-				words.append(line[readFrom .. i+1]);
-				readFrom = i + 1;
-				continue;
-			}
-			if (line[i] == ' ' || line[i] == '\t'){
-				if (readFrom <= i && removeWhitespace(line[readFrom .. i]).length > 0)
-					words.append(line[readFrom .. i]);
-				readFrom = i + 1;
-			}else if (i +1 == line.length && readFrom <= i){
-				words.append(line[readFrom .. i + 1]);
-			}
-		}
-		lines.append(words.toArray);
-		words.clear;
-	}
-	.destroy(words);
-	string[][] r = lines.toArray;
-	.destroy(lines);
 	return r;
 }
 ///
 unittest{
-	assert(["potato potato",
-		"potato asdadas asda asd",
-		"   \t",
-		"potato \"some String\" \'c\'"].readWords == [
-			["potato", "potato"],
-			["potato", "asdadas", "asda", "asd"],
-			[],
-			["potato","\"some String\"","\'c\'"]
-		]);
+	assert("potato".separateWhitespace == ["potato"]);
+	assert("potato potato".separateWhitespace == ["potato", "potato"]);
+	assert(" a b \"str\"".separateWhitespace == ["a", "b", "\"str\""]);
+	assert("a b 'c' \"str\"".separateWhitespace == ["a", "b", "'c'", "\"str\""]);
+	assert("\ta   \t b\"str\"".separateWhitespace == ["a", "b", "\"str\""]);
+	assert("   a   b  'c'\"str\"'c'".separateWhitespace == ["a", "b", "'c'", "\"str\"", "'c'"]);
+}
+
+/// ditto
+private string[][] separateWhitespace(string[] lines){
+	string[][] r;
+	r.length = lines.length;
+	foreach (i; 0 .. lines.length)
+		r[i] = separateWhitespace(lines[i]);
+	return r;
 }
 
 /// Returns: the index where a string ends, -1 if not terminated
-private integer strEnd(char specialCharBegin='\\', char strTerminator='"')(string s, uinteger startIndex){
+private integer strEnd(char specialCharBegin='\\')(string s, uinteger startIndex){
 	uinteger i;
+	immutable char strTerminator = s[startIndex];
 	for (i = startIndex+1; i < s.length; i ++){
 		if (s[i] == strTerminator){
 			return i;
@@ -332,8 +285,8 @@ unittest{
 }
 
 /// Returns: string with special characters replaced with their actual characters (i.e, \t replaced with tab, \n with newline...)
-private string strReplaceSpecial(char specialCharBegin='\\', char[char] map = ['t' : '\t', 'n' : '\n','\\':'\\'])
-(string s){
+private string strReplaceSpecial(char specialCharBegin='\\')
+(string s, char[char] map = ['t' : '\t', 'n' : '\n','\\':'\\']){
 	char[] r = [];
 	for (uinteger i = 0; i < s.length; i ++){
 		if (s[i] == specialCharBegin && i + 1 < s.length && s[i+1] in map){
@@ -343,7 +296,7 @@ private string strReplaceSpecial(char specialCharBegin='\\', char[char] map = ['
 		}
 		r ~= s[i];
 	}
-	return r;
+	return cast(string)r;
 }
 ///
 unittest{
