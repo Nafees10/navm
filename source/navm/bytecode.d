@@ -1,6 +1,6 @@
 module navm.bytecode;
 
-import navm.defs;
+import navm.navm : NaData;
 
 import utils.lists;
 import utils.misc;
@@ -14,23 +14,47 @@ public struct Statement{
 	/// instruction name
 	string instName;
 	/// arguments, if any
-	string[] instArguments;
+	string[] arguments;
 	/// comment, if any
 	string comment;
 	/// constructor, for instruction + args + comment
-	this(string instName, string[] instArguments=[], string comment = ""){
+	this(string instName, string[] arguments=[], string comment = ""){
 		this.instName = instName;
-		this.instArguments = instArguments.dup;
+		this.arguments = arguments.dup;
 		this.comment = comment;
 	}
 	/// constructor, for label + instruction
-	this(string label, string instName, string[] instArguments=[], string comment = ""){
+	this(string label, string instName, string[] arguments=[], string comment = ""){
 		this.label = label;
 		this.instName = instName;
-		this.instArguments = instArguments.dup;
+		this.arguments = arguments.dup;
 		this.comment = comment;
 	}
-
+	/// Reads statement from string
+	void fromString(string statement){
+		string[] separated = statement.separateWhitespace();
+		if (separated.length == 0)
+			return;
+		if (separated[0].length && separated[0][$-1] == ':'){
+			this.label = separated[0][0 .. $-1];
+			separated = separated[1 .. $];
+			if (separated.length == 0)
+				return;
+		}
+		this.instName = separated[0];
+		if (separated.length > 1)
+			this.arguments = separated[1 .. $];
+	}
+	/// Returns: string representation of this statement
+	string toString(){
+		string r;
+		if (label.length)
+			r = label ~ ": ";
+		r ~= instName;
+		foreach (arg; arguments)
+			r ~= ' ' ~ arg;
+		return r;
+	}
 }
 
 /// Stores bytecode that is almost ready to be used with NaVM
@@ -40,6 +64,92 @@ private:
 	NaData[] _instArgs; /// instruction arguments
 	uinteger[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
 	string[] _labelNames; /// label names
+}
+
+/// Stores an instruction table
+class NaInstTable{
+private:
+	NaInst[] _instructions; /// avaliable instructions. Index and code arent related
+	bool[uinteger] _codeIsUsed; /// if an instruction code is used
+	/// Returns: true if a code is used, false if not
+	bool codeUsed(uinteger code){
+		if (code in _codeIsUsed)
+			return _codeIsUsed[code];
+		return false;
+	}
+public:
+	/// constructor
+	this(){
+
+	}
+	/// destructor
+	~this(){}
+	/// Adds a new instruction.  
+	/// If `inst.code == 0`, Finds an available code, assigns `inst.code` that code.  
+	/// Otherwise `inst.code` is used, if available, or -1 returned.
+	/// 
+	/// Returns: instruction code if success, or -1 in case of error  
+	/// Error can be: code!=0 and code already used. No more codes left. Or another instruction with same name and arg types exists
+	integer addInstruction(ref NaInst inst){
+		if (inst.code == 0){
+			// find code
+			foreach (ushort i; 0 .. ushort.max){
+				if (!codeUsed(i)){
+					inst.code = i;
+					break;
+				}
+			}
+			return -1;
+		}else if (codeUsed(inst.code))
+			return -1;
+		// now make sure no other instruction with same name can be called with these args
+		if (getInstruction(inst.name, inst.arguments) == -1){
+			_instructions ~= inst;
+			_codeIsUsed[inst.code] = true;
+			return inst.code;
+		}
+		return -1;
+	}
+	/// Finds the instruction with matching code
+	/// 
+	/// Returns: the instruction.
+	/// 
+	/// Throws: Exception if doesnt exist
+	NaInst getInstruction(ushort code){
+		foreach (inst; _instructions){
+			if (inst.code == code)
+				return inst;
+		}
+		throw new Exception("instruction with code=" ~ code.to!string ~ " does not exist");
+	}
+	/// Finds an instruction that can be called with arguments with a matching name
+	/// 
+	/// Returns: the instruction code for an instruction that can be called, or -1 if doesnt exist
+	integer getInstruction(string name, NaInstArgType[] arguments){
+		foreach (inst; _instructions){
+			if (inst.name == name && inst.arguments.length == arguments.length){
+				foreach (i; 0 .. arguments.length){
+					if ((inst.arguments[i] & arguments[i]) == 0)
+						return -1;
+				}
+				return inst.code;
+			}
+		}
+		return -1;
+	}
+	/// whether an instruction exists
+	/// Returns: true if an instruction exists
+	bool instructionExists(ushort code){
+		return codeUsed(code);
+	}
+	/// ditto
+	bool instructionExists(string name){
+		foreach (inst; _instructions){
+			if (inst.name == name)
+				return true;
+		}
+		return false;
+	}
 }
 
 /// Possible types of arguments for instructions
