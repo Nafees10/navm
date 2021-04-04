@@ -293,7 +293,7 @@ unittest{
 /// 
 /// Returns: the number in a uinteger
 /// 
-/// Throws: Exception in case string is not a hexadecimal number
+/// Throws: Exception in case string is not a hexadecimal number, or too big to store in uinteger, or empty string
 private uinteger readHexadecimal(string str){
 	import std.range : iota, array;
 	if (str.length == 0)
@@ -323,7 +323,7 @@ unittest{
 /// 
 /// Returns: the number in a uinteger
 /// 
-/// Throws: Exception in case string is not a binary number
+/// Throws: Exception in case string is not a binary number, or too big to store in uinteger, or empty string
 private uinteger readBinary(string str){
 	if (str.length == 0)
 		throw new Exception("cannot read binary number from empty string");
