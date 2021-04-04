@@ -53,6 +53,8 @@ public struct Statement{
 		r ~= instName;
 		foreach (arg; arguments)
 			r ~= ' ' ~ arg;
+		if (comment.length)
+			r ~= " #"~comment;
 		return r;
 	}
 }
