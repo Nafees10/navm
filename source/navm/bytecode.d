@@ -148,6 +148,34 @@ public NaData readData(string strData, ref NaInstArgType type){
 	r.strVal = cast(dchar[])(strData.to!dstring);
 	return r;
 }
+/// ditto
+public NaData readData(string strData){
+	NaInstArgType type;
+	return readData(strData, type);
+}
+/// 
+unittest{
+	NaInstArgType type;
+	assert("true".readData(type) == NaData(true));
+	assert(type == NaInstArgType.LiteralBoolean);
+	assert("false".readData(type) == NaData(false));
+	assert(type == NaInstArgType.LiteralBoolean);
+
+	assert("@15".readData(type) == NaData(15));
+	assert(type == NaInstArgType.Address);
+	
+	assert("15".readData(type) == NaData(15));
+	assert(type == NaInstArgType.LiteralUInteger);
+	assert("0".readData(type) == NaData(0));
+	assert(type == NaInstArgType.LiteralUInteger);
+	assert("-1".readData(type) == NaData(-1));
+	assert(type == NaInstArgType.LiteralInteger);
+	assert("\"str\\t\"".readData(type).strVal == "str\t".to!dstring);
+	assert(type == NaInstArgType.Literal);
+
+	assert("potato".readData(type).strVal == "potato".to!dstring);
+	assert(type == NaInstArgType.Label);
+}
 
 /// Reads a hexadecimal number from string
 /// 
