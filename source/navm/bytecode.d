@@ -54,7 +54,7 @@ public struct Statement{
 		foreach (arg; arguments)
 			r ~= ' ' ~ arg;
 		if (comment.length)
-			r ~= " #"~comment;
+			r ~= "#"~comment;
 		return r;
 	}
 }
@@ -394,6 +394,7 @@ unittest{
 	assert("\ta   \t b\"str\"".separateWhitespace == ["a", "b", "\"str\""]);
 	assert("   a   b  'c'\"str\"'c'".separateWhitespace == ["a", "b", "'c'", "\"str\"", "'c'"]);
 	assert("a 'b'#c".separateWhitespace == ["a", "'b'"]);
+	assert("a: a b#c".separateWhitespace == ["a:","a", "b"]);
 	assert("a 'b' #c".separateWhitespace == ["a", "'b'"]);
 }
 
