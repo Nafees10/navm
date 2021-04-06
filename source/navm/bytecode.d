@@ -72,6 +72,7 @@ class NaBytecode{
 private:
 	ushort[] _instCodes; /// codes of instructions
 	NaData[] _instArgs; /// instruction arguments
+	NaInstArgType[] _instArgTypes; /// instruction argument types
 	uinteger[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
 	string[] _labelNames; /// label names
 	NaInstTable _instTable; /// the instruction table
@@ -85,8 +86,35 @@ public:
 	void clear(){
 		_instCodes.length = 0;
 		_instArgs.length = 0;
+		_instArgTypes.length = 0;
 		_labelIndexes.length = 0;
 		_labelNames.length = 0;
+	}
+	/// Verifies a loaded bytecode, to make sure only valid instructions exist, and correct number of arguments and types are loaded
+	/// 
+	/// Returns: true if verified without errors, false if there were errors.
+	bool verify(){
+		if (_instArgs.length != _instArgTypes.length || _labelNames.length != _labelIndexes.length)
+			return false;
+		uinteger argInd;
+		foreach (i; 0 .. _instCodes.length){
+			NaInst inst;
+			try
+				inst = _instTable.getInstruction(_instCodes[i]);
+			catch (Exception e){
+				.destroy(e);
+				return false;
+			}
+			if (_instArgTypes.length < argInd || _instArgTypes.length - argInd < inst.arguments.length)
+				return false; // if there arent enough arguments
+			NaInstArgType[] types = _instArgTypes[argInd .. argInd + inst.arguments.length];
+			foreach (typeInd; 0 .. types.length){
+				if ((types[typeInd] & inst.arguments[typeInd]) == 0)
+					return false;
+			}
+			argInd += inst.arguments.length;
+		}
+		return true;
 	}
 	/// Loads bytecode from `Statement[]`. Discards any existing bytecode
 	/// 
@@ -122,6 +150,7 @@ public:
 					errors ~= "line: "~(i+1).to!string ~ ": instruction does not exist or invalid arguments";
 				_instCodes ~= cast(ushort)code;
 				_instArgs ~= args;
+				_instArgTypes ~= types;
 			}
 		}
 		return [];
