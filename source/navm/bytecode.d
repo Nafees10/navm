@@ -7,16 +7,24 @@ import utils.misc;
 
 import std.conv : to;
 
-/// To store a single line of bytecode
+/// To store a single line of bytecode. This is used for raw bytecode.  
+/// Prefer using array of this to write bytecode, then load into NaBytecode to store or use
 public struct Statement{
 	/// label, if any, otherwise, null or empty string
 	string label;
 	/// instruction name
 	string instName;
-	/// arguments, if any
+	/// arguments, if any. These are ignored if `instName.length == 0`
 	string[] arguments;
 	/// comment, if any
 	string comment;
+	/// postblit
+	this(this){
+		this.label = this.label.dup;
+		this.instName = this.instName.dup;
+		this.arguments = this.arguments.dup;
+		this.comment = this.comment.dup;
+	}
 	/// constructor, for instruction + args + comment
 	this(string instName, string[] arguments=[], string comment = ""){
 		this.instName = instName;
@@ -59,13 +67,65 @@ public struct Statement{
 	}
 }
 
-/// Stores bytecode that is almost ready to be used with NaVM
+/// Stores bytecode that is almost ready to be used with NaVM.
 class NaBytecode{
 private:
 	ushort[] _instCodes; /// codes of instructions
 	NaData[] _instArgs; /// instruction arguments
 	uinteger[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
 	string[] _labelNames; /// label names
+	NaInstTable _instTable; /// the instruction table
+public:
+	/// constructor
+	this(NaInstTable instructionTable){
+		this._instTable = instructionTable;
+	}
+	~this(){}
+	/// Discards any existing bytecode
+	void clear(){
+		_instCodes.length = 0;
+		_instArgs.length = 0;
+		_labelIndexes.length = 0;
+		_labelNames.length = 0;
+	}
+	/// Loads bytecode from `Statement[]`. Discards any existing bytecode
+	/// 
+	/// Returns: [] if done without errors. error descriptions if there were errors
+	string[] load(Statement[] statements){
+		this.clear();
+		statements = statements.dup;
+		string[] errors;
+		foreach (i, statement; statements){
+			if (statement.label.length){
+				if (_labelNames.hasElement(statement.label.lowercase)){
+					errors ~= "line: "~ (i+1).to!string ~ " label `" ~ statement.label ~ "` used multiple times";
+					continue;
+				}
+				_labelIndexes ~= [_instCodes.length, _instArgs.length];
+				_labelNames ~= statement.label.lowercase;
+			}
+			if (statement.instName.length){
+				NaData[] args;
+				NaInstArgType[] types;
+				args.length = statement.arguments.length;
+				types.length = args.length;
+				foreach (index, arg; statement.arguments){
+					try{
+						args[index] = readData(arg, types[index]);
+					}catch (Exception e){
+						errors ~= "line: "~(i+1).to!string~" argument `"~arg~"`: "~e.msg;
+						.destroy(e);
+					}
+				}
+				immutable integer code = _instTable.getInstruction(statement.instName.lowercase, types);
+				if (code == -1)
+					errors ~= "line: "~(i+1).to!string ~ ": instruction does not exist or invalid arguments";
+				_instCodes ~= cast(ushort)code;
+				_instArgs ~= args;
+			}
+		}
+		return [];
+	}
 }
 
 /// Stores an instruction table
@@ -160,8 +220,9 @@ public enum NaInstArgType : ubyte{
 	LiteralInteger = 	0B00000011, /// integer, positive or negative
 	LiteralUInteger = 	0B00000111, /// integer, >=0, or could also be a binary or hexadecimal number
 	LiteralBoolean =	0B00001001, /// true or false
-	Label = 			0B00010000, /// a valid label (aka jump position)
-	Address = 			0B00100000, /// an address to an element on stack
+	LiteralString =		0B00010001, /// a string (dstring)
+	Label = 			0B01000000, /// a valid label (aka jump position)
+	Address = 			0B10000000, /// an address to an element on stack
 }
 
 /// stores an data about available instruction
