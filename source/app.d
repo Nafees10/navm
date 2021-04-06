@@ -6,47 +6,10 @@ version(demo){
 	import std.datetime.stopwatch;
 	import std.conv : to;
 
-	/// inherited VM with instruction added that we need
-	class VM : NaVM{
-	protected:
-		void writeInt(){
-			write(_stack.pop.intVal);
-		}
-		void writeDouble(){
-			write(_stack.pop.doubleVal);
-		}
-		void writeStr(){
-			write(_stack.pop.strVal);
-		}
-		void writeChar(){
-			write(_stack.pop.dcharVal);
-		}
-		void printDebug(){
-			writeln("DEBUG INFO:");
-			writeln("\t_stack.count:\t\t",_stack.count);
-			writeln("\t_stackIndex:\t\t", _stackIndex);
-			writeln("\t_jumpStack.count:\t", _jumpStack.count);
-		}
-	public:
-		/// constructor
-		this(){
-			super();
-			addInstruction(NaInstruction("writeInt",0xF0,1,0,&writeInt));
-			addInstruction(NaInstruction("writeDouble",0xF1,1,0,&writeDouble));
-			addInstruction(NaInstruction("writeStr",0xF2,1,0,&writeStr));
-			addInstruction(NaInstruction("writeChar",0xF3,1,0,&writeChar));
-			addInstruction(NaInstruction("printDebug",0xF4,&printDebug));
-		}
-	}
-
-
 	void main(string[] args){
 		if (args.length < 2)
 			args = [args[0], "sample"];
-
-		NaVM vm = new VM();
-		// load the bytecode
-		string[] errors = vm.load(fileToArray(args[1]));
+		string[] errors;
 		if (errors.length){
 			writeln("Errors in byte code:");
 			foreach (err; errors)
@@ -60,7 +23,7 @@ version(demo){
 			min = uinteger.max;
 			foreach (i; 0 .. count){
 				sw.start;
-				vm.execute(0); // start execution at instruction at index=0
+				// start execution at instruction at index=0
 				sw.stop;
 				times[i] = sw.peek.total!"msecs";
 				sw.reset;
@@ -68,7 +31,6 @@ version(demo){
 				min = times[i] < min ? times[i] : min;
 				max = times[i] > max ? times[i] : max;
 				avg += times[i];
-				vm.clearStack();
 			}
 			avg = avg / count;
 			if (count > 1){
