@@ -1,12 +1,12 @@
 module navm.navm;
 
-import navm.defs;
-import navm.bytecode;
 
 import std.conv : to;
 
 import utils.lists;
 import utils.misc;
+
+public import navm.bytecode;
 
 public alias NaInstruction = navm.bytecode.NaInst;
 public alias readData = navm.bytecode.readData;
@@ -66,11 +66,8 @@ public union NaData{
 	}
 	/// ditto
 	@property uinteger arrayValLength(uinteger length){
-		NaData[] array;
+		NaData[] array = (ptrVal-1)[0 .. (*(ptrVal-1)).intVal];
 		array.length = length + 1;
-		array[0].intVal = length;
-		immutable uinteger sliceLength = length > arrayValLength ? arrayValLength : length;
-		array[1 .. sliceLength+1] = arrayVal[0 .. sliceLength];
 		ptrVal = array.ptr+1;
 		return length;
 	}
