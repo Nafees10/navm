@@ -97,6 +97,7 @@ public:
 		if (_instArgs.length != _instArgTypes.length || _labelNames.length != _labelIndexes.length)
 			return false;
 		uinteger argInd;
+		uinteger[2][] labels = _labelIndexes.dup; // remove elements from this when they are determined valid. if length>0 at end, remaining invalid
 		foreach (i; 0 .. _instCodes.length){
 			NaInst inst;
 			try
@@ -112,9 +113,17 @@ public:
 				if ((types[typeInd] & inst.arguments[typeInd]) != inst.arguments[typeInd])
 					return false;
 			}
+			foreach (labInd; 0 .. labels.length){
+				if (labels[labInd][0] == i){
+					if (labels[labInd][1] != argInd)
+						return false;
+					labels[labInd] = labels[$-1];
+					labels.length --;
+				}
+			}
 			argInd += inst.arguments.length;
 		}
-		return true;
+		return labels.length == 0;
 	}
 	/// Loads bytecode from `Statement[]`. Discards any existing bytecode
 	/// 
