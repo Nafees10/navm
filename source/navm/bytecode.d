@@ -109,7 +109,7 @@ public:
 				return false; // if there arent enough arguments
 			NaInstArgType[] types = _instArgTypes[argInd .. argInd + inst.arguments.length];
 			foreach (typeInd; 0 .. types.length){
-				if ((types[typeInd] & inst.arguments[typeInd]) == 0)
+				if ((types[typeInd] & inst.arguments[typeInd]) != inst.arguments[typeInd])
 					return false;
 			}
 			argInd += inst.arguments.length;
@@ -220,7 +220,7 @@ public:
 		foreach (inst; _instructions){
 			if (inst.name == name && inst.arguments.length == arguments.length){
 				foreach (i; 0 .. arguments.length){
-					if ((inst.arguments[i] & arguments[i]) == 0)
+					if ((inst.arguments[i] & arguments[i]) != inst.arguments[i])
 						return -1;
 				}
 				return inst.code;
