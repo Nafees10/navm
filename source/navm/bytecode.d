@@ -167,6 +167,18 @@ public:
 		string error;
 		return this.append(statement, error);
 	}
+	/// ditto
+	bool append(string statementStr, ref string error){
+		Statement statement;
+		statement.fromString(statementStr);
+		return this.append(statement, error);
+	}
+	/// ditto
+	bool append(string statementStr){
+		Statement statement;
+		statement.fromString(statementStr);
+		return this.append(statement);
+	}
 	/// Loads bytecode from `Statement[]`. Discards any existing bytecode
 	/// 
 	/// Returns: [] if done without errors. error descriptions if there were errors
