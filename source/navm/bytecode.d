@@ -66,6 +66,12 @@ public struct Statement{
 		return r;
 	}
 }
+/// 
+unittest{
+	Statement s;
+	s.fromString("someLabel: someInst arg1 arg2#comment");
+	assert(s == Statement("someLabel", "someInst", ["arg1", "arg2"]));
+}
 
 /// Stores bytecode that is almost ready to be used with NaVM.
 class NaBytecode{
@@ -385,7 +391,7 @@ public NaData readData(string strData, ref NaInstArgType type){
 	// well it can only be a label now
 	type = NaInstArgType.Label;
 	NaData r;
-	r.strVal = cast(dchar[])(strData.to!dstring);
+	r.strVal = cast(dchar[])(strData.lowercase.to!dstring);
 	return r;
 }
 /// ditto
