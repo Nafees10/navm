@@ -125,6 +125,48 @@ public:
 		}
 		return labels.length == 0;
 	}
+	/// Adds a statement at end of existing bytecode
+	/// 
+	/// Returns: true if no errors, false if not done due to errors
+	bool append(Statement statement, ref string error){
+		if (statement.label.length){
+			if (_labelNames.hasElement(statement.label.lowercase)){
+				error = "label `" ~ statement.label ~ "` used multiple times";
+				return false;
+			}
+			_labelIndexes ~= [_instCodes.length, _instArgs.length];
+			_labelNames ~= statement.label.lowercase;
+		}
+		if (statement.instName.length){
+			NaData[] args;
+			NaInstArgType[] types;
+			args.length = statement.arguments.length;
+			types.length = args.length;
+			foreach (index, arg; statement.arguments){
+				try{
+					args[index] = readData(arg, types[index]);
+				}catch (Exception e){
+					error ~= "argument `"~arg~"`: "~e.msg;
+					.destroy(e);
+					return false;
+				}
+			}
+			immutable integer code = _instTable.getInstruction(statement.instName.lowercase, types);
+			if (code == -1){
+				error = "instruction does not exist or invalid arguments";
+				return false;
+			}
+			_instCodes ~= cast(ushort)code;
+			_instArgs ~= args;
+			_instArgTypes ~= types;
+		}
+		return true;
+	}
+	/// ditto
+	bool append(Statement statement){
+		string error;
+		return this.append(statement, error);
+	}
 	/// Loads bytecode from `Statement[]`. Discards any existing bytecode
 	/// 
 	/// Returns: [] if done without errors. error descriptions if there were errors
@@ -133,36 +175,11 @@ public:
 		statements = statements.dup;
 		string[] errors;
 		foreach (i, statement; statements){
-			if (statement.label.length){
-				if (_labelNames.hasElement(statement.label.lowercase)){
-					errors ~= "line: "~ (i+1).to!string ~ " label `" ~ statement.label ~ "` used multiple times";
-					continue;
-				}
-				_labelIndexes ~= [_instCodes.length, _instArgs.length];
-				_labelNames ~= statement.label.lowercase;
-			}
-			if (statement.instName.length){
-				NaData[] args;
-				NaInstArgType[] types;
-				args.length = statement.arguments.length;
-				types.length = args.length;
-				foreach (index, arg; statement.arguments){
-					try{
-						args[index] = readData(arg, types[index]);
-					}catch (Exception e){
-						errors ~= "line: "~(i+1).to!string~" argument `"~arg~"`: "~e.msg;
-						.destroy(e);
-					}
-				}
-				immutable integer code = _instTable.getInstruction(statement.instName.lowercase, types);
-				if (code == -1)
-					errors ~= "line: "~(i+1).to!string ~ ": instruction does not exist or invalid arguments";
-				_instCodes ~= cast(ushort)code;
-				_instArgs ~= args;
-				_instArgTypes ~= types;
-			}
+			string error;
+			if (!append(statement, error))
+				errors ~= "line "~(i+1).to!string~": "~error;
 		}
-		return [];
+		return errors;
 	}
 }
 
