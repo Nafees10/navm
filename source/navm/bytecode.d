@@ -205,6 +205,7 @@ public:
 class NaInstTable{
 private:
 	NaInst[ushort] _instructions; /// avaliable instructions. index is code
+	void delegate()[ushort] _instPtrs; /// pointers for instruction codes
 public:
 	/// constructor
 	this(){
@@ -218,7 +219,7 @@ public:
 	/// 
 	/// Returns: instruction code if success, or -1 in case of error  
 	/// Error can be: code!=0 and code already used. No more codes left. Or another instruction with same name and arg types exists
-	integer addInstruction(ref NaInst inst){
+	integer addInstruction(ref NaInst inst, void delegate() ptr = null){
 		if (inst.code == 0){
 			// find code
 			foreach (ushort i; 0 .. ushort.max){
@@ -233,6 +234,7 @@ public:
 		// now make sure no other instruction with same name can be called with these args
 		if (getInstruction(inst.name, inst.arguments) == -1){
 			_instructions[inst.code] = inst;
+			_instPtrs[inst.code] = ptr;
 			return inst.code;
 		}
 		return -1;
@@ -263,6 +265,16 @@ public:
 			}
 		}
 		return -1;
+	}
+	/// gets pointer for an instruction. **This can be null**
+	/// 
+	/// Returns: instruction pointer
+	/// 
+	/// Throws: Exception if instruction does not exist
+	void delegate() getInstructionPtr(ushort code){
+		if (code in _instPtrs)
+			return _instPtrs[code];
+		throw new Exception("instruction with code=" ~ code.to!string ~ " does not exist");
 	}
 	/// whether an instruction exists
 	/// Returns: true if an instruction exists
