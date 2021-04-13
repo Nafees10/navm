@@ -360,15 +360,16 @@ public NaData readData(string strData, ref NaInstArgType type){
 			return NaData(readBinary(strData[2 .. $]));
 		}
 	}
-	type = NaInstArgType.Literal;
-	if (strData.isNum(true))
-		return NaData(to!double(strData));
 	if (strData[0] == '\"'){
+		type = NaInstArgType.LiteralString;
 		// assume the whole thing is string, no need to find string end index
 		NaData r;
 		r.strVal = cast(dchar[])strReplaceSpecial(strData[1 .. $-1]).to!dstring;
 		return r;
 	}
+	type = NaInstArgType.Literal;
+	if (strData.isNum(true))
+		return NaData(to!double(strData));
 	if (strData[0] == '\''){
 		NaData r;
 		strData = strData.dup;
