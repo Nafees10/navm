@@ -204,14 +204,7 @@ public:
 /// Stores an instruction table
 class NaInstTable{
 private:
-	NaInst[] _instructions; /// avaliable instructions. Index and code arent related
-	bool[uinteger] _codeIsUsed; /// if an instruction code is used
-	/// Returns: true if a code is used, false if not
-	bool codeUsed(uinteger code){
-		if (code in _codeIsUsed)
-			return _codeIsUsed[code];
-		return false;
-	}
+	NaInst[ushort] _instructions; /// avaliable instructions. index is code
 public:
 	/// constructor
 	this(){
@@ -229,18 +222,17 @@ public:
 		if (inst.code == 0){
 			// find code
 			foreach (ushort i; 0 .. ushort.max){
-				if (!codeUsed(i)){
+				if (i ! in _instructions){
 					inst.code = i;
 					break;
 				}
 			}
 			return -1;
-		}else if (codeUsed(inst.code))
+		}else if (inst.code in _instructions)
 			return -1;
 		// now make sure no other instruction with same name can be called with these args
 		if (getInstruction(inst.name, inst.arguments) == -1){
-			_instructions ~= inst;
-			_codeIsUsed[inst.code] = true;
+			_instructions[inst.code] = inst;
 			return inst.code;
 		}
 		return -1;
@@ -275,7 +267,7 @@ public:
 	/// whether an instruction exists
 	/// Returns: true if an instruction exists
 	bool instructionExists(ushort code){
-		return codeUsed(code);
+		return (code in _instructions) !is null;
 	}
 	/// ditto
 	bool instructionExists(string name){
