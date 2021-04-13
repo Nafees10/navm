@@ -310,28 +310,16 @@ public struct NaInst{
 	ushort code = 0x0000;
 	/// what type of arguments are expected
 	NaInstArgType[] arguments;
-	/// number of elements it will push to stack
-	ubyte pushCount = 0;
-	/// number of elements it will pop (if `_popCount>=128`, then `popCount = arguments[_popCount-128]`)
-	private ubyte _popCount = 0;
-	/// Returns: number of elements it will pop
-	ubyte popCount(NaData[] args){
-		if (_popCount < 128)
-			return _popCount;
-		return cast(ubyte)(args[_popCount - 128].intVal);
-	}
 	/// constructor
-	this (string name, uinteger code, ubyte popCount = 0, ubyte pushCount = 0, NaInstArgType[] arguments = []){
+	this (string name, uinteger code, NaInstArgType[] arguments = []){
 		this.name = name;
 		this.code = cast(ushort)code;
-		this._popCount = popCount;
-		this.pushCount = pushCount;
 		this.arguments = arguments.dup;
 	}
-	/// constructor, with no push/pop
-	this (string name, uinteger code, NaInstArgType[] arguments){
+	/// constructor
+	this (string name, NaInstArgType[] arguments = []){
 		this.name = name;
-		this.code = cast(ushort)code;
+		this.code = 0;
 		this.arguments = arguments.dup;
 	}
 }
