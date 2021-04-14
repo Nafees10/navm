@@ -7,8 +7,7 @@ import utils.misc;
 
 import std.conv : to;
 
-/// To store a single line of bytecode. This is used for raw bytecode.  
-/// Prefer using array of this to write bytecode, then load into NaBytecode to store or use
+/// To store a single line of bytecode. This is used for raw bytecode.
 public struct Statement{
 	/// label, if any, otherwise, null or empty string
 	string label;
@@ -88,6 +87,36 @@ public:
 		this._instTable = instructionTable;
 	}
 	~this(){}
+	/// Returns: instruction codes
+	@property ushort[] instCodes(){
+		return _instCodes;
+	}
+	/// Returns: array of instruction pointers. invalid instructions will have null ptr
+	@property void delegate()[] instPtrs(){
+		void delegate()[] r;
+		r.length = _instCodes.length;
+		foreach (i; 0 .. r.length){
+			try
+				r[i] = _instTable.getInstructionPtr(_instCodes[i]);
+			catch (Exception e){
+				.destroy(e);
+				r[i] = null;
+			}
+		}
+		return r;
+	}
+	/// Returns: arguments for instructions
+	@property NaData[] instArgs(){
+		return _instArgs;
+	}
+	/// Returns: label indexes (`[instructionIndex, argIndex]`)
+	@property uinteger[2][] labelIndexes(){
+		return _labelIndexes;
+	}
+	/// Returns: label names, corresponding to labelIndexes
+	@property string[] labelNames(){
+		return _labelNames;
+	}
 	/// Discards any existing bytecode
 	void clear(){
 		_instCodes.length = 0;
