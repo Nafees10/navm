@@ -1,5 +1,6 @@
 .dub/*
 .vscode/*
+/*-test-default
 /demo
 dub.selections.json
 lib*.a
