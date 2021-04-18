@@ -6,18 +6,18 @@ _Note that you don't need to use this syntax to execute byte code using NaVM. Yo
 Instructions are executed from top to bottom.
 They are **not** case sensitive, and are written like:  
 ```
-	instructionName someArgument
-	anotherInstruction
+	instructionName     argument   argument 
 ```
 
 ## Instruction Arguments
 
-An instruction can have any number of arguments (`<128`). These can be of following types:
+An instruction can have any number of arguments. These can be of following types:
 
 * Literal - Any type of data (string, character, double, integer, positive integer, boolean)
 * Integer - Positive or negative (or zero) integer
 * UInteger - `>0` integer
 * Boolean - true (a non zero integer), or false (0, integer)
+* String - a string, enclosed between `"`
 * Label - Name of a Label. This is replaced with the index (integer) of that label stored in `_labels` array in NaVM when bytecode is loaded.
 * Address - Address to an element on stack. This can be absolute address, or relative, depending on instruction
 
@@ -56,7 +56,7 @@ They are also not case sensitive. And are written like:
 SomeLabel:
 			SomeInstruction
 			MoreInstructions
-OtherLabel: AnotherInstruction		withSomeArg		andAnotherArg	# a comment
+OtherLabel: AnotherInstruction		withSomeArg	andAnotherArg # comment
 ```
 
 ## Whitespace
