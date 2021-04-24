@@ -7,6 +7,11 @@ import utils.misc;
 
 import std.conv : to;
 
+/// Signature bytes
+private const ubyte[] SIGNATURE = cast(ubyte[])"NAVMBC-";
+/// number of bytes for signature
+private const ubyte SIG_BYTES_COUNT = 11;
+
 /// To store a single line of bytecode. This is used for raw bytecode.
 public struct Statement{
 	/// label, if any, otherwise, null or empty string
@@ -73,7 +78,7 @@ unittest{
 }
 
 /// Stores bytecode that is almost ready to be used with NaVM.
-class NaBytecode{
+public class NaBytecode{
 private:
 	ushort[] _instCodes; /// codes of instructions
 	NaData[] _instArgs; /// instruction arguments
@@ -230,8 +235,63 @@ public:
 	}
 }
 
+/// same as NaBytecode, but also works with binary bytecode (see `spec/binarybytecode.md`)
+public class NaBytecodeBinary : NaBytecode{
+private:
+	ByteStream _bin;
+	ubyte[] _sig;
+	ubyte[] _metadata;
+public:
+	/// constructor
+	this(NaInstTable instructionTable, ubyte[] signature){
+		super(instructionTable);
+		this.signature = signature;
+	}
+	/// signature
+	@property ubyte[] signature(){
+		return _sig.dup;
+	}
+	/// signature. 
+	/// If the newVal is too long, the first bytes are used. If too short, 0x00 is used to fill
+	@property ubyte[] signature(ubyte[] newVal){
+		static const ubyte maxLen = SIG_BYTES_COUNT - SIGNATURE.length;
+		uinteger prevLen = newVal.length;
+		newVal.length = maxLen;
+		_sig = newVal.dup;
+		if (prevLen < maxLen){
+			// shift to right
+			_sig[$ - prevLen .. $] = _sig[0 .. prevLen];
+			_sig[0 .. $ - prevLen] = 0;
+		}
+		return _sig.dup;
+	}
+	/// the metadata stored alongside
+	@property ubyte[] metadata(){
+		return _metadata;
+	}
+	/// ditto
+	@property ubyte[] metadata(ubyte[] newVal){
+		return _metadata = newVal;
+	}
+	/// the ByteStream storing bytecode. Be aware that this will be destroyed when NaBytecodeBinary is destroyed
+	@property ByteStream binCode(){
+		return _bin;
+	}
+	/// Prepares binary bytecode
+	void writeBinCode(){
+		// TODO
+	}
+	/// Reads binary bytecode
+	/// 
+	/// Returns: true on success, false on error
+	bool readBinCode(ref string error){
+		// TODO
+		return true;
+	}
+}
+
 /// Stores an instruction table
-class NaInstTable{
+public class NaInstTable{
 private:
 	NaInst[ushort] _instructions; /// avaliable instructions. index is code
 	void delegate()[ushort] _instPtrs; /// pointers for instruction codes
