@@ -1,5 +1,5 @@
 # Binary Bytecode
-This document describes how NaBytecode class stores bytecode in binary format.
+This document describes how `NaBytecodeBinary` class stores bytecode in binary format.
 
 The binary file contains these sections of bytecode in the this order:
 
@@ -41,13 +41,13 @@ Each argument is stored as:
 
 if an argument is fixed length or not is determined by its type:  
 
-* Literal - variable length
+* Literal - treated as an int, fixed length, 8 bytes
 * LiteralInteger - fixed length, 8 bytes
 * LiteralUInteger - fixed length, 8 bytes
+* Address - fixed length, 8 bytes
 * LiteralBoolean - fixed length, 1 byte
 * LiteralString - variable length
 * Label - variable length (label name is stored)
-* Address - fixed length, 8 bytes
 
 ## Labels
 A label is stored as:  
