@@ -17,7 +17,7 @@ This is used when storing data like strings, metadata.
 Sections, except for Signature Bytes, are all stored this way.
 
 ## Signature Bytes
-This part is always 11 bytes.  
+This part is always 17 bytes.  
 
 The first 7 bytes are to be:
 ```
@@ -27,7 +27,16 @@ OR
 
 4E 41 56 4D 42 43 2D
 ```
-4 bytes after these bytes are ignored.
+These are followed by 2 bytes, which are used to identify version information.  
+8 bytes after these bytes are ignored.
+
+### Version Identifying Bytes
+
+|	Bytes (Hexadecimal)	|	First NaVM Version	|
+| --------------------- | --------------------- |
+| 		`00  01`		| 		v1.2			|
+
+Byte combinations not present in table above are reserved for future versions.
 
 ## Metadata
 This can be used to store any data along with bytecode, or can be left empty.
