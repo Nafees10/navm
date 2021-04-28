@@ -7,11 +7,6 @@ import utils.misc;
 
 import std.conv : to;
 
-/// Signature bytes
-private const ubyte[] SIGNATURE = cast(ubyte[])"NAVMBC-";
-/// number of bytes for signature
-private const ubyte SIG_BYTES_COUNT = 11;
-
 /// To store a single line of bytecode. This is used for raw bytecode.
 public struct Statement{
 	/// label, if any, otherwise, null or empty string
@@ -238,6 +233,13 @@ public:
 /// same as NaBytecode, but also works with binary bytecode (see `spec/binarybytecode.md`)
 public class NaBytecodeBinary : NaBytecode{
 private:
+	/// Signature bytes
+	const ubyte[7] SIGNATURE = cast(ubyte[7])"NAVMBC-";
+	/// version bytes
+	const ubyte[2] SIG_VER = [0x00, 0x01];
+	/// number of bytes after signature bytes to ignore
+	const ubyte SIG_BYTES_IGNORE = 8;
+
 	ByteStream _bin;
 	ubyte[] _sig;
 	ubyte[] _metadata;
@@ -254,15 +256,10 @@ public:
 	/// signature. 
 	/// If the newVal is too long, the first bytes are used. If too short, 0x00 is used to fill
 	@property ubyte[] signature(ubyte[] newVal){
-		static const ubyte maxLen = SIG_BYTES_COUNT - SIGNATURE.length;
-		uinteger prevLen = newVal.length;
-		newVal.length = maxLen;
-		_sig = newVal.dup;
-		if (prevLen < maxLen){
-			// shift to right
-			_sig[$ - prevLen .. $] = _sig[0 .. prevLen];
-			_sig[0 .. $ - prevLen] = 0;
-		}
+		_sig.length = SIG_BYTES_IGNORE;
+		_sig[] = 0x00;
+		immutable uinteger len = newVal.length > SIG_BYTES_IGNORE ? SIG_BYTES_IGNORE : newVal.length;
+		_sig[0 .. len] = newVal[0 .. len];
 		return _sig.dup;
 	}
 	/// the metadata stored alongside
@@ -279,7 +276,45 @@ public:
 	}
 	/// Prepares binary bytecode
 	void writeBinCode(){
-		// TODO
+		_bin.size = 0;
+		_bin.grow = true;
+		_bin.maxSize = 0;
+		// start by signature
+		_bin.writeRaw(SIGNATURE);
+		_bin.writeRaw(SIG_VER);
+		_bin.writeRaw(_sig);
+		// metadata
+		_bin.writeArray(_metadata, 8);
+		// instruction codes
+		_bin.writeArray(_instCodes, 8);
+		// args
+		uinteger lenSeek = _bin.seek;
+		_bin.write(0, 8); /// dummy length, will change later when length is known
+		foreach (i, type; _instArgTypes){
+			_bin.write(type, 1);
+			if (type == NaInstArgType.LiteralBoolean)
+				_bin.write(_instArgs[i].boolVal, 1);
+			else if (type == NaInstArgType.LiteralString || type == NaInstArgType.Label)
+				_bin.writeArray(_instArgs[i].strVal, 8);
+			else // everything else is 8 bytes:
+				_bin.write(_instArgs[i],8);
+		}
+		uinteger finalSeek = _bin.seek;
+		_bin.seek = lenSeek;
+		_bin.write(finalSeek - lenSeek, 8);
+		_bin.seek = finalSeek;
+		// labels
+		lenSeek = _bin.seek;
+		_bin.write(0, 8); // dummy length
+		foreach (i, label; _labelIndexes){
+			_bin.write(label[0], 8); // code index
+			_bin.write(label[1], 8); // instruction index
+			_bin.writeArray(_labelNames[i], 8); // name
+		}
+		finalSeek = _bin.seek;
+		_bin.seek = lenSeek;
+		_bin.write(finalSeek - lenSeek, 8);
+		_bin.seek = finalSeek;
 	}
 	/// Reads binary bytecode
 	/// 
