@@ -299,10 +299,7 @@ public:
 			else // everything else is 8 bytes:
 				_bin.write(_instArgs[i],8);
 		}
-		uinteger finalSeek = _bin.seek;
-		_bin.seek = lenSeek;
-		_bin.write(finalSeek - lenSeek, 8);
-		_bin.seek = finalSeek;
+		_bin.writeAt(lenSeek, _bin.seek - (lenSeek + 8), 8);
 		// labels
 		lenSeek = _bin.seek;
 		_bin.write(0, 8); // dummy length
@@ -311,10 +308,7 @@ public:
 			_bin.write(label[1], 8); // instruction index
 			_bin.writeArray(_labelNames[i], 8); // name
 		}
-		finalSeek = _bin.seek;
-		_bin.seek = lenSeek;
-		_bin.write(finalSeek - lenSeek, 8);
-		_bin.seek = finalSeek;
+		_bin.writeAt(lenSeek, _bin.seek - (lenSeek + 8), 8);
 	}
 	/// Reads binary bytecode
 	/// 
