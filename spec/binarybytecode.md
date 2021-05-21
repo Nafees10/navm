@@ -11,7 +11,7 @@ The binary file contains these sections of bytecode in the this order:
 
 ## Storing Variable Length Data
 if data is not fixed length, it will be stored as:  
-First 4 bytes to store length (unsigned int), followed by the data.  
+First 8 bytes to store length (unsigned int), followed by the data.  
   
 This is used when storing data like strings, metadata.  
 Sections, except for Signature Bytes, are all stored this way.
