@@ -53,8 +53,8 @@ if an argument is fixed length or not is determined by its type:
 * LiteralUInteger - fixed length, 8 bytes
 * Address - fixed length, 8 bytes
 * LiteralBoolean - fixed length, 1 byte
-* LiteralString - variable length (`dchar` array)
-* Label - variable length (label name is stored, as `dchar` array)
+* LiteralString - variable length (`char` array)
+* Label - variable length (label name is stored, as `char` array)
 
 ## Labels
 An 8 byte (64 bit) unsigned integer stores the **number of labels** (not bytes). This is followed by the labels.  
