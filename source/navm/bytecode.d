@@ -2,7 +2,7 @@ module navm.bytecode;
 
 import navm.navm : NaData;
 
-import utils.lists;
+import utils.ds;
 import utils.misc;
 
 import std.conv : to;
@@ -233,32 +233,32 @@ public:
 /// same as NaBytecode, but also works with binary bytecode (see `spec/binarybytecode.md`)
 public class NaBytecodeBinary : NaBytecode{
 private:
-	/// Signature bytes
-	const ubyte[7] SIGNATURE = cast(ubyte[7])"NAVMBC-";
+	/// magic number
+	const ubyte[7] MAGIC_NUM = cast(ubyte[7])"NAVMBC-";
 	/// version bytes
-	const ubyte[2] SIG_VER = [0x00, 0x01];
-	/// number of bytes after signature bytes to ignore
-	const ubyte SIG_BYTES_IGNORE = 8;
+	const ushort SIG_VER = 0x0001;
+	/// number of bytes after magic bytes+version bytes to ignore
+	const ubyte MAGIC_BYTES_IGNORE = 8;
 
 	ByteStream _bin;
 	ubyte[] _sig;
 	ubyte[] _metadata;
 public:
 	/// constructor
-	this(NaInstTable instructionTable, ubyte[] signature){
+	this(NaInstTable instructionTable, ubyte[] magicNumberPost){
 		super(instructionTable);
-		this.signature = signature;
+		this.magicNumberPost = magicNumberPost;
 	}
-	/// signature
-	@property ubyte[] signature(){
+	/// postfix for magic number
+	@property ubyte[] magicNumberPost(){
 		return _sig.dup;
 	}
-	/// signature. 
+	/// postfix for magic number
 	/// If the newVal is too long, the first bytes are used. If too short, 0x00 is used to fill
-	@property ubyte[] signature(ubyte[] newVal){
-		_sig.length = SIG_BYTES_IGNORE;
+	@property ubyte[] magicNumberPost(ubyte[] newVal){
+		_sig.length = MAGIC_BYTES_IGNORE;
 		_sig[] = 0x00;
-		immutable uinteger len = newVal.length > SIG_BYTES_IGNORE ? SIG_BYTES_IGNORE : newVal.length;
+		immutable uinteger len = newVal.length > MAGIC_BYTES_IGNORE ? MAGIC_BYTES_IGNORE : newVal.length;
 		_sig[0 .. len] = newVal[0 .. len];
 		return _sig.dup;
 	}
@@ -280,16 +280,15 @@ public:
 		_bin.grow = true;
 		_bin.maxSize = 0;
 		// start by signature
-		_bin.writeRaw(SIGNATURE);
-		_bin.writeRaw(SIG_VER);
+		_bin.writeRaw(MAGIC_NUM);
+		_bin.write(cast(ushort)SIG_VER);
 		_bin.writeRaw(_sig);
 		// metadata
 		_bin.writeArray(_metadata, 8);
 		// instruction codes
 		_bin.writeArray(_instCodes, 8);
 		// args
-		uinteger lenSeek = _bin.seek;
-		_bin.write(0, 8); /// dummy length, will change later when length is known
+		_bin.write(_instArgs.length, 8); /// number of args
 		foreach (i, type; _instArgTypes){
 			_bin.write(type, 1);
 			if (type == NaInstArgType.LiteralBoolean)
@@ -299,22 +298,77 @@ public:
 			else // everything else is 8 bytes:
 				_bin.write(_instArgs[i],8);
 		}
-		_bin.writeAt(lenSeek, _bin.seek - (lenSeek + 8), 8);
 		// labels
-		lenSeek = _bin.seek;
-		_bin.write(0, 8); // dummy length
+		_bin.write(_labelIndexes.length, 8); // number of labels
 		foreach (i, label; _labelIndexes){
 			_bin.write(label[0], 8); // code index
 			_bin.write(label[1], 8); // instruction index
 			_bin.writeArray(_labelNames[i], 8); // name
 		}
-		_bin.writeAt(lenSeek, _bin.seek - (lenSeek + 8), 8);
 	}
-	/// Reads binary bytecode
+	/// Reads binary bytecode. Any existing bytecode is `clear()`ed
 	/// 
-	/// Returns: true on success, false on error
-	bool readBinCode(ref string error){
-		// TODO
+	/// Returns: true on success, false if file is malformed
+	bool readBinCode(){
+		this.clear;
+		_metadata = [];
+		_sig = [];
+		if (_bin.size <= MAGIC_NUM.length + SIG_VER.sizeof + MAGIC_BYTES_IGNORE)
+			return false;
+		ubyte[] buffer;
+		uinteger readCount;
+		bool incompleteRead;
+		buffer.length = MAGIC_NUM.length;
+		_bin.seek=0;
+		if (_bin.readRaw(buffer) != buffer.length || buffer != MAGIC_NUM)
+			return false;
+		if (_bin.read!ushort != SIG_VER)
+			return false;
+		_sig.length = MAGIC_BYTES_IGNORE;
+		_bin.readRaw(_sig);
+		// read metadata
+		_metadata = _bin.readArray!ubyte(readCount,8);
+		if (readCount < _metadata.length)
+			return false;
+		// instruction codes
+		_instCodes = _bin.readArray!ushort(readCount, 8);
+		if (readCount < _instCodes.length)
+			return false;
+		// arguments
+		_instArgTypes.length = _bin.read!uinteger(incompleteRead,8);
+		if (incompleteRead)
+			return false;
+		_instArgs.length = _instArgTypes.length;
+		foreach(i; 0 .. _instArgs.length){
+			_instArgTypes[i] = _bin.read!NaInstArgType(incompleteRead,1);
+			if (incompleteRead)
+				return false;
+			if (_instArgTypes[i] == NaInstArgType.LiteralBoolean)
+				_instArgs[i].boolVal = _bin.read!bool(incompleteRead, 1);
+			else if (_instArgTypes[i] == NaInstArgType.LiteralString || _instArgTypes[i] == NaInstArgType.Label){
+				_instArgs[i].strVal = _bin.readArray!dchar(readCount, 8);
+				incompleteRead = readCount < _instArgs[i].strVal.length;
+			}else // everything else is 8 bytes:
+				_instArgs[i] = _bin.read!NaData(incompleteRead, 8);
+			if (incompleteRead)
+				return false;
+		}
+		// labels
+		_labelIndexes.length = _bin.read!uinteger(incompleteRead,8);
+		if (incompleteRead)
+			return false;
+		_labelNames.length = _labelIndexes.length;
+		foreach (i; 0 .. _labelIndexes.length){
+			_labelIndexes[0] = _bin.read!uinteger(incompleteRead, 8);
+			if (incompleteRead)
+				return false;
+			_labelIndexes[1] = _bin.read!uinteger(incompleteRead, 8);
+			if (incompleteRead)
+				return false;
+			_labelNames[i] = cast(string)_bin.readArray!char(readCount, 8);
+			if (readCount < _labelNames[i].length)
+				return false;
+		}
 		return true;
 	}
 }
