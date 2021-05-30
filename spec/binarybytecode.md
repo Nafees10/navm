@@ -48,13 +48,12 @@ Each argument is stored as:
 
 if an argument is fixed length or not is determined by its type:  
 
-* Literal - treated as an int, fixed length, 8 bytes
-* LiteralInteger - fixed length, 8 bytes
-* LiteralUInteger - fixed length, 8 bytes
-* Address - fixed length, 8 bytes
-* LiteralBoolean - fixed length, 1 byte
-* LiteralString - variable length (`char` array)
-* Label - variable length (label name is stored, as `char` array)
+* Boolean - fixed length, 1 byte
+* Char - fixed length, 1 byte
+* Integer - fixed length, 8 bytes (even when `ptrdiff_t.sizeof == 4`)
+* Double - fixed length, 8 bytes
+* String - variable length (8 bytes for length, followed by `char[]`)
+* Label - variable length (label name is stored as string)
 
 ## Labels
 An 8 byte (64 bit) unsigned integer stores the **number of labels** (not bytes). This is followed by the labels.  
