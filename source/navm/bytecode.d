@@ -70,11 +70,80 @@ unittest{
 	assert(s == Statement("someLabel", "someInst", ["arg1", "arg2"]));
 }
 
+/// stores an data about available instruction
+public struct NaInst{
+	/// name of instruction, **in lowercase**
+	string name;
+	/// value when read as a ushort;
+	ushort code = 0x0000;
+	/// what type of arguments are expected
+	NaInstArgType[] arguments;
+	/// constructor
+	this (string name, uinteger code, NaInstArgType[] arguments = []){
+		this.name = name;
+		this.code = cast(ushort)code;
+		this.arguments = arguments.dup;
+	}
+	/// constructor
+	this (string name, NaInstArgType[] arguments = []){
+		this.name = name;
+		this.code = 0;
+		this.arguments = arguments.dup;
+	}
+}
+
+/// Types of instruction arguments, for validation
+enum NaInstArgType : ubyte{
+	Boolean, /// boolean
+	Integer, /// singed integer (ptrdiff_t)
+	String, /// a string (char[])
+	Char, /// a 1 byte character
+	Double, /// a double (float)
+	Label, /// a label (name is stored)
+}
+
+/// For storing data of varying data types
+public struct NaData{
+	/// the actual data
+	ubyte[] argData;
+	/// value. ** do not use this for arrays, aside from string **
+	/// 
+	/// Returns: stored value, or `T.init` if invalid type
+	@property T value(T)(){
+		static if (is (T == string))
+			return cast(string)cast(char[])argData;
+		else if (argData.length < T.sizeof)
+			return T.init;
+		else
+			return *(cast(T*)argData.ptr);
+	}
+	/// ditto
+	@property T value(T)(T newVal){
+		static if (is (T == string)){
+			argData.length = newVal.length;
+			argData = cast(ubyte[])(cast(char[])newVal.dup);
+			return newVal;
+		}else if (argData.length >= T.sizeof){
+			argData[0 .. T.sizeof] = (cast(ubyte*)&newVal)[0 .. T.sizeof];
+			return newVal;
+		}else{
+			argData.length = T.sizeof;
+			return this.value!T = newVal;
+		}
+	}
+	/// constructor
+	this(T)(T value){
+		this.value!T = value;
+	}
+}
+
+
 /// Stores bytecode that is almost ready to be used with NaVM.
 public class NaBytecode{
 private:
 	ushort[] _instCodes; /// codes of instructions
-	NaInstArg[] _instArgs; /// instruction arguments
+	NaData[] _instArgs; /// instruction arguments
+	NaInstArgType[] _instArgTypes; /// instruction argument types
 	uinteger[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
 	string[] _labelNames; /// label names
 	NaInstTable _instTable; /// the instruction table
@@ -103,8 +172,12 @@ public:
 		return r;
 	}
 	/// Returns: arguments for instructions
-	@property NaInstArg[] instArgs(){
+	@property NaData[] instArgs(){
 		return _instArgs;
+	}
+	/// Returns: types of arguments for instructions
+	@property NaInstArgType[] instArgTypes(){
+		return _instArgTypes;
 	}
 	/// Returns: label indexes (`[instructionIndex, argIndex]`)
 	@property uinteger[2][] labelIndexes(){
@@ -125,7 +198,7 @@ public:
 	/// 
 	/// Returns: true if verified without errors, false if there were errors.
 	bool verify(){
-		if (_labelNames.length != _labelIndexes.length)
+		if (_labelNames.length != _labelIndexes.length || _instArgTypes.length != _instArgs.length)
 			return false;
 		uinteger argInd;
 		uinteger[2][] labels = _labelIndexes.dup; // remove elements from this when they are determined valid. if length>0 at end, remaining invalid
@@ -139,9 +212,9 @@ public:
 			}
 			if (_instArgs.length < argInd || _instArgs.length - argInd < inst.arguments.length)
 				return false; // if there arent enough arguments
-			NaInstArg[] args = _instArgs[argInd .. argInd + inst.arguments.length];
-			foreach (typeInd; 0 .. args.length){
-				if ((args[typeInd].type & inst.arguments[typeInd]) != inst.arguments[typeInd])
+			NaInstArgType[] argTypes = _instArgTypes[argInd .. argInd + inst.arguments.length];
+			foreach (typeInd; 0 .. argTypes.length){
+				if (argTypes[typeInd] != inst.arguments[typeInd])
 					return false;
 			}
 			foreach (labInd; 0 .. labels.length){
@@ -169,13 +242,13 @@ public:
 			_labelNames ~= statement.label.lowercase;
 		}
 		if (statement.instName.length){
-			NaInstArg[] args;
+			NaData[] args;
 			NaInstArgType[] types;
 			args.length = statement.arguments.length;
 			types.length = args.length;
 			foreach (index, arg; statement.arguments){
 				try{
-					args[index] = readData(arg);
+					args[index] = readData(arg, types[index]);
 				}catch (Exception e){
 					error ~= "argument `"~arg~"`: "~e.msg;
 					.destroy(e);
@@ -285,13 +358,13 @@ public:
 		// args
 		_bin.write(_instArgs.length, 8); /// number of args
 		foreach (i, arg; _instArgs){
-			_bin.write(arg.type, 1);
-			if (arg.type == NaInstArgType.LiteralBoolean)
-				_bin.write(_instArgs[i].boolVal, 1);
-			else if (arg.type == NaInstArgType.LiteralString || arg.type == NaInstArgType.Label)
-				_bin.writeArray(_instArgs[i].strVal, 8);
+			_bin.write(_instArgTypes[i], 1);
+			if (_instArgTypes[i] == NaInstArgType.Boolean)
+				_bin.write(arg.value!bool, 1);
+			else if (_instArgTypes[i] == NaInstArgType.String || _instArgTypes[i] == NaInstArgType.Label)
+				_bin.writeArray(arg.value!string, 8);
 			else // everything else is 8 bytes:
-				_bin.write(_instArgs[i].intVal,8);
+				_bin.write(arg.value!integer,8);
 		}
 		// labels
 		_bin.write(_labelIndexes.length, 8); // number of labels
@@ -333,17 +406,18 @@ public:
 		_instArgs.length = _bin.read!uinteger(incompleteRead,8);
 		if (incompleteRead)
 			return false;
+		_instArgTypes.length = _instArgs.length;
 		foreach(i; 0 .. _instArgs.length){
-			_instArgs[i].type = _bin.read!NaInstArgType(incompleteRead,1);
+			_instArgTypes[i] = _bin.read!(NaInstArgType)(incompleteRead,1);
 			if (incompleteRead)
 				return false;
-			if (_instArgs[i].type == NaInstArgType.LiteralBoolean)
-				_instArgs[i].boolVal = _bin.read!bool(incompleteRead, 1);
-			else if (_instArgs[i].type == NaInstArgType.LiteralString || _instArgs[i].type == NaInstArgType.Label){
-				_instArgs[i].strVal = cast(string)(_bin.readArray!char(readCount, 8));
-				incompleteRead = readCount < _instArgs[i].strVal.length;
+			if (_instArgTypes[i] == NaInstArgType.Boolean)
+				_instArgs[i].value!bool = _bin.read!bool(incompleteRead, 1);
+			else if (_instArgTypes[i] == NaInstArgType.String || _instArgTypes[i] == NaInstArgType.Label){
+				_instArgs[i].value!string = cast(string)(_bin.readArray!char(readCount, 8));
+				incompleteRead = readCount < _instArgs[i].value!string.length;
 			}else // everything else is 8 bytes:
-				_instArgs[i].intVal = _bin.read!uinteger(incompleteRead, 8);
+				_instArgs[i].value!integer = _bin.read!integer(incompleteRead, 8);
 			if (incompleteRead)
 				return false;
 		}
@@ -457,71 +531,6 @@ public:
 	}
 }
 
-private alias NaInstArgType = NaInstArg.Type;
-
-/// Stores an argument for instruction
-public struct NaInstArg{
-	/// Possible types
-	enum Type : ubyte{
-		Literal = 			0B00000001, /// any literal
-		LiteralInteger = 	0B00000011, /// integer, positive or negative
-		LiteralUInteger = 	0B00000111, /// integer, >=0, or could also be a binary or hexadecimal number. This is still stored in `intVal`, but is >=0
-		LiteralBoolean =	0B00001001, /// true or false
-		LiteralString =		0B00010001, /// a string
-		LiteralDouble = 	0B00100001, /// a double (float)
-		Label = 			0B01000000, /// a valid label (aka jump position)
-		Address = 			0B10000000, /// an address to an element on stack
-	}
-	Type type; /// type of currently stored argument
-	union{
-		bool boolVal; /// boolean value
-		char charVal; /// char value
-		integer intVal; /// integer value
-		double doubleVal; /// double/float value
-		string strVal; /// string value
-	}
-	/// constructor
-	/// data can be any of the type which it can store
-	this (T)(T data, Type type){
-		static if (is (T == int) || is (T == long) || is (T == uint) || is (T == ulong)){
-			intVal = data;
-		}else static if (is (T == double) || is (T == float)){
-			doubleVal = data;
-		}else static if (is (T == char)){
-			charVal = data;
-		}else static if (is (T == char[]) || is (T == string)){
-			strVal = cast(string)data;
-		}else static if (is (T == bool)){
-			boolVal = data;
-		}else{
-			throw new Exception("cannot store "~T.stringof~" in NaInstArg");
-		}
-		this.type = type;
-	}
-}
-
-/// stores an data about available instruction
-public struct NaInst{
-	/// name of instruction, **in lowercase**
-	string name;
-	/// value when read as a ushort;
-	ushort code = 0x0000;
-	/// what type of arguments are expected
-	NaInstArgType[] arguments;
-	/// constructor
-	this (string name, uinteger code, NaInstArgType[] arguments = []){
-		this.name = name;
-		this.code = cast(ushort)code;
-		this.arguments = arguments.dup;
-	}
-	/// constructor
-	this (string name, NaInstArgType[] arguments = []){
-		this.name = name;
-		this.code = 0;
-		this.arguments = arguments.dup;
-	}
-}
-
 /// Reads data from a string (which can be string, char, double, integer, bool)
 /// 
 /// Addresses are read as integers
@@ -529,76 +538,64 @@ public struct NaInst{
 /// Returns: the data in NaInstArg
 /// 
 /// Throws: Exception if data is invalid
-public NaInstArg readData(string strData){
+public NaData readData(string strData, ref NaInstArgType type){
+	NaData r;
 	if (strData.length == 0)
 		throw new Exception("cannot read data from empty string");
 	if (["true", "false"].hasElement(strData)){
-		return NaInstArg(strData == "true", NaInstArg.Type.LiteralBoolean);
-	}
-	if (strData[0] == '@' && isNum(strData[1 .. $], false))
-		return NaInstArg(to!integer(strData[1 .. $]), NaInstArg.Type.Address);
-	NaInstArg r;
-	if (strData.isNum(false)){
-		r.intVal = strData.to!integer;
-		if (r.intVal >= 0)
-			r.type = NaInstArg.Type.LiteralUInteger;
-		else
-			r.type = NaInstArg.Type.LiteralInteger;
-		return r;
-	}
-	if (strData.length >= 2 && strData[0] == '0' && (strData[1] == 'x' || strData[1] == 'B')){
-		r.type = NaInstArg.Type.LiteralUInteger;
+		r.value!bool = strData == "true";
+		type = NaInstArgType.Boolean;
+	}else if (strData.isNum(false)){
+		r.value!integer = strData.to!integer;
+		type = NaInstArgType.Integer;
+	}else if (strData.isNum(true)){
+		r.value!double = strData.to!double;
+		type = NaInstArgType.Double;
+	}else if (strData.length >= 2 && (strData[0 .. 2] == "0x" || strData[0 .. 2] == "0B")){
+		type = NaInstArgType.Integer;
 		if (strData.length == 2)
-			r.intVal = 0;
-		if (strData[1] == 'x')
-			r.intVal = readHexadecimal(strData[2 .. $]);
-		r.intVal = readBinary(strData[2 .. $]);
-		return r;
-	}
-	if (strData[0] == '\"'){
-		r.type = NaInstArgType.LiteralString;
-		r.strVal = strReplaceSpecial(strData[1 .. $-1]);
-		return r;
-	}
-	if (strData.isNum(true))
-		return NaInstArg(to!double(strData), NaInstArg.Type.LiteralDouble);
-	if (strData[0] == '\''){
-		r.type = NaInstArgType.Literal;
+			r.value!integer = 0;
+		if (strData[0 .. 2] == "0x")
+			r.value!integer = readHexadecimal(strData[2 .. $]);
+		else
+			r.value!integer = readBinary(strData[2 .. $]);
+	}else if (strData[0] == '\"'){
+		type = NaInstArgType.String;
+		r.value!string = strReplaceSpecial(strData[1 .. $-1]);
+	}else if (strData[0] == '\''){
+		type = NaInstArgType.Char;
 		strData = strData.dup;
 		strData = strReplaceSpecial(strData[1 .. $ -1]);
 		if (strData.length > 1)
 			throw new Exception("' ' can only contain 1 character");
 		if (strData.length < 1)
 			throw new Exception("no character provided in ''");
-		r.charVal = strData[0];
-		return r;
+		r.value!char = strData[0];
+	}else{
+		// probably a label
+		type = NaInstArgType.Label;
+		r.value!string = strData.lowercase;
 	}
-	// well it can only be a label now
-	r.type = NaInstArgType.Label;
-	r.strVal = strData.lowercase;
 	return r;
 }
 /// 
 unittest{
 	NaInstArgType type;
 	assert("true".readData(type) == NaData(true));
-	assert(type == NaInstArgType.LiteralBoolean);
+	assert(type == NaInstArgType.Boolean);
 	assert("false".readData(type) == NaData(false));
-	assert(type == NaInstArgType.LiteralBoolean);
-
-	assert("@15".readData(type) == NaData(15));
-	assert(type == NaInstArgType.Address);
+	assert(type == NaInstArgType.Boolean);
 	
-	assert("15".readData(type) == NaData(15));
-	assert(type == NaInstArgType.LiteralUInteger);
-	assert("0".readData(type) == NaData(0));
-	assert(type == NaInstArgType.LiteralUInteger);
-	assert("-1".readData(type) == NaData(-1));
-	assert(type == NaInstArgType.LiteralInteger);
-	assert("\"str\\t\"".readData(type).strVal == "str\t".to!dstring);
-	assert(type == NaInstArgType.Literal);
+	assert("15".readData(type).value!integer == 15);
+	assert(type == NaInstArgType.Integer);
+	assert("0".readData(type).value!integer == 0);
+	assert(type == NaInstArgType.Integer);
+	assert("-1".readData(type).value!integer == -1);
+	assert(type == NaInstArgType.Integer);
+	assert("\"str\\t\"".readData(type).value!string == "str\t");
+	assert(type == NaInstArgType.String);
 
-	assert("potato".readData(type).strVal == "potato".to!dstring);
+	assert("potato".readData(type).value!string == "potato");
 	assert(type == NaInstArgType.Label);
 }
 
