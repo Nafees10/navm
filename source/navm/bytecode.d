@@ -321,7 +321,7 @@ public:
 unittest{
 	string[] source = [
 		"start: inst0 l2",
-		"	inst1 50 50.5"
+		"	inst1 50 50.5",
 		"	inst2 \"hello\" false",
 		"l2: inst3 'c' start"
 	];
@@ -336,7 +336,7 @@ unittest{
 	iTable.addInstruction(inst);
 	NaBytecode bcode = new NaBytecode(iTable);
 	string[] errors = bcode.load(source);
-	assert(bcode.labelNames = ["start", "l2"]);
+	assert(bcode.labelNames == ["start", "l2"]);
 	assert(bcode.labelIndexes == [[0, 0], [3, 6]]);
 	assert(bcode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double, NaInstArgType.String,
 		NaInstArgType.Boolean, NaInstArgType.Char, NaInstArgType.Label]);
