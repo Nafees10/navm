@@ -141,7 +141,14 @@ public struct NaData{
 		this.value!T = value;
 	}
 }
-
+/// 
+unittest{
+	assert(NaData(cast(integer)1025).value!integer == 1025);
+	assert(NaData("hello").value!string == "hello");
+	assert(NaData(cast(double)50.5).value!double == 50.5);
+	assert(NaData('a').value!char == 'a');
+	assert(NaData(true).value!bool == true);
+}
 
 /// Stores bytecode that is almost ready to be used with NaVM.
 public class NaBytecode{
