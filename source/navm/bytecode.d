@@ -294,7 +294,7 @@ public:
 		statement.fromString(statementStr);
 		return this.append(statement);
 	}
-	/// Loads bytecode from `Statement[]`. Discards any existing bytecode
+	/// Loads bytecode. Discards any existing bytecode
 	/// 
 	/// Returns: [] if done without errors. error descriptions if there were errors
 	string[] load(Statement[] statements){
@@ -308,6 +308,39 @@ public:
 		}
 		return errors;
 	}
+	/// ditto
+	string[] load(string[] statementStrings){
+		Statement[] statements;
+		statements.length = statementStrings.length;
+		foreach (i, line; statementStrings)
+			statements[i].fromString(line);
+		return load(statements);
+	}
+}
+/// 
+unittest{
+	string[] source = [
+		"start: inst0 l2",
+		"	inst1 50 50.5"
+		"	inst2 \"hello\" false",
+		"l2: inst3 'c' start"
+	];
+	NaInstTable iTable = new NaInstTable();
+	NaInst inst = NaInst("inst0",[NaInstArgType.Label]);
+	iTable.addInstruction(inst);
+	inst = NaInst("inst1", [NaInstArgType.Integer, NaInstArgType.Double]);
+	iTable.addInstruction(inst);
+	inst = NaInst("inst2", [NaInstArgType.String, NaInstArgType.Boolean]);
+	iTable.addInstruction(inst);
+	inst = NaInst("inst3", [NaInstArgType.Char, NaInstArgType.Label]);
+	iTable.addInstruction(inst);
+	NaBytecode bcode = new NaBytecode(iTable);
+	string[] errors = bcode.load(source);
+	assert(bcode.labelNames = ["start", "l2"]);
+	assert(bcode.labelIndexes == [[0, 0], [3, 6]]);
+	assert(bcode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double, NaInstArgType.String,
+		NaInstArgType.Boolean, NaInstArgType.Char, NaInstArgType.Label]);
+	assert(bcode.verify == true);
 }
 
 /// same as NaBytecode, but also works with binary bytecode (see `spec/binarybytecode.md`)
