@@ -37,6 +37,9 @@ public struct Statement{
 	}
 	/// Reads statement from string
 	void fromString(string statement){
+		label = "";
+		instName = "";
+		arguments.length = 0;
 		string[] separated = statement.separateWhitespace();
 		if (separated.length == 0)
 			return;
@@ -68,6 +71,8 @@ unittest{
 	Statement s;
 	s.fromString("someLabel: someInst arg1 arg2#comment");
 	assert(s == Statement("someLabel", "someInst", ["arg1", "arg2"]));
+	s.fromString("someInst arg1 # comment");
+	assert(s == Statement("someInst", ["arg1"]), s.toString);
 }
 
 /// stores an data about available instruction
