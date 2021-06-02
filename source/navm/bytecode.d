@@ -336,7 +336,7 @@ unittest{
 	inst = NaInst("inst3", [NaInstArgType.Char, NaInstArgType.Label]);
 	iTable.addInstruction(inst);
 	NaBytecode bcode = new NaBytecode(iTable);
-	string[] errors = bcode.load(source);
+	bcode.load(source);
 	assert(bcode.labelNames == ["start", "l2"]);
 	assert(bcode.labelIndexes == [[0, 0], [3, 5]]);
 	assert(bcode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double, NaInstArgType.String,
@@ -362,6 +362,10 @@ public:
 	this(NaInstTable instructionTable, ubyte[] magicNumberPost){
 		super(instructionTable);
 		this.magicNumberPost = magicNumberPost;
+		_bin = new ByteStream();
+	}
+	~this(){
+		.destroy(_bin);
 	}
 	/// postfix for magic number
 	@property ubyte[] magicNumberPost(){
@@ -404,9 +408,9 @@ public:
 		// args
 		_bin.write(_instArgs.length, 8); /// number of args
 		foreach (i, arg; _instArgs){
-			_bin.write(_instArgTypes[i], 1);
-			if (_instArgTypes[i] == NaInstArgType.Boolean)
-				_bin.write(arg.value!bool, 1);
+			_bin.write!ubyte(_instArgTypes[i], 1);
+			if (_instArgTypes[i] == NaInstArgType.Boolean || _instArgTypes[i] == NaInstArgType.Char)
+				_bin.write!ubyte(arg.value!ubyte, 1);
 			else if (_instArgTypes[i] == NaInstArgType.String || _instArgTypes[i] == NaInstArgType.Label)
 				_bin.writeArray(arg.value!string, 8);
 			else // everything else is 8 bytes:
@@ -415,8 +419,8 @@ public:
 		// labels
 		_bin.write(_labelIndexes.length, 8); // number of labels
 		foreach (i, label; _labelIndexes){
-			_bin.write(label[0], 8); // code index
-			_bin.write(label[1], 8); // instruction index
+			_bin.write!uinteger(label[0], 8); // code index
+			_bin.write!uinteger(label[1], 8); // instruction index
 			_bin.writeArray(_labelNames[i], 8); // name
 		}
 	}
@@ -457,7 +461,7 @@ public:
 			_instArgTypes[i] = _bin.read!(NaInstArgType)(incompleteRead,1);
 			if (incompleteRead)
 				return false;
-			if (_instArgTypes[i] == NaInstArgType.Boolean)
+			if (_instArgTypes[i] == NaInstArgType.Boolean ||_instArgTypes[i] == NaInstArgType.Char)
 				_instArgs[i].value!bool = _bin.read!bool(incompleteRead, 1);
 			else if (_instArgTypes[i] == NaInstArgType.String || _instArgTypes[i] == NaInstArgType.Label){
 				_instArgs[i].value!string = cast(string)(_bin.readArray!char(readCount, 8));
@@ -473,10 +477,10 @@ public:
 			return false;
 		_labelNames.length = _labelIndexes.length;
 		foreach (i; 0 .. _labelIndexes.length){
-			_labelIndexes[0] = _bin.read!uinteger(incompleteRead, 8);
+			_labelIndexes[i][0] = _bin.read!uinteger(incompleteRead, 8);
 			if (incompleteRead)
 				return false;
-			_labelIndexes[1] = _bin.read!uinteger(incompleteRead, 8);
+			_labelIndexes[i][1] = _bin.read!uinteger(incompleteRead, 8);
 			if (incompleteRead)
 				return false;
 			_labelNames[i] = cast(string)_bin.readArray!char(readCount, 8);
@@ -485,6 +489,39 @@ public:
 		}
 		return true;
 	}
+}
+/// 
+unittest{
+	NaInstTable iTable = new NaInstTable();
+	NaInst inst = NaInst("inst0",[NaInstArgType.Label]);
+	iTable.addInstruction(inst);
+	inst = NaInst("inst1", [NaInstArgType.Integer, NaInstArgType.Double]);
+	iTable.addInstruction(inst);
+	inst = NaInst("inst2", [NaInstArgType.String, NaInstArgType.Boolean]);
+	iTable.addInstruction(inst);
+	inst = NaInst("inst3", [NaInstArgType.Char, NaInstArgType.Label]);
+	iTable.addInstruction(inst);
+	NaBytecodeBinary binCode = new NaBytecodeBinary(iTable, cast(ubyte[])"test");
+	bool status = true;
+	status = status && binCode.append("start: inst0 someLabel");
+	status = status && binCode.append("inst1 1025 1025.5");
+	status = status && binCode.append("inst2 \"tab:\\tnewline:\\n\" true");
+	status = status && binCode.append("end: inst3 'c' start");
+	assert(status == true); // all those functions returned true
+	
+	binCode.metadata = cast(ubyte[])"METADATA-metadata-0123456789";
+	binCode.writeBinCode();
+	binCode.binCode.toFile("tempcode");
+	binCode.binCode.size = 0;
+	binCode.metadata = [];
+	binCode.binCode.fromFile("tempcode");
+	assert(binCode.readBinCode() == true);
+	assert(binCode.metadata == cast(ubyte[])"METADATA-metadata-0123456789");
+	assert(binCode.instCodes == [1,2,3,4]);
+	assert(binCode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double,
+			NaInstArgType.String, NaInstArgType.Boolean, NaInstArgType.Char, NaInstArgType.Label]);
+	assert(binCode.labelNames == ["start", "end"]);
+	assert(binCode.labelIndexes == [[0,0],[3,5]]);
 }
 
 /// Stores an instruction table
