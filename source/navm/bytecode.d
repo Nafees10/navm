@@ -520,6 +520,13 @@ unittest{
 	assert(binCode.instCodes == [1,2,3,4]);
 	assert(binCode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double,
 			NaInstArgType.String, NaInstArgType.Boolean, NaInstArgType.Char, NaInstArgType.Label]);
+	assert(binCode.instArgs[0].value!string == "somelabel");
+	assert(binCode.instArgs[1].value!integer == 1025);
+	assert(binCode.instArgs[2].value!double == 1025.5);
+	assert(binCode.instArgs[3].value!string == "tab:\tnewline:\n");
+	assert(binCode.instArgs[4].value!bool == true);
+	assert(binCode.instArgs[5].value!char == 'c');
+	assert(binCode.instArgs[6].value!string == "start");
 	assert(binCode.labelNames == ["start", "end"]);
 	assert(binCode.labelIndexes == [[0,0],[3,5]]);
 }
