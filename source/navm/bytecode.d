@@ -342,6 +342,8 @@ unittest{
 	assert(bcode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double, NaInstArgType.String,
 		NaInstArgType.Boolean, NaInstArgType.Char, NaInstArgType.Label]);
 	assert(bcode.verify == true);
+	.destroy(iTable);
+	.destroy(bcode);
 }
 
 /// same as NaBytecode, but also works with binary bytecode (see `spec/binarybytecode.md`)
@@ -529,6 +531,8 @@ unittest{
 	assert(binCode.instArgs[6].value!string == "start");
 	assert(binCode.labelNames == ["start", "end"]);
 	assert(binCode.labelIndexes == [[0,0],[3,5]]);
+	.destroy(binCode);
+	.destroy(iTable);
 }
 
 /// Stores an instruction table

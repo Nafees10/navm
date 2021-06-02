@@ -116,6 +116,7 @@ unittest{
 	s.popArray(iA);
 	assert(iA == [integer.max, integer.max >> 1, 0, 1025]);
 	assert(s.errored == false);
+	.destroy(s);
 }
 
 /// NaVM
