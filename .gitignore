@@ -5,3 +5,4 @@
 dub.selections.json
 lib*.a
 sample
+tempcode
