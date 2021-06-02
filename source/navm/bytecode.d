@@ -229,7 +229,7 @@ public:
 				if (argTypes[typeInd] != inst.arguments[typeInd])
 					return false;
 			}
-			foreach (labInd; 0 .. labels.length){
+			for (uinteger labInd = 0; labInd < labels.length; labInd ++){
 				if (labels[labInd][0] == i){
 					if (labels[labInd][1] != argInd)
 						return false;
@@ -274,6 +274,7 @@ public:
 			}
 			_instCodes ~= cast(ushort)code;
 			_instArgs ~= args;
+			_instArgTypes ~= types;
 		}
 		return true;
 	}
