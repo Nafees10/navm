@@ -337,7 +337,7 @@ unittest{
 	NaBytecode bcode = new NaBytecode(iTable);
 	string[] errors = bcode.load(source);
 	assert(bcode.labelNames == ["start", "l2"]);
-	assert(bcode.labelIndexes == [[0, 0], [3, 6]]);
+	assert(bcode.labelIndexes == [[0, 0], [3, 5]]);
 	assert(bcode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double, NaInstArgType.String,
 		NaInstArgType.Boolean, NaInstArgType.Char, NaInstArgType.Label]);
 	assert(bcode.verify == true);
@@ -507,13 +507,14 @@ public:
 	integer addInstruction(ref NaInst inst, void delegate() ptr = null){
 		if (inst.code == 0){
 			// find code
-			foreach (ushort i; 0 .. ushort.max){
+			foreach (ushort i; 1 .. ushort.max){
 				if (i ! in _instructions){
 					inst.code = i;
 					break;
 				}
 			}
-			return -1;
+			if (inst.code == 0)
+				return -1;
 		}else if (inst.code in _instructions)
 			return -1;
 		// now make sure no other instruction with same name can be called with these args
