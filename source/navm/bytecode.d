@@ -518,6 +518,7 @@ unittest{
 	binCode.metadata = [];
 	binCode.binCode.fromFile("tempcode");
 	assert(binCode.readBinCode() == true);
+	assert(binCode.verify == true);
 	assert(binCode.metadata == cast(ubyte[])"METADATA-metadata-0123456789");
 	assert(binCode.instCodes == [1,2,3,4]);
 	assert(binCode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double,
