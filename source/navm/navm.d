@@ -8,7 +8,7 @@ import utils.misc;
 
 public import navm.bytecode;
 
-/// a stack
+/// Stack, with no fixed data type for elements.
 public class NaStack{
 private:
 	ubyte[] _stack;
@@ -119,9 +119,89 @@ unittest{
 	.destroy(s);
 }
 
-/// NaVM
-public class NaVM{
+/// NaVM abstract class
+public abstract class NaVM{
 protected:
 	void delegate()[] _instructions; /// the instruction pointers
 	ubyte[] _args; /// stores arguments
+	void delegate()* _instPtr; /// pointer to next instruction
+	void delegate()* _instLastPtr; /// pointer to last instruction
+	ubyte* _argPtr; /// pointer to next argument
+	ubyte* _argLastPtr; /// pointer to last argument
+	void delegate()*[] _labelInstPtr; /// instruction pointer for labels
+	ubyte*[] _labelArgsPtr; /// argument pointer for labels
+	string[] _labelNames; /// label names
+
+	NaInstTable _instTable; /// instruction table
+
+	/// Loads bytecode
+	/// 
+	/// set `invalidLabelToString` if you want invalid label arguments to be read as strings
+	/// 
+	/// Returns: array containting errors, or empty array
+	string[] _loadBytecode(NaBytecode code, bool invalidLabelToString){
+		// TODO
+		return [];
+	}
+
+	/// Gets an argument.
+	/// 
+	/// Returns: the argument, or T.init if no more arguments
+	T _getArg(T)(){
+		if (_argPtr + T.sizeof > _argLastPtr)
+			return T.init;
+		T r = *(cast(T*)_argPtr);
+		_argPtr += T.sizeof;
+		return r;
+	}
+	/// Changes value of an argument.
+	/// 
+	/// Returns: true if done, false if argument address is out of bounds
+	bool _setArg(T)(uinteger argAddr, T val){
+		if (argAddr + T.sizeof > _args.length)
+			return false;
+		*cast(T*)(_args.ptr + argAddr) = val;
+		return true;
+	}
+public:
+	/// constructor
+	this(){
+		_instTable = new NaInstTable();
+	}
+	~this(){
+		.destroy(_instTable);
+	}
+	/// instruction table
+	@property NaInstTable instTable(){
+		return _instTable;
+	}
+	/// label names, at corresponding label index
+	@property string[] labelNames(){
+		return _labelNames;
+	}
+	/// loads bytecode
+	/// 
+	/// Overriding:  
+	/// this function must initialize `_instructions`, `_args`, `_argPtr`,
+	/// `_argLastPtr`, `_instPtr`, `_instLastPtr`, `_labelInstPtr`,
+	/// `_labelArgsPtr`, and `_labelNames`.  
+	/// Alternatively, you could use call `_loadBytecode` in this function
+	/// 
+	/// Returns: [] on success, or errors in case of any
+	abstract string[] loadBytecode(NaBytecode code);
+	/// starts execution from a label.
+	void execute(string labelName){
+		integer index = _labelNames.indexOf(labelName);
+		if (index > -1)
+			execute(index);
+	}
+	/// ditto
+	void execute(uinteger labelIndex){
+		if (labelIndex >= _labelArgsPtr.length)
+			return;
+		_argPtr = _labelArgsPtr[labelIndex];
+		_instPtr = _labelInstPtr[labelIndex];
+		while (_instPtr)
+			(*_instPtr)();
+	}
 }
