@@ -8,6 +8,20 @@ import utils.misc;
 
 public import navm.bytecode;
 
+/// TODO: move this to utils package
+package union ByteUnion(T){
+	T data;
+	ubyte[T.sizeof] array;
+	/// constructor
+	this(T data){
+		this.data = data;
+	}
+	/// ditto
+	this(ubyte[T.sizeof] array){
+		this.array = array;
+	}
+}
+
 /// Stack, with no fixed data type for elements.
 public class NaStack{
 private:
@@ -121,11 +135,6 @@ unittest{
 
 /// NaVM abstract class
 public abstract class NaVM{
-private:
-	union ByteUnion(T){
-		T data;
-		ubyte[T.sizeof] array;
-	}
 protected:
 	void delegate()[] _instructions; /// the instruction pointers
 	ubyte[] _args; /// stores arguments
@@ -143,6 +152,8 @@ protected:
 	/// 
 	/// Returns: array containting errors, or empty array
 	string[] _loadBytecode(NaBytecode code, bool invalidLabelToString){
+		if (!code.verify)
+			return ["bytecode.verify returned false"];
 		string[] errors;
 		_instructions = code.instPtrs;
 		foreach (i, inst; _instructions){
@@ -236,7 +247,9 @@ public:
 	~this(){
 		.destroy(_instTable);
 	}
-	/// instruction table
+	/// instruction table.  
+	/// 
+	/// **this will be destroyed when this class is destroyed**
 	@property NaInstTable instTable(){
 		return _instTable;
 	}
