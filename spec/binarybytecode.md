@@ -41,19 +41,10 @@ An 8 byte (64 bit) unsigned integer stores the number of bytes used for storing 
 Each instruction code is a `ushort`, so 2 bytes are used for 1 instruction code.
 
 ## Instruction Arguments
-An 8 byte (64 bit) unsigned integer stores the **number of arguments** (not bytes). This is followed by the arguments.  
+An 8 byte (64 bit) unsigned integer stores the number of arguments. This is followed by the arguments.  
 
-Each argument is stored as:  
-1 byte for NaInstArgType + rest of bytes for argument itself.  
-
-if an argument is fixed length or not is determined by its type:  
-
-* Boolean - fixed length, 1 byte
-* Char - fixed length, 1 byte
-* Integer - fixed length, 8 bytes (even when `ptrdiff_t.sizeof == 4`)
-* Double - fixed length, 8 bytes
-* String - variable length (8 bytes for length, followed by `char[]`)
-* Label - variable length (label name is stored as string)
+Arguments are stored as:  
+1 byte for `NaInstArgType`, then 8 byte unsigned integer for number of bytes in argument, followed by the bytes for argument.
 
 ## Labels
 An 8 byte (64 bit) unsigned integer stores the **number of labels** (not bytes). This is followed by the labels.  
@@ -66,3 +57,5 @@ A label is stored as:
 ---
 
 Any excess bytes at end of last section are ignored
+
+**All data is stored in little endian encoding**
