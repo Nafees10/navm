@@ -5,6 +5,8 @@ import utils.misc;
 
 import std.conv : to;
 
+import navm.navm : ByteUnion;
+
 /// To store a single line of bytecode. This is used for raw bytecode.
 public struct Statement{
 	/// label, if any, otherwise, null or empty string
@@ -98,13 +100,55 @@ public struct NaInst{
 }
 
 /// Types of instruction arguments, for validation
-enum NaInstArgType : ubyte{
-	Boolean, /// boolean
+public enum NaInstArgType : ubyte{
 	Integer, /// singed integer (ptrdiff_t)
-	String, /// a string (char[])
-	Char, /// a 1 byte character
 	Double, /// a double (float)
+	Address, /// Address to some argument
+	String, /// a string (char[])
 	Label, /// a label (name is stored)
+	Char, /// a 1 byte character
+	Boolean, /// boolean
+}
+
+/// For storing argument that is an Address
+public struct NaInstArgAddress{
+	string labelOffset; /// label, if any
+	uinteger address; /// the address itself
+	/// constructor
+	this (string labelOffset, uinteger address = 0){
+		this.labelOffset = labelOffset;
+		this.address = address;
+	}
+	/// ditto
+	this (uinteger address){
+		this.address = address;
+	}
+	/// ditto
+	private this(ubyte[] binaryData){
+		this._binData = binaryData;
+	}
+	/// Returns: this address, when stored as stream of bytes
+	private @property ubyte[] _binData(){
+		ubyte[] r;
+		r.length = labelOffset.length + 8;
+		r[] = 0;
+		ByteUnion!uinteger u = ByteUnion!uinteger(address);
+		assert(u.array.length <= 8);
+		r[0 .. u.array.length] = u.array;
+		r[8 .. $] = cast(ubyte[])labelOffset;
+		return r;
+	}
+	/// ditto
+	private @property ubyte[] _binData(ubyte[] newVal){
+		labelOffset = [];
+		address = 0;
+		assert(newVal.length >= 8);
+		ByteUnion!uinteger u = ByteUnion!uinteger(newVal[0 .. uinteger.sizeof]);
+		address = u.data;
+		if (newVal.length > 8)
+			labelOffset = cast(string)newVal[8 .. $].dup;
+		return newVal;
+	}
 }
 
 /// For storing data of varying data types
@@ -117,6 +161,8 @@ public struct NaData{
 	@property T value(T)(){
 		static if (is (T == string))
 			return cast(string)cast(char[])argData;
+		else static if (is (T == NaInstArgAddress))
+			return NaInstArgAddress(argData);
 		else if (argData.length < T.sizeof)
 			return T.init;
 		else
@@ -127,6 +173,9 @@ public struct NaData{
 		static if (is (T == string)){
 			argData.length = newVal.length;
 			argData = cast(ubyte[])(cast(char[])newVal.dup);
+			return newVal;
+		}else static if (is (T == NaInstArgAddress)){
+			argData = newVal._binData;
 			return newVal;
 		}else if (argData.length >= T.sizeof){
 			argData[0 .. T.sizeof] = (cast(ubyte*)&newVal)[0 .. T.sizeof];
@@ -225,9 +274,23 @@ public:
 			if (_instArgs.length < argInd || _instArgs.length - argInd < inst.arguments.length)
 				return false; // if there arent enough arguments
 			NaInstArgType[] argTypes = _instArgTypes[argInd .. argInd + inst.arguments.length];
+			NaData[] args = _instArgs[argInd .. argInd + inst.arguments.length];
 			foreach (typeInd; 0 .. argTypes.length){
 				if (argTypes[typeInd] != inst.arguments[typeInd])
 					return false;
+				// for address, resolve it into just address, no label
+				if (argTypes[typeInd] == NaInstArgType.Address){
+					NaInstArgAddress addr = args[typeInd].value!NaInstArgAddress;
+					if (addr.labelOffset.length){
+						integer index = _labelNames.indexOf(addr.labelOffset);
+						if (index == -1)
+							return false;
+						addr.address += index;
+						_instArgs[argInd + typeInd].value!NaInstArgAddress = addr;
+					}
+					if (addr.address >= _instArgs.length)
+						return false;
+				}
 			}
 			for (uinteger labInd = 0; labInd < labels.length; labInd ++){
 				if (labels[labInd][0] == i){
@@ -394,7 +457,7 @@ public:
 	@property ByteStream binCode(){
 		return _bin;
 	}
-	/// Prepares binary bytecode
+	/// Prepares binary bytecode. **call .verify() before this**
 	void writeBinCode(){
 		_bin.size = 0;
 		_bin.grow = true;
@@ -411,12 +474,7 @@ public:
 		_bin.write(_instArgs.length, 8); /// number of args
 		foreach (i, arg; _instArgs){
 			_bin.write!ubyte(_instArgTypes[i], 1);
-			if (_instArgTypes[i] == NaInstArgType.Boolean || _instArgTypes[i] == NaInstArgType.Char)
-				_bin.write!ubyte(arg.value!ubyte, 1);
-			else if (_instArgTypes[i] == NaInstArgType.String || _instArgTypes[i] == NaInstArgType.Label)
-				_bin.writeArray(arg.value!string, 8);
-			else // everything else is 8 bytes:
-				_bin.write(arg.value!integer,8);
+			_bin.writeArray(arg.argData, 8);
 		}
 		// labels
 		_bin.write(_labelIndexes.length, 8); // number of labels
@@ -447,7 +505,7 @@ public:
 		_sig.length = MAGIC_BYTES_IGNORE;
 		_bin.readRaw(_sig);
 		// read metadata
-		_metadata = _bin.readArray!ubyte(readCount,8);
+		_metadata = _bin.readArray!ubyte(readCount, 8);
 		if (readCount < _metadata.length)
 			return false;
 		// instruction codes
@@ -461,16 +519,8 @@ public:
 		_instArgTypes.length = _instArgs.length;
 		foreach(i; 0 .. _instArgs.length){
 			_instArgTypes[i] = _bin.read!(NaInstArgType)(incompleteRead,1);
-			if (incompleteRead)
-				return false;
-			if (_instArgTypes[i] == NaInstArgType.Boolean ||_instArgTypes[i] == NaInstArgType.Char)
-				_instArgs[i].value!bool = _bin.read!bool(incompleteRead, 1);
-			else if (_instArgTypes[i] == NaInstArgType.String || _instArgTypes[i] == NaInstArgType.Label){
-				_instArgs[i].value!string = cast(string)(_bin.readArray!char(readCount, 8));
-				incompleteRead = readCount < _instArgs[i].value!string.length;
-			}else // everything else is 8 bytes:
-				_instArgs[i].value!integer = _bin.read!integer(incompleteRead, 8);
-			if (incompleteRead)
+			instArgs[i].argData = _bin.readArray!ubyte(readCount, 8);
+			if (readCount < instArgs[i].argData.length)
 				return false;
 		}
 		// labels
@@ -655,6 +705,17 @@ public NaData readData(string strData, ref NaInstArgType type){
 			r.value!integer = readHexadecimal(strData[2 .. $]);
 		else
 			r.value!integer = readBinary(strData[2 .. $]);
+	}else if (strData[0] == '@'){
+		type = NaInstArgType.Address;
+		if (strData.length == 1)
+			r.value!integer = 0;
+		else if (strData[1 .. $].isNum(false))
+			r.value!integer = strData[1 .. $].to!integer;
+		else{
+			strData = strData[1 .. $];
+			integer commaIndex = strData.indexOf(',');
+
+		}
 	}else if (strData[0] == '\"'){
 		type = NaInstArgType.String;
 		r.value!string = strReplaceSpecial(strData[1 .. $-1]);
@@ -693,6 +754,9 @@ unittest{
 
 	assert("potato".readData(type).value!string == "potato");
 	assert(type == NaInstArgType.Label);
+
+	assert("@1234".readData(type).value!integer == 1234);
+	assert(type == NaInstArgType.Address);
 }
 
 /// Reads a hexadecimal number from string
