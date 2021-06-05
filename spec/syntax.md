@@ -32,16 +32,16 @@ An instruction can have any number of arguments. These can be of following types
 * Integer - signed integer (`ptrdiff_t`)
 * Double - a float
 * Address - an address to an argument, this can be written in a number of ways, see below.
-* Boolean - true (a non zero integer), or false (0)
+* Boolean - true (a non zero ubyte), or false (0)
 * String - a string, enclosed between `"`
 * Label - Name of a Label. This is replaced with the index (integer) of that label stored in `_labels` array in NaVM when bytecode is loaded.
 
 ### Address
-This is translated to the argument index, but can be written in a number of ways.  
+This is translated to the argument index (integer), but can be written in a number of ways.  
 Assuming this code:   
 ```
-start:		add2	50	250
-			store	<ADDRESS>
+start:	add2	50	250
+		store	<ADDRESS>
 ```
 In this case, `<ADDRESS>` can be written as:  
 
