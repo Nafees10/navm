@@ -52,6 +52,8 @@ In this case, `<ADDRESS>` can be written as:
 * `@start,1` to point to `250`
 * `@start,2` to point to itself
 
+**There must be no whitespace before/after the comma or `@` when writing address**
+
 
 ### Strings
 These are written like: `"someString"`.  
