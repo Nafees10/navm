@@ -150,7 +150,7 @@ unittest{
 	assert(NaData(true).value!bool == true);
 }
 
-/// Stores bytecode that is almost ready to be used with NaVM.
+/// Stores bytecode
 public class NaBytecode{
 private:
 	ushort[] _instCodes; /// codes of instructions

@@ -121,15 +121,18 @@ unittest{
 
 /// NaVM abstract class
 public abstract class NaVM{
+private:
+	union ByteUnion(T){
+		T data;
+		ubyte[T.sizeof] array;
+	}
 protected:
 	void delegate()[] _instructions; /// the instruction pointers
 	ubyte[] _args; /// stores arguments
-	void delegate()* _instPtr; /// pointer to next instruction
-	void delegate()* _instLastPtr; /// pointer to last instruction
-	ubyte* _argPtr; /// pointer to next argument
-	ubyte* _argLastPtr; /// pointer to last argument
-	void delegate()*[] _labelInstPtr; /// instruction pointer for labels
-	ubyte*[] _labelArgsPtr; /// argument pointer for labels
+	uinteger _instIndex; /// index of next instruction
+	uinteger _argIndex; /// index next argument
+	uinteger[] _labelInstIndexes; /// instruction indexes for labels
+	uinteger[] _labelArgIndexes; /// argument indexes for labels
 	string[] _labelNames; /// label names
 
 	NaInstTable _instTable; /// instruction table
@@ -140,24 +143,86 @@ protected:
 	/// 
 	/// Returns: array containting errors, or empty array
 	string[] _loadBytecode(NaBytecode code, bool invalidLabelToString){
-		// TODO
-		return [];
+		string[] errors;
+		_instructions = code.instPtrs;
+		foreach (i, inst; _instructions){
+			if (inst is null){
+				try{
+					NaInst instData = _instTable.getInstruction(code.instCodes[i]);
+					errors ~= "invalid pointer for instruction `"~instData.name~'`';
+				}catch (Exception e){
+					.destroy(e);
+					errors ~= "invalid instruction code "~code.instCodes[i].to!string;
+				}
+			}
+		}
+		// now labels
+		_labelNames = code.labelNames;
+		_labelInstIndexes.length = _labelNames.length;
+		_labelArgIndexes.length = _labelNames.length;
+		foreach (i, indexes; code.labelIndexes){
+			_labelInstIndexes[i] = indexes[0];
+			_labelArgIndexes[i] = indexes[1];
+		}
+		// append arguments to _args
+		foreach (i, ref arg; code.instArgs){
+			NaInstArgType type = code.instArgTypes[i];
+			if (type == NaInstArgType.Label){
+				immutable integer index = _labelNames.indexOf(arg.value!string);
+				if (index == -1){
+					if (!invalidLabelToString){
+						errors ~= "label `"~arg.value!string~"` is invalid";
+						continue;
+					}
+					type = NaInstArgType.String;
+				}else{
+					// change it to label index
+					arg.value!integer = index;
+				}
+			}
+			if (type == NaInstArgType.String){
+				ByteUnion!integer sizeStore;
+				string str = arg.value!string;
+				sizeStore.data = str.length;
+				_args ~= sizeStore.array ~ cast(ubyte[])str;
+			}else if (type == NaInstArgType.Boolean || type == NaInstArgType.Char){
+				_args ~= arg.value!ubyte;
+			}else if (type == NaInstArgType.Double){
+				ByteUnion!double valStore;
+				valStore.data = arg.value!double;
+				_args ~= valStore.array;
+			}else if (type == NaInstArgType.Integer){
+				ByteUnion!integer valStore;
+				valStore.data = arg.value!integer;
+				_args ~= valStore.array;
+			}
+		}
+		return errors;
 	}
 
-	/// Gets an argument.
+	/// Gets an argument. **Do not use this when argument is array (string)**
 	/// 
 	/// Returns: the argument, or T.init if no more arguments
-	T _getArg(T)(){
-		if (_argPtr + T.sizeof > _argLastPtr)
+	T _readArg(T)(){
+		if (_argIndex + T.sizeof > _argIndex)
 			return T.init;
-		T r = *(cast(T*)_argPtr);
-		_argPtr += T.sizeof;
-		return r;
+		ByteUnion!T u;
+		u.array = _args[_argIndex .. _argIndex + T.sizeof];
+		_argIndex += T.sizeof;
+		return u.data;
 	}
-	/// Changes value of an argument.
+	/// Reads an array from arguments. Will try to read enough bytes to fill `array`
+	void _readArgArray(T)(T[] array){
+		uinteger lenBytes = T.sizeof * array.length;
+		if (lenBytes + _argIndex > _args.length)
+			lenBytes = _args.length - _argIndex;
+		*(cast(ubyte*)array.ptr)[0 .. lenBytes] = _args[_argIndex .. _argIndex + lenBytes];
+		_argIndex += lenBytes;
+	}
+	/// Changes value of an argument. **Do not use this when argument is array (string)**
 	/// 
 	/// Returns: true if done, false if argument address is out of bounds
-	bool _setArg(T)(uinteger argAddr, T val){
+	bool _writeArg(T)(uinteger argAddr, T val){
 		if (argAddr + T.sizeof > _args.length)
 			return false;
 		*cast(T*)(_args.ptr + argAddr) = val;
@@ -182,14 +247,13 @@ public:
 	/// loads bytecode
 	/// 
 	/// Overriding:  
-	/// this function must initialize `_instructions`, `_args`, `_argPtr`,
-	/// `_argLastPtr`, `_instPtr`, `_instLastPtr`, `_labelInstPtr`,
-	/// `_labelArgsPtr`, and `_labelNames`.  
+	/// this function must initialize `_instructions`, `_args`, `_argIndex`,
+	/// `_instIndex`, `_labelInstIndexes`, `_labelArgsIndexes`, and `_labelNames`.  
 	/// Alternatively, you could use call `_loadBytecode` in this function
 	/// 
 	/// Returns: [] on success, or errors in case of any
 	abstract string[] loadBytecode(NaBytecode code);
-	/// starts execution from a label.
+	/// starts execution from a label. Will do nothing if label invalid or doesnt exist
 	void execute(string labelName){
 		integer index = _labelNames.indexOf(labelName);
 		if (index > -1)
@@ -197,11 +261,11 @@ public:
 	}
 	/// ditto
 	void execute(uinteger labelIndex){
-		if (labelIndex >= _labelArgsPtr.length)
+		if (labelIndex >= _labelInstIndexes.length)
 			return;
-		_argPtr = _labelArgsPtr[labelIndex];
-		_instPtr = _labelInstPtr[labelIndex];
-		while (_instPtr)
-			(*_instPtr)();
+		_argIndex = _labelArgIndexes[labelIndex];
+		_instIndex = _labelInstIndexes[labelIndex];
+		while (_instIndex < _instructions.length)
+			_instructions[_instIndex]();
 	}
 }
