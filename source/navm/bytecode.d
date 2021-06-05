@@ -133,7 +133,7 @@ public struct NaInstArgAddress{
 		r.length = labelOffset.length + 8;
 		r[] = 0;
 		ByteUnion!uinteger u = ByteUnion!uinteger(address);
-		assert(u.array.length <= 8);
+		debug{assert (u.array.length <= 8);}
 		r[0 .. u.array.length] = u.array;
 		r[8 .. $] = cast(ubyte[])labelOffset;
 		return r;
@@ -142,8 +142,8 @@ public struct NaInstArgAddress{
 	private @property ubyte[] _binData(ubyte[] newVal){
 		labelOffset = [];
 		address = 0;
-		assert(newVal.length >= 8);
-		ByteUnion!uinteger u = ByteUnion!uinteger(newVal[0 .. uinteger.sizeof]);
+		debug{assert (newVal.length >= 8);}
+		immutable ByteUnion!uinteger u = ByteUnion!uinteger(newVal[0 .. uinteger.sizeof]);
 		address = u.data;
 		if (newVal.length > 8)
 			labelOffset = cast(string)newVal[8 .. $].dup;
@@ -282,7 +282,7 @@ public:
 				if (argTypes[typeInd] == NaInstArgType.Address){
 					NaInstArgAddress addr = args[typeInd].value!NaInstArgAddress;
 					if (addr.labelOffset.length){
-						integer index = _labelNames.indexOf(addr.labelOffset);
+						immutable integer index = _labelNames.indexOf(addr.labelOffset);
 						if (index == -1)
 							return false;
 						addr.address += index;
@@ -708,13 +708,26 @@ public NaData readData(string strData, ref NaInstArgType type){
 	}else if (strData[0] == '@'){
 		type = NaInstArgType.Address;
 		if (strData.length == 1)
-			r.value!integer = 0;
+			r.value!NaInstArgAddress = NaInstArgAddress(0);
 		else if (strData[1 .. $].isNum(false))
-			r.value!integer = strData[1 .. $].to!integer;
+			r.value!NaInstArgAddress = NaInstArgAddress(strData[1 .. $].to!integer);
 		else{
 			strData = strData[1 .. $];
 			integer commaIndex = strData.indexOf(',');
-
+			NaInstArgAddress addr;
+			if (commaIndex == -1 && !strData.isNum(false)){
+				addr.labelOffset = strData;
+			}else{
+				addr.labelOffset = strData[0 .. commaIndex].lowercase;
+				if (commaIndex + 1 < strData.length){
+					strData = strData[commaIndex + 1 .. $];
+					if (strData.isNum(false))
+						addr.address = strData.to!integer;
+					else
+						throw new Exception("invalid address");
+				}
+			}
+			r.value!NaInstArgAddress = addr;
 		}
 	}else if (strData[0] == '\"'){
 		type = NaInstArgType.String;
@@ -755,7 +768,13 @@ unittest{
 	assert("potato".readData(type).value!string == "potato");
 	assert(type == NaInstArgType.Label);
 
-	assert("@1234".readData(type).value!integer == 1234);
+	assert("@1234".readData(type).value!NaInstArgAddress == NaInstArgAddress(1234));
+	assert(type == NaInstArgType.Address);
+	assert("@1234,12".readData(type).value!NaInstArgAddress == NaInstArgAddress("1234",12));
+	assert(type == NaInstArgType.Address);
+	assert("@label".readData(type).value!NaInstArgAddress == NaInstArgAddress("label"));
+	assert(type == NaInstArgType.Address);
+	assert("@label,1234".readData(type).value!NaInstArgAddress == NaInstArgAddress("label",1234));
 	assert(type == NaInstArgType.Address);
 }
 
