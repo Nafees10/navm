@@ -27,9 +27,11 @@ These are followed by 2 bytes, which are used to identify version information.
 
 ### Version Identifying Bytes
 
-|	Bytes (Hexadecimal)	|	First NaVM Version	|
+| Version number, ushort|	First NaVM Version	|
 | --------------------- | --------------------- |
-| 		`00  01`		| 		v1.2			|
+| 		`0x0001`		| 		v1.2			|
+
+Since all integers are stored in little endian, `0x0001` will be stored as: `01  00`  
 
 Byte combinations not present in table above are reserved for future versions.
 
