@@ -562,6 +562,7 @@ unittest{
 	assert(status == true); // all those functions returned true
 	
 	binCode.metadata = cast(ubyte[])"METADATA-metadata-0123456789";
+	binCode.verify();
 	binCode.writeBinCode();
 	binCode.binCode.toFile("tempcode");
 	binCode.binCode.size = 0;
