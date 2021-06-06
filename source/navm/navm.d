@@ -148,12 +148,12 @@ protected:
 
 	/// Loads bytecode
 	/// 
-	/// set `invalidLabelToString` if you want invalid label arguments to be read as strings
-	/// 
 	/// Returns: array containting errors, or empty array
-	string[] _loadBytecode(NaBytecode code, bool invalidLabelToString){
+	string[] _loadBytecode(NaBytecode code){
 		if (!code.verify)
 			return ["bytecode.verify returned false"];
+		_instIndex = 0;
+		_argIndex = 0;
 		string[] errors;
 		_instructions = code.instPtrs;
 		foreach (i, inst; _instructions){
@@ -177,20 +177,7 @@ protected:
 		}
 		// append arguments to _args
 		foreach (i, ref arg; code.instArgs){
-			NaInstArgType type = code.instArgTypes[i];
-			if (type == NaInstArgType.Label){
-				immutable integer index = _labelNames.indexOf(arg.value!string);
-				if (index == -1){
-					if (!invalidLabelToString){
-						errors ~= "label `"~arg.value!string~"` is invalid";
-						continue;
-					}
-					type = NaInstArgType.String;
-				}else{
-					// change it to label index
-					arg.value!integer = index;
-				}
-			}
+			immutable NaInstArgType type = code.instArgTypes[i];
 			if (type == NaInstArgType.String){
 				ByteUnion!integer sizeStore;
 				string str = arg.value!string;
@@ -202,7 +189,8 @@ protected:
 				ByteUnion!double valStore;
 				valStore.data = arg.value!double;
 				_args ~= valStore.array;
-			}else if (type == NaInstArgType.Integer){
+			}else if (type == NaInstArgType.Integer || type == NaInstArgType.Label ||
+				type == NaInstArgType.Address){
 				ByteUnion!integer valStore;
 				valStore.data = arg.value!integer;
 				_args ~= valStore.array;
@@ -215,11 +203,19 @@ protected:
 	/// 
 	/// Returns: the argument, or T.init if no more arguments
 	T _readArg(T)(){
-		if (_argIndex + T.sizeof > _argIndex)
+		if (_argIndex + T.sizeof > _args.length)
 			return T.init;
 		ByteUnion!T u;
 		u.array = _args[_argIndex .. _argIndex + T.sizeof];
 		_argIndex += T.sizeof;
+		return u.data;
+	}
+	/// ditto
+	T _readArg(T)(uinteger argAddr){
+		if (argAddr + T.sizeof > _args.length)
+			return T.init;
+		ByteUnion!T u;
+		u.array = _args[argAddr .. argAddr + T.sizeof];
 		return u.data;
 	}
 	/// Reads an array from arguments. Will try to read enough bytes to fill `array`
@@ -279,6 +275,6 @@ public:
 		_argIndex = _labelArgIndexes[labelIndex];
 		_instIndex = _labelInstIndexes[labelIndex];
 		while (_instIndex < _instructions.length)
-			_instructions[_instIndex]();
+			_instructions[_instIndex++]();
 	}
 }

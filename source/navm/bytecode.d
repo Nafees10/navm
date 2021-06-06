@@ -75,6 +75,8 @@ unittest{
 	assert(s == Statement("someLabel", "someInst", ["arg1", "arg2"]));
 	s.fromString("someInst arg1 # comment");
 	assert(s == Statement("someInst", ["arg1"]), s.toString);
+	s.fromString("load 0");
+	assert(s == Statement("load", ["0"]));
 }
 
 /// stores an data about available instruction
@@ -208,6 +210,66 @@ private:
 	uinteger[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
 	string[] _labelNames; /// label names
 	NaInstTable _instTable; /// the instruction table
+protected:
+	/// Returns: size in bytes of argument at an index
+	uinteger argSize(uinteger argIndex){
+		if (argIndex > _instArgs.length)
+			return 0;
+		if (_instArgTypes[argIndex] == NaInstArgType.Address || _instArgTypes[argIndex] == NaInstArgType.Integer || 
+			_instArgTypes[argIndex] == NaInstArgType.Label)
+			return integer.sizeof;
+		else if (_instArgTypes[argIndex] == NaInstArgType.Boolean || _instArgTypes[argIndex] == NaInstArgType.Char)
+			return 1;
+		else if (_instArgTypes[argIndex] == NaInstArgType.Double)
+			return double.sizeof;
+		else if (_instArgTypes[argIndex] == NaInstArgType.String)
+			return  _instArgs[argIndex].value!string.length;
+		return 0;
+	}
+	/// Changes labels to label indexes, and resolves addresses, in arguments
+	/// 
+	/// called by this.verify
+	/// 
+	/// Returns: false if there are invalid labels or addresses
+	bool resolveArgs(){
+		foreach (i; 0 .. _instArgs.length){
+			// addresses: for now, change it to argument index.
+			if (_instArgTypes[i] == NaInstArgType.Address){
+				NaInstArgAddress addr = _instArgs[i].value!NaInstArgAddress;
+				if (addr.labelOffset.length){
+					immutable integer index = _labelNames.indexOf(addr.labelOffset);
+					if (index == -1)
+						return false;
+					addr.address += _labelIndexes[index][1]; // TODO
+					_instArgs[i].value!NaInstArgAddress = addr;
+				}
+				if (addr.address >= _instArgs.length)
+					return false;
+			}else if (_instArgTypes[i] == NaInstArgType.Label){
+				// change label to label index
+				immutable integer index = _labelNames.indexOf(_instArgs[i].value!string);
+				if (index == -1)
+					return false;
+				_instArgs[i].value!integer = index;
+			}
+		}
+		// now change addresses from indexes to addresses
+		for(uinteger i, labelIndex, size; i < _instArgs.length; i ++){
+			if (_instArgTypes[i] == NaInstArgType.Address){
+			uinteger addressVal = 0;
+				foreach (argIndex; 0 .. _instArgs[i].value!integer)
+					addressVal += argSize(argIndex);
+				_instArgs[i].value!integer = addressVal;
+			}
+			// if a label has this arg, change that too
+			if (labelIndex < _labelIndexes.length && _labelIndexes[labelIndex][1] == i){
+				_labelIndexes[labelIndex][1] = size;
+				labelIndex ++;
+			}
+			size += argSize(i);
+		}
+		return true;
+	}
 public:
 	/// constructor
 	this(NaInstTable instructionTable){
@@ -261,7 +323,7 @@ public:
 	bool verify(){
 		if (_labelNames.length != _labelIndexes.length || _instArgTypes.length != _instArgs.length)
 			return false;
-		uinteger argInd;
+		uinteger argsInd;
 		uinteger[2][] labels = _labelIndexes.dup; // remove elements from this when they are determined valid. if length>0 at end, remaining invalid
 		foreach (i; 0 .. _instCodes.length){
 			NaInst inst;
@@ -271,38 +333,25 @@ public:
 				.destroy(e);
 				return false;
 			}
-			if (_instArgs.length < argInd || _instArgs.length - argInd < inst.arguments.length)
+			if (_instArgs.length < argsInd || _instArgs.length - argsInd < inst.arguments.length)
 				return false; // if there arent enough arguments
-			NaInstArgType[] argTypes = _instArgTypes[argInd .. argInd + inst.arguments.length];
-			NaData[] args = _instArgs[argInd .. argInd + inst.arguments.length];
-			foreach (typeInd; 0 .. argTypes.length){
-				if (argTypes[typeInd] != inst.arguments[typeInd])
+			foreach (argInd; argsInd .. argsInd + inst.arguments.length){
+				if (_instArgTypes[argInd] != inst.arguments[argInd - argsInd])
 					return false;
-				// for address, resolve it into just address, no label
-				if (argTypes[typeInd] == NaInstArgType.Address){
-					NaInstArgAddress addr = args[typeInd].value!NaInstArgAddress;
-					if (addr.labelOffset.length){
-						immutable integer index = _labelNames.indexOf(addr.labelOffset);
-						if (index == -1)
-							return false;
-						addr.address += index;
-						_instArgs[argInd + typeInd].value!NaInstArgAddress = addr;
-					}
-					if (addr.address >= _instArgs.length)
-						return false;
-				}
 			}
 			for (uinteger labInd = 0; labInd < labels.length; labInd ++){
 				if (labels[labInd][0] == i){
-					if (labels[labInd][1] != argInd)
+					if (labels[labInd][1] != argsInd)
 						return false;
 					labels[labInd] = labels[$-1];
 					labels.length --;
 				}
 			}
-			argInd += inst.arguments.length;
+			argsInd += inst.arguments.length;
 		}
-		return labels.length == 0;
+		if (labels.length)
+			return false;
+		return resolveArgs();
 	}
 	/// Adds a statement at end of existing bytecode
 	/// 
@@ -642,13 +691,17 @@ public:
 	/// 
 	/// Returns: the instruction code for an instruction that can be called, or -1 if doesnt exist
 	integer getInstruction(string name, NaInstArgType[] arguments){
-		foreach (inst; _instructions){
+		foreach (j, inst; _instructions){
 			if (inst.name == name && inst.arguments.length == arguments.length){
+				bool argsMatch = true;
 				foreach (i; 0 .. arguments.length){
-					if ((inst.arguments[i] & arguments[i]) != inst.arguments[i])
-						return -1;
+					if (inst.arguments[i] != arguments[i]){
+						argsMatch = false;
+						break;
+					}
 				}
-				return inst.code;
+				if (argsMatch)
+					return inst.code;
 			}
 		}
 		return -1;
@@ -869,7 +922,7 @@ private string[] separateWhitespace(char[] whitespace=[' ','\t'], char comment='
 			i --; // back to whitespace, i++ in for(..;..;) exists
 			continue;
 		}
-		if (i+1 == line.length && readFrom < i){
+		if (i+1 == line.length && readFrom <= i){
 			r ~= line[readFrom .. $].dup;
 		}
 	}
