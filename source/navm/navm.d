@@ -220,11 +220,11 @@ protected:
 		immutable uinteger lenBytes = T.sizeof * array.length;
 		immutable uinteger altLenBytes = _args.length - _argIndex;
 		if (lenBytes > altLenBytes){
-			*(cast(ubyte*)array.ptr)[0 .. altLenBytes] = _args[_argIndex .. $];
+			(cast(ubyte*)array.ptr)[0 .. altLenBytes] = _args[_argIndex .. $];
 			_argIndex = _args.length;
 			return;
 		}
-		*(cast(ubyte*)array.ptr)[0 .. lenBytes] = _args[_argIndex .. _argIndex + lenBytes];
+		(cast(ubyte*)array.ptr)[0 .. lenBytes] = _args[_argIndex .. _argIndex + lenBytes];
 		_argIndex += lenBytes;
 	}
 	/// Changes value of an argument. **Do not use this when argument is array (string)**
