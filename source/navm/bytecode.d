@@ -51,9 +51,12 @@ public struct Statement{
 			if (separated.length == 0)
 				return;
 		}
-		this.instName = separated[0];
-		if (separated.length > 1)
-			this.arguments = separated[1 .. $];
+		if (separated[0].isAlphabet){
+			this.instName = separated[0];
+			separated = separated[1 .. $];
+		}
+		if (separated.length)
+			this.arguments = separated;
 	}
 	/// Returns: string representation of this statement
 	string toString(){
@@ -210,6 +213,7 @@ private:
 	uinteger[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
 	string[] _labelNames; /// label names
 	NaInstTable _instTable; /// the instruction table
+	bool _lastWasArgOnly; /// if last statement appended was args without instName
 protected:
 	/// Returns: size in bytes of argument at an index
 	uinteger argSize(uinteger argIndex){
@@ -223,7 +227,7 @@ protected:
 		else if (_instArgTypes[argIndex] == NaInstArgType.Double)
 			return double.sizeof;
 		else if (_instArgTypes[argIndex] == NaInstArgType.String)
-			return  _instArgs[argIndex].value!string.length;
+			return  _instArgs[argIndex].value!string.length + integer.sizeof;
 		return 0;
 	}
 	/// Changes labels to label indexes, and resolves addresses, in arguments
@@ -274,6 +278,7 @@ public:
 	/// constructor
 	this(NaInstTable instructionTable){
 		this._instTable = instructionTable;
+		_lastWasArgOnly = false;
 	}
 	~this(){}
 	/// Returns: instruction codes
@@ -316,42 +321,52 @@ public:
 		_instArgs.length = 0;
 		_labelIndexes.length = 0;
 		_labelNames.length = 0;
+		_lastWasArgOnly = false;
 	}
 	/// Verifies a loaded bytecode, to make sure only valid instructions exist, and correct number of arguments and types are loaded
 	/// 
 	/// Returns: true if verified without errors, false if there were errors.
-	bool verify(){
-		if (_labelNames.length != _labelIndexes.length || _instArgTypes.length != _instArgs.length)
+	bool verify(string error){
+		if (_labelNames.length != _labelIndexes.length || _instArgTypes.length != _instArgs.length){
+			error = "labelNames and labelIndexes, and/or argumentTypes and arguments length mismatch";
 			return false;
+		}
 		uinteger argsInd;
-		uinteger[2][] labels = _labelIndexes.dup; // remove elements from this when they are determined valid. if length>0 at end, remaining invalid
 		foreach (i; 0 .. _instCodes.length){
 			NaInst inst;
 			try
 				inst = _instTable.getInstruction(_instCodes[i]);
 			catch (Exception e){
 				.destroy(e);
+				error = "instruction with code "~_instCodes[i].to!string~" does not exist";
 				return false;
 			}
-			if (_instArgs.length < argsInd || _instArgs.length - argsInd < inst.arguments.length)
-				return false; // if there arent enough arguments
-			foreach (argInd; argsInd .. argsInd + inst.arguments.length){
-				if (_instArgTypes[argInd] != inst.arguments[argInd - argsInd])
-					return false;
+			if (_instArgs.length < argsInd || _instArgs.length - argsInd < inst.arguments.length){
+				error = "not enough arguments for instruction `"~inst.name~"` with code "~inst.code.to!string;
+				return false;
 			}
-			for (uinteger labInd = 0; labInd < labels.length; labInd ++){
-				if (labels[labInd][0] == i){
-					if (labels[labInd][1] != argsInd)
+			foreach (argInd; argsInd .. argsInd + inst.arguments.length){
+				if (_instArgTypes[argInd] != inst.arguments[argInd - argsInd]){
+					error = "invalid argument types for instruction `"~inst.name~"` with code "~inst.code.to!string;
+					return false;
+				}
+			}
+			for (uinteger labInd = 0; labInd < _labelIndexes.length; labInd ++){
+				if (_labelIndexes[labInd][0] == i){
+					if (_labelIndexes[labInd][1] != argsInd){
+						error = "label `"~_labelNames[labInd]~"` points to invalid argument address";
 						return false;
-					labels[labInd] = labels[$-1];
-					labels.length --;
+					}
 				}
 			}
 			argsInd += inst.arguments.length;
 		}
-		if (labels.length)
-			return false;
 		return resolveArgs();
+	}
+	/// ditto
+	bool verify(){
+		string dummyError;
+		return verify(dummyError);
 	}
 	/// Adds a statement at end of existing bytecode
 	/// 
@@ -365,29 +380,37 @@ public:
 			_labelIndexes ~= [_instCodes.length, _instArgs.length];
 			_labelNames ~= statement.label.lowercase;
 		}
-		if (statement.instName.length){
-			NaData[] args;
-			NaInstArgType[] types;
-			args.length = statement.arguments.length;
-			types.length = args.length;
-			foreach (index, arg; statement.arguments){
-				try{
-					args[index] = readData(arg, types[index]);
-				}catch (Exception e){
-					error ~= "argument `"~arg~"`: "~e.msg;
-					.destroy(e);
-					return false;
-				}
+		if (statement.instName.length + statement.arguments.length == 0)
+			return true;
+		if (statement.instName.length && _lastWasArgOnly){
+			error = "cannot add instruction after data section";
+			return false;
+		}
+		if (!statement.instName.length)
+			_lastWasArgOnly = true;
+		NaData[] args;
+		NaInstArgType[] types;
+		args.length = statement.arguments.length;
+		types.length = args.length;
+		foreach (index, arg; statement.arguments){
+			try{
+				args[index] = readData(arg, types[index]);
+			}catch (Exception e){
+				error ~= "argument `"~arg~"`: "~e.msg;
+				.destroy(e);
+				return false;
 			}
+		}
+		if (statement.instName.length){
 			immutable integer code = _instTable.getInstruction(statement.instName.lowercase, types);
 			if (code == -1){
 				error = "instruction does not exist or invalid arguments";
 				return false;
 			}
 			_instCodes ~= cast(ushort)code;
-			_instArgs ~= args;
-			_instArgTypes ~= types;
 		}
+		_instArgs ~= args;
+		_instArgTypes ~= types;
 		return true;
 	}
 	/// ditto
