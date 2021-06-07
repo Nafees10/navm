@@ -5,8 +5,6 @@ A barebones VM, intended to be used for scripting applications.
 
 ## Getting Started
 These instructions will build the demo configuration of NaVM.  
-  
-Remember that NaVM is not built to be a standalone application, the demo is just a demo.  
 
 See the documents in `spec/` to know about NaVM syntax and more.  
 And `source/app.d` for demo usage.
@@ -15,7 +13,8 @@ And `source/app.d` for demo usage.
 You need to have these present on your machine to build NaVM:
 
 1. dub
-2. dlang compiler (I've only tested with `dmd`)
+2. dlang compiler (tested with `dmd` and `gdc`)
+3. `utils` package (dub will fetch it)
 
 ### Building
 Run:
@@ -27,7 +26,7 @@ Following this, you will have the demo NaVM binary (named `demo`) with very basi
 
 You can now run NaVM bytecode using:  
 ```bash
-~/.dub/packages/navm-*/navm/demo path/to/bytecodefile
+./demo path/to/bytecodefile
 ```
 
 ---
