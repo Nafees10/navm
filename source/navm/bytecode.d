@@ -261,8 +261,8 @@ protected:
 					addressVal += argSize(argIndex);
 				_instArgs[i].value!integer = addressVal;
 			}
-			// if a label has this arg, change that too
-			if (labelIndex < _labelIndexes.length && _labelIndexes[labelIndex][1] == i){
+			// if a label has this arg, change that too, this works assuming labels are in sorted order
+			while (labelIndex < _labelIndexes.length && _labelIndexes[labelIndex][1] == i){
 				_labelIndexes[labelIndex][1] = size;
 				labelIndex ++;
 			}
