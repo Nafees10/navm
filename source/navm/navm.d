@@ -108,7 +108,9 @@ unittest{
 	s.push!ubyte(255);
 	s.push!byte(127);
 	byte b;
+	b = 0;
 	ubyte ub;
+	ub = 0;
 	integer[] iA = [0];
 	assert(s.errored == false);
 	s.pop(b);
