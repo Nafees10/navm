@@ -37,6 +37,13 @@ version(demo){
 		void printC(){
 			write(_readArg!char());
 		}
+		/// print 	string
+		void printS(){
+			char[] str;
+			str.length = _readArg!integer();
+			_readArgArray(str);
+			write(str);
+		}
 		/// add		address
 		void add(){
 			_reg += _readArg!integer(_readArg!integer());
@@ -83,6 +90,7 @@ version(demo){
 				NaInst("load", [NaInstArgType.Address]),
 				NaInst("print"),
 				NaInst("print", [NaInstArgType.Char]),
+				NaInst("print", [NaInstArgType.String]),
 				NaInst("add", [NaInstArgType.Address]),
 				NaInst("add", [NaInstArgType.Integer]),
 				NaInst("compare", [NaInstArgType.Address]),
@@ -94,7 +102,7 @@ version(demo){
 			void delegate()[] ptrs = [
 				&store,
 				&loadVal,&load,
-				&print,&printC,
+				&print,&printC,&printS,
 				&add,&addVal,
 				&compare,&compareVal,
 				&not,
