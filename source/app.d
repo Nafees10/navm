@@ -134,27 +134,20 @@ version(demo){
 				writeln("label `start` not found");
 				return;
 			}
-			uinteger[] times;
-			times.length = count;
-			uinteger min,max,avg;
-			min = uinteger.max;
+			uinteger min = uinteger.max ,max = 0 ,avg = 0;
 			foreach (i; 0 .. count){
 				sw.start;
-				// start execution at instruction at first the label with name `start`
 				vm.execute(startIndex);
 				sw.stop;
-				times[i] = sw.peek.total!"msecs";
-				sw.reset;
-				writeln("Execution finished in: ",times[i], " msecs");
-				min = times[i] < min ? times[i] : min;
-				max = times[i] > max ? times[i] : max;
-				avg += times[i];
+				immutable uinteger currentTime = sw.peek.total!"msecs" - avg;
+				min = currentTime < min ? currentTime : min;
+				max = currentTime > max ? currentTime : max;
+				avg = sw.peek.total!"msecs";
 			}
-			avg = avg / count;
-			if (count > 1){
-				writeln("min\tmax\tavg");
-				writeln(min,'\t',max,'\t',avg);
-			}
+			avg = sw.peek.total!"msecs" / count;
+			writeln("executed `",args[1],"` ",count," times:");
+			writeln("min\tmax\tavg\ttotal");
+			writeln(min,'\t',max,'\t',avg,'\t',sw.peek.total!"msecs");
 		}
 	}
 }
