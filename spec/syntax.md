@@ -9,6 +9,8 @@ They are **not** case sensitive, and are written like:
 	instructionName     argument   argument 
 ```
 
+instructionName can only contain alphabets (lowercase and uppercase).
+
 ## Labels
 These are used to specify from where execution can start from, or jump to.  
 They are also not case sensitive. And are written like:
