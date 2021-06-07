@@ -205,24 +205,25 @@ protected:
 	T _readArg(T)(){
 		if (_argIndex + T.sizeof > _args.length)
 			return T.init;
-		ByteUnion!T u;
-		u.array = _args[_argIndex .. _argIndex + T.sizeof];
+		T r = *(cast(T*)(_args.ptr + _argIndex));
 		_argIndex += T.sizeof;
-		return u.data;
+		return r;
 	}
 	/// ditto
 	T _readArg(T)(uinteger argAddr){
 		if (argAddr + T.sizeof > _args.length)
 			return T.init;
-		ByteUnion!T u;
-		u.array = _args[argAddr .. argAddr + T.sizeof];
-		return u.data;
+		return *(cast(T*)(_args.ptr + argAddr));
 	}
 	/// Reads an array from arguments. Will try to read enough bytes to fill `array`
 	void _readArgArray(T)(T[] array){
-		uinteger lenBytes = T.sizeof * array.length;
-		if (lenBytes + _argIndex > _args.length)
-			lenBytes = _args.length - _argIndex;
+		immutable uinteger lenBytes = T.sizeof * array.length;
+		immutable uinteger altLenBytes = _args.length - _argIndex;
+		if (lenBytes > altLenBytes){
+			*(cast(ubyte*)array.ptr)[0 .. altLenBytes] = _args[_argIndex .. $];
+			_argIndex = _args.length;
+			return;
+		}
 		*(cast(ubyte*)array.ptr)[0 .. lenBytes] = _args[_argIndex .. _argIndex + lenBytes];
 		_argIndex += lenBytes;
 	}
