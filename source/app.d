@@ -113,12 +113,6 @@ version(demo){
 					throw new Exception("error adding instruction `"~inst.name~"`");
 			}
 		}
-		/// loads bytecode
-		/// 
-		/// Returns: list of errors, if any
-		override string[] loadBytecode(NaBytecode code){
-			return this._loadBytecode(code);
-		}
 	}
 
 	void main(string[] args){
