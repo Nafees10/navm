@@ -23,6 +23,8 @@ package union ByteUnion(T){
 }
 
 /// Stack, with no fixed data type for elements.
+/// 
+/// Right now its not used anywhere, but it migth be useful.
 public class NaStack{
 private:
 	ubyte[] _stack;
@@ -202,20 +204,13 @@ protected:
 	}
 
 	/// Gets an argument. **Do not use this when argument is array (string)**
-	/// 
-	/// Returns: the argument, or T.init if no more arguments
-	T _readArg(T)(){
-		if (_argIndex + T.sizeof > _args.length)
-			return T.init;
-		T r = *(cast(T*)(_args.ptr + _argIndex));
+	void _readArg(T)(ref T arg){
+		arg = *(cast(T*)(_args.ptr + _argIndex*(_argIndex + T.sizeof <= _args.length)));
 		_argIndex += T.sizeof;
-		return r;
 	}
 	/// ditto
-	T _readArg(T)(uinteger argAddr){
-		if (argAddr + T.sizeof > _args.length)
-			return T.init;
-		return *(cast(T*)(_args.ptr + argAddr));
+	void _readArg(T)(uinteger argAddr, ref T arg){
+		arg = *(cast(T*)(_args.ptr + _argIndex*(_argIndex + T.sizeof <= _args.length)));
 	}
 	/// Reads an array from arguments. Will try to read enough bytes to fill `array`
 	void _readArgArray(T)(T[] array){
