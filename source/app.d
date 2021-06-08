@@ -19,18 +19,15 @@ version(demo){
 
 		/// store	address
 		void store(){
-			integer addr;
-			_readArg(addr);
-			_writeArg(addr, _reg);
+			_writeArg(_readArg!integer(), _reg);
 		}
 		/// load	address
 		void load(){
-			_readArg(_reg);
-			_readArg(_reg, _reg);
+			_reg = _readArg!integer(_readArg!integer());
 		}
 		/// load	integer
 		void loadVal(){
-			_readArg(_reg);
+			_reg = _readArg!integer();
 		}
 		/// print
 		void print(){
@@ -38,44 +35,30 @@ version(demo){
 		}
 		/// print	char
 		void printC(){
-			char chr;
-			_readArg(chr);
-			write(chr);
+			write(_readArg!char());
 		}
 		/// print 	string
 		void printS(){
 			char[] str;
-			integer len;
-			_readArg(len);
-			str.length = len;
+			str.length = _readArg!integer();
 			_readArgArray(str);
 			write(str);
 		}
 		/// add		address
 		void add(){
-			integer i;
-			_readArg(i);
-			_readArg(i,i);
-			_reg += i;
+			_reg += _readArg!integer(_readArg!integer());
 		}
 		/// add		integer
 		void addVal(){
-			integer i;
-			_readArg(i);
-			_reg += i;
+			_reg += _readArg!integer();
 		}
 		/// compare	address
 		void compare(){
-			integer i;
-			_readArg(i);
-			_readArg(i,i);
-			_regCmp = i == _reg;
+			_regCmp = _readArg!integer(_readArg!integer()) == _reg;
 		}
 		/// compare	integer
 		void compareVal(){
-			integer i;
-			_readArg(i);
-			_regCmp = i == _reg;
+			_regCmp = _readArg!integer() == _reg;
 		}
 		/// not
 		void not(){
@@ -83,8 +66,7 @@ version(demo){
 		}
 		/// jump	integer
 		void jump(){
-			uinteger labelIndex;
-			_readArg(labelIndex);
+			immutable uinteger labelIndex = _readArg!integer();
 			if (labelIndex < _labelNames.length){
 				_instIndex = _labelInstIndexes[labelIndex];
 				_argIndex = _labelArgIndexes[labelIndex];
@@ -92,8 +74,7 @@ version(demo){
 		}
 		/// jumpIf	integer
 		void jumpIf(){
-			uinteger labelIndex;
-			_readArg(labelIndex);
+			immutable uinteger labelIndex = _readArg!integer();
 			if (_regCmp && labelIndex < _labelNames.length){
 				_instIndex = _labelInstIndexes[labelIndex];
 				_argIndex = _labelArgIndexes[labelIndex];
