@@ -19,7 +19,7 @@
 			"versions": ["demo"]
 		}
 	],
-	"description": "A simple VM intended to be used in scripting languages",
+	"description": "A barebones VM for use in scripting languages",
 	"license": "MIT",
 	"name": "navm"
 }
