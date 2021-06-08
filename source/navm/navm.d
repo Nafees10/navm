@@ -8,8 +8,10 @@ import utils.misc;
 
 public import navm.bytecode;
 
+/// Used to read some data type as `ubyte[x]`
+///
 /// TODO: move this to utils package
-package union ByteUnion(T){
+private union ByteUnion(T){
 	T data;
 	ubyte[T.sizeof] array;
 	/// constructor
@@ -150,59 +152,6 @@ protected:
 
 	NaInstTable _instTable; /// instruction table
 
-	/// Loads bytecode
-	/// 
-	/// Returns: array containting errors, or empty array
-	string[] _loadBytecode(NaBytecode code){
-		if (!code.verify)
-			return ["bytecode.verify returned false"];
-		_instIndex = 0;
-		_argIndex = 0;
-		string[] errors;
-		_instructions = code.instPtrs;
-		foreach (i, inst; _instructions){
-			if (inst is null){
-				try{
-					NaInst instData = _instTable.getInstruction(code.instCodes[i]);
-					errors ~= "invalid pointer for instruction `"~instData.name~'`';
-				}catch (Exception e){
-					.destroy(e);
-					errors ~= "invalid instruction code "~code.instCodes[i].to!string;
-				}
-			}
-		}
-		// now labels
-		_labelNames = code.labelNames;
-		_labelInstIndexes.length = _labelNames.length;
-		_labelArgIndexes.length = _labelNames.length;
-		foreach (i, indexes; code.labelIndexes){
-			_labelInstIndexes[i] = indexes[0];
-			_labelArgIndexes[i] = indexes[1];
-		}
-		// append arguments to _args
-		foreach (i, ref arg; code.instArgs){
-			immutable NaInstArgType type = code.instArgTypes[i];
-			if (type == NaInstArgType.String){
-				ByteUnion!integer sizeStore;
-				string str = arg.value!string;
-				sizeStore.data = str.length;
-				_args ~= sizeStore.array ~ cast(ubyte[])str;
-			}else if (type == NaInstArgType.Boolean || type == NaInstArgType.Char){
-				_args ~= arg.value!ubyte;
-			}else if (type == NaInstArgType.Double){
-				ByteUnion!double valStore;
-				valStore.data = arg.value!double;
-				_args ~= valStore.array;
-			}else if (type == NaInstArgType.Integer || type == NaInstArgType.Label ||
-				type == NaInstArgType.Address){
-				ByteUnion!integer valStore;
-				valStore.data = arg.value!integer;
-				_args ~= valStore.array;
-			}
-		}
-		return errors;
-	}
-
 	/// Gets an argument. **Do not use this when argument is array (string)**
 	T _readArg(T)(){
 		immutable T r = *(cast(T*)(_args.ptr + _argIndex*(_argIndex + T.sizeof <= _args.length)));
@@ -257,10 +206,57 @@ public:
 	/// Overriding:  
 	/// this function must initialize `_instructions`, `_args`, `_argIndex`,
 	/// `_instIndex`, `_labelInstIndexes`, `_labelArgsIndexes`, and `_labelNames`.  
-	/// Alternatively, you could use call `_loadBytecode` in this function
 	/// 
 	/// Returns: [] on success, or errors in case of any
-	abstract string[] loadBytecode(NaBytecode code);
+	string[] loadBytecode(NaBytecode code){
+		if (!code.verify)
+			return ["bytecode.verify returned false"];
+		_instIndex = 0;
+		_argIndex = 0;
+		string[] errors;
+		_instructions = code.instPtrs;
+		foreach (i, inst; _instructions){
+			if (inst is null){
+				try{
+					NaInst instData = _instTable.getInstruction(code.instCodes[i]);
+					errors ~= "invalid pointer for instruction `"~instData.name~'`';
+				}catch (Exception e){
+					.destroy(e);
+					errors ~= "invalid instruction code "~code.instCodes[i].to!string;
+				}
+			}
+		}
+		// now labels
+		_labelNames = code.labelNames;
+		_labelInstIndexes.length = _labelNames.length;
+		_labelArgIndexes.length = _labelNames.length;
+		foreach (i, indexes; code.labelIndexes){
+			_labelInstIndexes[i] = indexes[0];
+			_labelArgIndexes[i] = indexes[1];
+		}
+		// append arguments to _args
+		foreach (i, ref arg; code.instArgs){
+			immutable NaInstArgType type = code.instArgTypes[i];
+			if (type == NaInstArgType.String){
+				ByteUnion!integer sizeStore;
+				string str = arg.value!string;
+				sizeStore.data = str.length;
+				_args ~= sizeStore.array ~ cast(ubyte[])str;
+			}else if (type == NaInstArgType.Boolean || type == NaInstArgType.Char){
+				_args ~= arg.value!ubyte;
+			}else if (type == NaInstArgType.Double){
+				ByteUnion!double valStore;
+				valStore.data = arg.value!double;
+				_args ~= valStore.array;
+			}else if (type == NaInstArgType.Integer || type == NaInstArgType.Label ||
+				type == NaInstArgType.Address){
+				ByteUnion!integer valStore;
+				valStore.data = arg.value!integer;
+				_args ~= valStore.array;
+			}
+		}
+		return errors;
+	}
 	/// starts execution from a label. Will do nothing if label invalid or doesnt exist
 	void execute(string labelName){
 		integer index = _labelNames.indexOf(labelName);
