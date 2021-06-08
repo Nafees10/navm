@@ -1,52 +1,128 @@
 version(demo){
 	import std.stdio;
-	import navm.navm;
-
-	import utils.misc;
 	import std.datetime.stopwatch;
 	import std.conv : to;
 
-	/// inherited VM with instruction added that we need
-	class VM : NaVM{
-	protected:
-		void writeInt(){
-			write(_stack.pop.intVal);
+	import utils.misc;
+
+	import navm.navm; // for the NaVM class
+	import navm.bytecode; // for reading bytecode
+
+	/// a VM
+	class DemoVM : NaVM{
+	private:
+		/// general register
+		integer _reg;
+		/// register for compare result
+		bool _regCmp;
+		// instructions
+
+		/// store	address
+		void store(){
+			_writeArg(_readArg!integer(), _reg);
 		}
-		void writeDouble(){
-			write(_stack.pop.doubleVal);
+		/// load	address
+		void load(){
+			_reg = _readArg!integer(_readArg!integer());
 		}
-		void writeStr(){
-			write(_stack.pop.strVal);
+		/// load	integer
+		void loadVal(){
+			_reg = _readArg!integer();
 		}
-		void writeChar(){
-			write(_stack.pop.dcharVal);
+		/// print
+		void print(){
+			write(_reg);
 		}
-		void printDebug(){
-			writeln("DEBUG INFO:");
-			writeln("\t_stack.count:\t\t",_stack.count);
-			writeln("\t_stackIndex:\t\t", _stackIndex);
-			writeln("\t_jumpStack.count:\t", _jumpStack.count);
+		/// print	char
+		void printC(){
+			write(_readArg!char());
+		}
+		/// print 	string
+		void printS(){
+			char[] str;
+			str.length = _readArg!integer();
+			_readArgArray(str);
+			write(str);
+		}
+		/// add		address
+		void add(){
+			_reg += _readArg!integer(_readArg!integer());
+		}
+		/// add		integer
+		void addVal(){
+			_reg += _readArg!integer();
+		}
+		/// compare	address
+		void compare(){
+			_regCmp = _readArg!integer(_readArg!integer()) == _reg;
+		}
+		/// compare	integer
+		void compareVal(){
+			_regCmp = _readArg!integer() == _reg;
+		}
+		/// not
+		void not(){
+			_regCmp = !_regCmp;
+		}
+		/// jump	integer
+		void jump(){
+			immutable uinteger labelIndex = _readArg!integer();
+			if (labelIndex < _labelNames.length){
+				_instIndex = _labelInstIndexes[labelIndex];
+				_argIndex = _labelArgIndexes[labelIndex];
+			}
+		}
+		/// jumpIf	integer
+		void jumpIf(){
+			immutable uinteger labelIndex = _readArg!integer();
+			if (_regCmp && labelIndex < _labelNames.length){
+				_instIndex = _labelInstIndexes[labelIndex];
+				_argIndex = _labelArgIndexes[labelIndex];
+			}
 		}
 	public:
 		/// constructor
 		this(){
-			super();
-			addInstruction(NaInstruction("writeInt",0xF0,1,0,&writeInt));
-			addInstruction(NaInstruction("writeDouble",0xF1,1,0,&writeDouble));
-			addInstruction(NaInstruction("writeStr",0xF2,1,0,&writeStr));
-			addInstruction(NaInstruction("writeChar",0xF3,1,0,&writeChar));
-			addInstruction(NaInstruction("printDebug",0xF4,&printDebug));
+			super(); // this is a must, or create _instTable here manually
+			NaInst[] instList = [
+				NaInst("store", [NaInstArgType.Address]),
+				NaInst("load", [NaInstArgType.Integer]),
+				NaInst("load", [NaInstArgType.Address]),
+				NaInst("print"),
+				NaInst("print", [NaInstArgType.Char]),
+				NaInst("print", [NaInstArgType.String]),
+				NaInst("add", [NaInstArgType.Address]),
+				NaInst("add", [NaInstArgType.Integer]),
+				NaInst("compare", [NaInstArgType.Address]),
+				NaInst("compare", [NaInstArgType.Integer]),
+				NaInst("not"),
+				NaInst("jump", [NaInstArgType.Label]),
+				NaInst("jumpif",[NaInstArgType.Label]),
+			];
+			void delegate()[] ptrs = [
+				&store,
+				&loadVal,&load,
+				&print,&printC,&printS,
+				&add,&addVal,
+				&compare,&compareVal,
+				&not,
+				&jump,&jumpIf,
+			];
+			foreach (i, ref inst; instList){
+				if (_instTable.addInstruction(inst, ptrs[i]) == -1)
+					throw new Exception("error adding instruction `"~inst.name~"`");
+			}
 		}
 	}
-
 
 	void main(string[] args){
 		if (args.length < 2)
 			args = [args[0], "sample"];
-
-		NaVM vm = new VM();
-		// load the bytecode
-		string[] errors = vm.load(fileToArray(args[1]));
+		DemoVM vm = new DemoVM();
+		NaBytecode code = new NaBytecode(vm.instTable);
+		string[] errors = code.load(fileToArray(args[1]));
+		if (!errors.length)
+			errors = vm.loadBytecode(code);
 		if (errors.length){
 			writeln("Errors in byte code:");
 			foreach (err; errors)
@@ -54,27 +130,26 @@ version(demo){
 		}else{
 			immutable uinteger count = args.length > 2 && args[2].isNum ? args[2].to!uinteger : 1;
 			StopWatch sw;
-			uinteger[] times;
-			times.length = count;
-			uinteger min,max,avg;
-			min = uinteger.max;
+			sw = StopWatch(AutoStart.no);
+			immutable integer startIndex = vm.labelNames.indexOf("start");
+			if (startIndex == -1){
+				writeln("label `start` not found");
+				return;
+			}
+			uinteger min = uinteger.max ,max = 0 ,avg = 0;
 			foreach (i; 0 .. count){
 				sw.start;
-				vm.execute(0); // start execution at instruction at index=0
+				vm.execute(startIndex);
 				sw.stop;
-				times[i] = sw.peek.total!"msecs";
-				sw.reset;
-				writeln("Execution finished in: ",times[i], " msecs");
-				min = times[i] < min ? times[i] : min;
-				max = times[i] > max ? times[i] : max;
-				avg += times[i];
-				vm.clearStack();
+				immutable uinteger currentTime = sw.peek.total!"msecs" - avg;
+				min = currentTime < min ? currentTime : min;
+				max = currentTime > max ? currentTime : max;
+				avg = sw.peek.total!"msecs";
 			}
-			avg = avg / count;
-			if (count > 1){
-				writeln("min\tmax\tavg");
-				writeln(min,'\t',max,'\t',avg);
-			}
+			avg = sw.peek.total!"msecs" / count;
+			writeln("executed `",args[1],"` ",count," times:");
+			writeln("min\tmax\tavg\ttotal");
+			writeln(min,'\t',max,'\t',avg,'\t',sw.peek.total!"msecs");
 		}
 	}
 }
