@@ -204,13 +204,14 @@ protected:
 	}
 
 	/// Gets an argument. **Do not use this when argument is array (string)**
-	void _readArg(T)(ref T arg){
-		arg = *(cast(T*)(_args.ptr + _argIndex*(_argIndex + T.sizeof <= _args.length)));
+	T _readArg(T)(){
+		immutable T r = *(cast(T*)(_args.ptr + _argIndex*(_argIndex + T.sizeof <= _args.length)));
 		_argIndex += T.sizeof;
+		return r;
 	}
 	/// ditto
-	void _readArg(T)(uinteger argAddr, ref T arg){
-		arg = *(cast(T*)(_args.ptr + _argIndex*(_argIndex + T.sizeof <= _args.length)));
+	T _readArg(T)(uinteger argAddr){
+		return *(cast(T*)(_args.ptr + argAddr*(argAddr + T.sizeof <= _args.length)));
 	}
 	/// Reads an array from arguments. Will try to read enough bytes to fill `array`
 	void _readArgArray(T)(T[] array){
