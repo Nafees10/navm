@@ -36,10 +36,10 @@ Since all integers are stored in little endian, `0x0001` will be stored as: `01 
 Byte combinations not present in table above are reserved for future versions.
 
 ## Metadata
-An 8 byte (64 bit) unsigned integer used to store number of bytes. Then that number of bytes follows it, storing the metadata.
+An 8 byte (64 bit) unsigned integer used to store number of bytes in metadata, followed by the metadata.
 
 ## Instruction Codes
-An 8 byte (64 bit) unsigned integer stores the number of bytes used for storing instruction codes.  
+An 8 byte (64 bit) unsigned integer stores the _number of bytes_ used for storing instruction codes.  
 Each instruction code is a `ushort`, so 2 bytes are used for 1 instruction code.
 
 ## Instruction Arguments
@@ -49,7 +49,7 @@ Arguments are stored as:
 1 byte for `NaInstArgType`, then 8 byte unsigned integer for number of bytes in argument, followed by the bytes for argument.
 
 ## Labels
-An 8 byte (64 bit) unsigned integer stores the **number of labels** (not bytes). This is followed by the labels.  
+An 8 byte (64 bit) unsigned integer stores the number of labels. This is followed by the labels.  
 A label is stored as:  
 
 1. CodeIndex - fixed length, 8 bytes
