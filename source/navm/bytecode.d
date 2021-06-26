@@ -5,8 +5,6 @@ import utils.misc;
 
 import std.conv : to;
 
-import navm.navm : ByteUnion;
-
 /// To store a single line of bytecode. This is used for raw bytecode.
 public struct Statement{
 	/// label, if any, otherwise, null or empty string
@@ -323,7 +321,8 @@ public:
 		_labelNames.length = 0;
 		_lastWasArgOnly = false;
 	}
-	/// Verifies a loaded bytecode, to make sure only valid instructions exist, and correct number of arguments and types are loaded
+	/// Verifies a loaded bytecode, to make sure only valid instructions exist, and correct number of arguments and types are loaded  
+	/// No more statements should be added after this has been called
 	/// 
 	/// Returns: true if verified without errors, false if there were errors.
 	bool verify(string error){
@@ -349,14 +348,6 @@ public:
 				if (_instArgTypes[argInd] != inst.arguments[argInd - argsInd]){
 					error = "invalid argument types for instruction `"~inst.name~"` with code "~inst.code.to!string;
 					return false;
-				}
-			}
-			for (uinteger labInd = 0; labInd < _labelIndexes.length; labInd ++){
-				if (_labelIndexes[labInd][0] == i){
-					if (_labelIndexes[labInd][1] != argsInd){
-						error = "label `"~_labelNames[labInd]~"` points to invalid argument address";
-						return false;
-					}
 				}
 			}
 			argsInd += inst.arguments.length;
@@ -386,7 +377,7 @@ public:
 			error = "cannot add instruction after data section";
 			return false;
 		}
-		if (!statement.instName.length)
+		if (!statement.instName.length && statement.arguments.length)
 			_lastWasArgOnly = true;
 		NaData[] args;
 		NaInstArgType[] types;
@@ -456,19 +447,19 @@ public:
 /// 
 unittest{
 	string[] source = [
-		"start: inst0 l2",
-		"	inst1 50 50.5",
-		"	inst2 \"hello\" false",
-		"l2: inst3 'c' start"
+		"start: instA l2",
+		"	instB 50 50.5",
+		"	instC \"hello\" false",
+		"l2: instd 'c' start"
 	];
 	NaInstTable iTable = new NaInstTable();
-	NaInst inst = NaInst("inst0",[NaInstArgType.Label]);
+	NaInst inst = NaInst("insta",[NaInstArgType.Label]);
 	iTable.addInstruction(inst);
-	inst = NaInst("inst1", [NaInstArgType.Integer, NaInstArgType.Double]);
+	inst = NaInst("instb", [NaInstArgType.Integer, NaInstArgType.Double]);
 	iTable.addInstruction(inst);
-	inst = NaInst("inst2", [NaInstArgType.String, NaInstArgType.Boolean]);
+	inst = NaInst("instc", [NaInstArgType.String, NaInstArgType.Boolean]);
 	iTable.addInstruction(inst);
-	inst = NaInst("inst3", [NaInstArgType.Char, NaInstArgType.Label]);
+	inst = NaInst("instd", [NaInstArgType.Char, NaInstArgType.Label]);
 	iTable.addInstruction(inst);
 	NaBytecode bcode = new NaBytecode(iTable);
 	bcode.load(source);
@@ -617,44 +608,42 @@ public:
 /// 
 unittest{
 	NaInstTable iTable = new NaInstTable();
-	NaInst inst = NaInst("inst0",[NaInstArgType.Label]);
+	NaInst inst = NaInst("insta",[NaInstArgType.Label]);
 	iTable.addInstruction(inst);
-	inst = NaInst("inst1", [NaInstArgType.Integer, NaInstArgType.Double]);
+	inst = NaInst("instb", [NaInstArgType.Integer, NaInstArgType.Double]);
 	iTable.addInstruction(inst);
-	inst = NaInst("inst2", [NaInstArgType.String, NaInstArgType.Boolean]);
+	inst = NaInst("instc", [NaInstArgType.String, NaInstArgType.Boolean]);
 	iTable.addInstruction(inst);
-	inst = NaInst("inst3", [NaInstArgType.Char, NaInstArgType.Label]);
+	inst = NaInst("instd", [NaInstArgType.Char, NaInstArgType.Label]);
 	iTable.addInstruction(inst);
 	NaBytecodeBinary binCode = new NaBytecodeBinary(iTable, cast(ubyte[])"test");
 	bool status = true;
-	status = status && binCode.append("start: inst0 someLabel");
-	status = status && binCode.append("inst1 1025 1025.5");
-	status = status && binCode.append("inst2 \"tab:\\tnewline:\\n\" true");
-	status = status && binCode.append("end: inst3 'c' start");
+	status = status && binCode.append("start: instA end");
+	status = status && binCode.append("instB 1025 1025.5");
+	status = status && binCode.append("instc \"tab:\\tnewline:\\n\" true");
+	status = status && binCode.append("end: instD 'c' start");
 	assert(status == true); // all those functions returned true
 	
 	binCode.metadata = cast(ubyte[])"METADATA-metadata-0123456789";
-	binCode.verify();
+	assert(binCode.verify());
 	binCode.writeBinCode();
 	binCode.binCode.toFile("tempcode");
 	binCode.binCode.size = 0;
 	binCode.metadata = [];
 	binCode.binCode.fromFile("tempcode");
 	assert(binCode.readBinCode() == true);
-	assert(binCode.verify == true);
 	assert(binCode.metadata == cast(ubyte[])"METADATA-metadata-0123456789");
 	assert(binCode.instCodes == [1,2,3,4]);
 	assert(binCode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double,
 			NaInstArgType.String, NaInstArgType.Boolean, NaInstArgType.Char, NaInstArgType.Label]);
-	assert(binCode.instArgs[0].value!string == "somelabel");
+	assert(binCode.instArgs[0].value!integer == binCode.labelNames.indexOf("end"));
 	assert(binCode.instArgs[1].value!integer == 1025);
 	assert(binCode.instArgs[2].value!double == 1025.5);
 	assert(binCode.instArgs[3].value!string == "tab:\tnewline:\n");
 	assert(binCode.instArgs[4].value!bool == true);
 	assert(binCode.instArgs[5].value!char == 'c');
-	assert(binCode.instArgs[6].value!string == "start");
+	assert(binCode.instArgs[6].value!integer == binCode.labelNames.indexOf("start"));
 	assert(binCode.labelNames == ["start", "end"]);
-	assert(binCode.labelIndexes == [[0,0],[3,5]]);
 	.destroy(binCode);
 	.destroy(iTable);
 }

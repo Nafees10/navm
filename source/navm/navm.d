@@ -8,22 +8,6 @@ import utils.misc;
 
 public import navm.bytecode;
 
-/// Used to read some data type as `ubyte[x]`
-///
-/// TODO: move this to utils package
-private union ByteUnion(T){
-	T data;
-	ubyte[T.sizeof] array;
-	/// constructor
-	this(T data){
-		this.data = data;
-	}
-	/// ditto
-	this(ubyte[T.sizeof] array){
-		this.array = array;
-	}
-}
-
 /// Stack, with no fixed data type for elements.
 /// 
 /// Right now its not used anywhere, but it migth be useful.
