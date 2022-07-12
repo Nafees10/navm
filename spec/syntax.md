@@ -1,12 +1,12 @@
 # NaVM syntax
 
-_Note that you don't need to use this syntax to execute byte code using NaVM. You can programmatically construct programs_ 
+_Note that you don't need to use this syntax to write NaVM progrms. You can programmatically construct programs_ 
 
 ## Instructions
 Instructions are executed from top to bottom.
 They are **not** case sensitive, and are written like:  
 ```
-	instructionName     argument   argument 
+instructionName     argument   argument
 ```
 
 instructionName can only contain alphabets (lowercase and uppercase).
