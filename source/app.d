@@ -12,22 +12,22 @@ version(demo){
 	class DemoVM : NaVM{
 	private:
 		/// general register
-		integer _reg;
+		ptrdiff_t _reg;
 		/// register for compare result
 		bool _regCmp;
 		// instructions
 
 		/// store	address
 		void store(){
-			_writeArg(_readArg!integer(), _reg);
+			_writeArg(_readArg!ptrdiff_t(), _reg);
 		}
 		/// load	address
 		void load(){
-			_reg = _readArg!integer(_readArg!integer());
+			_reg = _readArg!ptrdiff_t(_readArg!ptrdiff_t());
 		}
-		/// load	integer
+		/// load	ptrdiff_t
 		void loadVal(){
-			_reg = _readArg!integer();
+			_reg = _readArg!ptrdiff_t();
 		}
 		/// print
 		void print(){
@@ -40,41 +40,41 @@ version(demo){
 		/// print 	string
 		void printS(){
 			char[] str;
-			str.length = _readArg!integer();
+			str.length = _readArg!ptrdiff_t();
 			_readArgArray(str);
 			write(str);
 		}
 		/// add		address
 		void add(){
-			_reg += _readArg!integer(_readArg!integer());
+			_reg += _readArg!ptrdiff_t(_readArg!ptrdiff_t());
 		}
-		/// add		integer
+		/// add		ptrdiff_t
 		void addVal(){
-			_reg += _readArg!integer();
+			_reg += _readArg!ptrdiff_t();
 		}
 		/// compare	address
 		void compare(){
-			_regCmp = _readArg!integer(_readArg!integer()) == _reg;
+			_regCmp = _readArg!ptrdiff_t(_readArg!ptrdiff_t()) == _reg;
 		}
-		/// compare	integer
+		/// compare	ptrdiff_t
 		void compareVal(){
-			_regCmp = _readArg!integer() == _reg;
+			_regCmp = _readArg!ptrdiff_t() == _reg;
 		}
 		/// not
 		void not(){
 			_regCmp = !_regCmp;
 		}
-		/// jump	integer
+		/// jump	ptrdiff_t
 		void jump(){
-			immutable uinteger labelIndex = _readArg!integer();
+			immutable size_t labelIndex = _readArg!ptrdiff_t();
 			if (labelIndex < _labelNames.length){
 				_instIndex = _labelInstIndexes[labelIndex];
 				_argIndex = _labelArgIndexes[labelIndex];
 			}
 		}
-		/// jumpIf	integer
+		/// jumpIf	ptrdiff_t
 		void jumpIf(){
-			immutable uinteger labelIndex = _readArg!integer();
+			immutable size_t labelIndex = _readArg!ptrdiff_t();
 			if (_regCmp && labelIndex < _labelNames.length){
 				_instIndex = _labelInstIndexes[labelIndex];
 				_argIndex = _labelArgIndexes[labelIndex];
@@ -128,20 +128,20 @@ version(demo){
 			foreach (err; errors)
 				writeln(err);
 		}else{
-			immutable uinteger count = args.length > 2 && args[2].isNum ? args[2].to!uinteger : 1;
+			immutable size_t count = args.length > 2 && args[2].isNum ? args[2].to!size_t : 1;
 			StopWatch sw;
 			sw = StopWatch(AutoStart.no);
-			immutable integer startIndex = vm.labelNames.indexOf("start");
+			immutable ptrdiff_t startIndex = vm.labelNames.indexOf("start");
 			if (startIndex == -1){
 				writeln("label `start` not found");
 				return;
 			}
-			uinteger min = uinteger.max ,max = 0 ,avg = 0;
+			size_t min = size_t.max ,max = 0 ,avg = 0;
 			foreach (i; 0 .. count){
 				sw.start;
 				vm.execute(startIndex);
 				sw.stop;
-				immutable uinteger currentTime = sw.peek.total!"msecs" - avg;
+				immutable size_t currentTime = sw.peek.total!"msecs" - avg;
 				min = currentTime < min ? currentTime : min;
 				max = currentTime > max ? currentTime : max;
 				avg = sw.peek.total!"msecs";

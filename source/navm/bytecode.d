@@ -4,6 +4,7 @@ import utils.ds;
 import utils.misc;
 
 import std.conv : to;
+import std.algorithm : canFind;
 
 /// To store a single line of bytecode. This is used for raw bytecode.
 public struct Statement{
@@ -89,7 +90,7 @@ public struct NaInst{
 	/// what type of arguments are expected
 	NaInstArgType[] arguments;
 	/// constructor
-	this (string name, uinteger code, NaInstArgType[] arguments = []){
+	this (string name, size_t code, NaInstArgType[] arguments = []){
 		this.name = name;
 		this.code = cast(ushort)code;
 		this.arguments = arguments.dup;
@@ -104,7 +105,7 @@ public struct NaInst{
 
 /// Types of instruction arguments, for validation
 public enum NaInstArgType : ubyte{
-	Integer, /// singed integer (ptrdiff_t)
+	Integer, /// singed ptrdiff_t (ptrdiff_t)
 	Double, /// a double (float)
 	Address, /// Address to some argument
 	String, /// a string (char[])
@@ -116,14 +117,14 @@ public enum NaInstArgType : ubyte{
 /// For storing argument that is an Address
 public struct NaInstArgAddress{
 	string labelOffset; /// label, if any
-	uinteger address; /// the address itself
+	size_t address; /// the address itself
 	/// constructor
-	this (string labelOffset, uinteger address = 0){
+	this (string labelOffset, size_t address = 0){
 		this.labelOffset = labelOffset;
 		this.address = address;
 	}
 	/// ditto
-	this (uinteger address){
+	this (size_t address){
 		this.address = address;
 	}
 	/// ditto
@@ -135,7 +136,7 @@ public struct NaInstArgAddress{
 		ubyte[] r;
 		r.length = labelOffset.length + 8;
 		r[] = 0;
-		ByteUnion!uinteger u = ByteUnion!uinteger(address);
+		ByteUnion!size_t u = ByteUnion!size_t(address);
 		debug{assert (u.array.length <= 8);}
 		r[0 .. u.array.length] = u.array;
 		r[8 .. $] = cast(ubyte[])labelOffset;
@@ -146,7 +147,7 @@ public struct NaInstArgAddress{
 		labelOffset = [];
 		address = 0;
 		debug{assert (newVal.length >= 8);}
-		immutable ByteUnion!uinteger u = ByteUnion!uinteger(newVal[0 .. uinteger.sizeof]);
+		immutable ByteUnion!size_t u = ByteUnion!size_t(newVal[0 .. size_t.sizeof]);
 		address = u.data;
 		if (newVal.length > 8)
 			labelOffset = cast(string)newVal[8 .. $].dup;
@@ -195,7 +196,7 @@ public struct NaData{
 }
 /// 
 unittest{
-	assert(NaData(cast(integer)1025).value!integer == 1025);
+	assert(NaData(cast(ptrdiff_t)1025).value!ptrdiff_t == 1025);
 	assert(NaData("hello").value!string == "hello");
 	assert(NaData(cast(double)50.5).value!double == 50.5);
 	assert(NaData('a').value!char == 'a');
@@ -208,24 +209,24 @@ private:
 	ushort[] _instCodes; /// codes of instructions
 	NaData[] _instArgs; /// instruction arguments
 	NaInstArgType[] _instArgTypes; /// instruction argument types
-	uinteger[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
+	size_t[2][] _labelIndexes; /// [codeIndex, argIndex] for each label index
 	string[] _labelNames; /// label names
 	NaInstTable _instTable; /// the instruction table
 	bool _lastWasArgOnly; /// if last statement appended was args without instName
 protected:
 	/// Returns: size in bytes of argument at an index
-	uinteger argSize(uinteger argIndex){
+	size_t argSize(size_t argIndex){
 		if (argIndex > _instArgs.length)
 			return 0;
 		if (_instArgTypes[argIndex] == NaInstArgType.Address || _instArgTypes[argIndex] == NaInstArgType.Integer || 
 			_instArgTypes[argIndex] == NaInstArgType.Label)
-			return integer.sizeof;
+			return ptrdiff_t.sizeof;
 		else if (_instArgTypes[argIndex] == NaInstArgType.Boolean || _instArgTypes[argIndex] == NaInstArgType.Char)
 			return 1;
 		else if (_instArgTypes[argIndex] == NaInstArgType.Double)
 			return double.sizeof;
 		else if (_instArgTypes[argIndex] == NaInstArgType.String)
-			return  _instArgs[argIndex].value!string.length + integer.sizeof;
+			return  _instArgs[argIndex].value!string.length + ptrdiff_t.sizeof;
 		return 0;
 	}
 	/// Changes labels to label indexes, and resolves addresses, in arguments
@@ -239,7 +240,7 @@ protected:
 			if (_instArgTypes[i] == NaInstArgType.Address){
 				NaInstArgAddress addr = _instArgs[i].value!NaInstArgAddress;
 				if (addr.labelOffset.length){
-					immutable integer index = _labelNames.indexOf(addr.labelOffset);
+					immutable ptrdiff_t index = _labelNames.indexOf(addr.labelOffset);
 					if (index == -1)
 						return false;
 					addr.address += _labelIndexes[index][1]; // TODO
@@ -249,19 +250,19 @@ protected:
 					return false;
 			}else if (_instArgTypes[i] == NaInstArgType.Label){
 				// change label to label index
-				immutable integer index = _labelNames.indexOf(_instArgs[i].value!string);
+				immutable ptrdiff_t index = _labelNames.indexOf(_instArgs[i].value!string);
 				if (index == -1)
 					return false;
-				_instArgs[i].value!integer = index;
+				_instArgs[i].value!ptrdiff_t = index;
 			}
 		}
 		// now change addresses from indexes to addresses
-		for(uinteger i, labelIndex, size; i < _instArgs.length; i ++){
+		for(size_t i, labelIndex, size; i < _instArgs.length; i ++){
 			if (_instArgTypes[i] == NaInstArgType.Address){
-			uinteger addressVal = 0;
-				foreach (argIndex; 0 .. _instArgs[i].value!integer)
+			size_t addressVal = 0;
+				foreach (argIndex; 0 .. _instArgs[i].value!ptrdiff_t)
 					addressVal += argSize(argIndex);
-				_instArgs[i].value!integer = addressVal;
+				_instArgs[i].value!ptrdiff_t = addressVal;
 			}
 			// if a label has this arg, change that too, this works assuming labels are in sorted order
 			while (labelIndex < _labelIndexes.length && _labelIndexes[labelIndex][1] == i){
@@ -306,7 +307,7 @@ public:
 		return _instArgTypes;
 	}
 	/// Returns: label indexes (`[instructionIndex, argIndex]`)
-	@property uinteger[2][] labelIndexes(){
+	@property size_t[2][] labelIndexes(){
 		return _labelIndexes;
 	}
 	/// Returns: label names, corresponding to labelIndexes
@@ -330,7 +331,7 @@ public:
 			error = "labelNames and labelIndexes, and/or argumentTypes and arguments length mismatch";
 			return false;
 		}
-		uinteger argsInd;
+		size_t argsInd;
 		foreach (i; 0 .. _instCodes.length){
 			NaInst inst;
 			try
@@ -364,7 +365,7 @@ public:
 	/// Returns: true if no errors, false if not done due to errors
 	bool append(Statement statement, ref string error){
 		if (statement.label.length){
-			if (_labelNames.hasElement(statement.label.lowercase)){
+			if (_labelNames.canFind(statement.label.lowercase)){
 				error = "label `" ~ statement.label ~ "` used multiple times";
 				return false;
 			}
@@ -393,7 +394,7 @@ public:
 			}
 		}
 		if (statement.instName.length){
-			immutable integer code = _instTable.getInstruction(statement.instName.lowercase, types);
+			immutable ptrdiff_t code = _instTable.getInstruction(statement.instName.lowercase, types);
 			if (code == -1){
 				error = "instruction does not exist or invalid arguments";
 				return false;
@@ -504,7 +505,7 @@ public:
 	@property ubyte[] magicNumberPost(ubyte[] newVal){
 		_sig.length = MAGIC_BYTES_IGNORE;
 		_sig[] = 0x00;
-		immutable uinteger len = newVal.length > MAGIC_BYTES_IGNORE ? MAGIC_BYTES_IGNORE : newVal.length;
+		immutable size_t len = newVal.length > MAGIC_BYTES_IGNORE ? MAGIC_BYTES_IGNORE : newVal.length;
 		_sig[0 .. len] = newVal[0 .. len];
 		return _sig.dup;
 	}
@@ -542,8 +543,8 @@ public:
 		// labels
 		_bin.write(_labelIndexes.length, 8); // number of labels
 		foreach (i, label; _labelIndexes){
-			_bin.write!uinteger(label[0], 8); // code index
-			_bin.write!uinteger(label[1], 8); // instruction index
+			_bin.write!size_t(label[0], 8); // code index
+			_bin.write!size_t(label[1], 8); // instruction index
 			_bin.writeArray(_labelNames[i], 8); // name
 		}
 	}
@@ -557,7 +558,7 @@ public:
 		if (_bin.size <= MAGIC_NUM.length + SIG_VER.sizeof + MAGIC_BYTES_IGNORE)
 			return false;
 		ubyte[] buffer;
-		uinteger readCount;
+		size_t readCount;
 		bool incompleteRead;
 		buffer.length = MAGIC_NUM.length;
 		_bin.seek=0;
@@ -576,7 +577,7 @@ public:
 		if (readCount < _instCodes.length)
 			return false;
 		// arguments
-		_instArgs.length = _bin.read!uinteger(incompleteRead,8);
+		_instArgs.length = _bin.read!size_t(incompleteRead,8);
 		if (incompleteRead)
 			return false;
 		_instArgTypes.length = _instArgs.length;
@@ -587,15 +588,15 @@ public:
 				return false;
 		}
 		// labels
-		_labelIndexes.length = _bin.read!uinteger(incompleteRead,8);
+		_labelIndexes.length = _bin.read!size_t(incompleteRead,8);
 		if (incompleteRead)
 			return false;
 		_labelNames.length = _labelIndexes.length;
 		foreach (i; 0 .. _labelIndexes.length){
-			_labelIndexes[i][0] = _bin.read!uinteger(incompleteRead, 8);
+			_labelIndexes[i][0] = _bin.read!size_t(incompleteRead, 8);
 			if (incompleteRead)
 				return false;
-			_labelIndexes[i][1] = _bin.read!uinteger(incompleteRead, 8);
+			_labelIndexes[i][1] = _bin.read!size_t(incompleteRead, 8);
 			if (incompleteRead)
 				return false;
 			_labelNames[i] = cast(string)_bin.readArray!char(readCount, 8);
@@ -636,13 +637,13 @@ unittest{
 	assert(binCode.instCodes == [1,2,3,4]);
 	assert(binCode.instArgTypes == [NaInstArgType.Label, NaInstArgType.Integer, NaInstArgType.Double,
 			NaInstArgType.String, NaInstArgType.Boolean, NaInstArgType.Char, NaInstArgType.Label]);
-	assert(binCode.instArgs[0].value!integer == binCode.labelNames.indexOf("end"));
-	assert(binCode.instArgs[1].value!integer == 1025);
+	assert(binCode.instArgs[0].value!ptrdiff_t == binCode.labelNames.indexOf("end"));
+	assert(binCode.instArgs[1].value!ptrdiff_t == 1025);
 	assert(binCode.instArgs[2].value!double == 1025.5);
 	assert(binCode.instArgs[3].value!string == "tab:\tnewline:\n");
 	assert(binCode.instArgs[4].value!bool == true);
 	assert(binCode.instArgs[5].value!char == 'c');
-	assert(binCode.instArgs[6].value!integer == binCode.labelNames.indexOf("start"));
+	assert(binCode.instArgs[6].value!ptrdiff_t == binCode.labelNames.indexOf("start"));
 	assert(binCode.labelNames == ["start", "end"]);
 	.destroy(binCode);
 	.destroy(iTable);
@@ -666,7 +667,7 @@ public:
 	/// 
 	/// Returns: instruction code if success, or -1 in case of error  
 	/// Error can be: code!=0 and code already used. No more codes left. Or another instruction with same name and arg types exists
-	integer addInstruction(ref NaInst inst, void delegate() ptr = null){
+	ptrdiff_t addInstruction(ref NaInst inst, void delegate() ptr = null){
 		if (inst.code == 0){
 			// find code
 			foreach (ushort i; 1 .. ushort.max){
@@ -702,7 +703,7 @@ public:
 	/// Finds an instruction that can be called with arguments with a matching name
 	/// 
 	/// Returns: the instruction code for an instruction that can be called, or -1 if doesnt exist
-	integer getInstruction(string name, NaInstArgType[] arguments){
+	ptrdiff_t getInstruction(string name, NaInstArgType[] arguments){
 		foreach (j, inst; _instructions){
 			if (inst.name == name && inst.arguments.length == arguments.length){
 				bool argsMatch = true;
@@ -743,7 +744,7 @@ public:
 	}
 }
 
-/// Reads data from a string (which can be string, char, double, integer, bool)
+/// Reads data from a string (which can be string, char, double, ptrdiff_t, bool)
 /// 
 /// Addresses are read as integers
 /// 
@@ -754,11 +755,11 @@ public NaData readData(string strData, ref NaInstArgType type){
 	NaData r;
 	if (strData.length == 0)
 		throw new Exception("cannot read data from empty string");
-	if (["true", "false"].hasElement(strData)){
+	if (["true", "false"].canFind(strData)){
 		r.value!bool = strData == "true";
 		type = NaInstArgType.Boolean;
 	}else if (strData.isNum(false)){
-		r.value!integer = strData.to!integer;
+		r.value!ptrdiff_t = strData.to!ptrdiff_t;
 		type = NaInstArgType.Integer;
 	}else if (strData.isNum(true)){
 		r.value!double = strData.to!double;
@@ -766,20 +767,20 @@ public NaData readData(string strData, ref NaInstArgType type){
 	}else if (strData.length >= 2 && (strData[0 .. 2] == "0x" || strData[0 .. 2] == "0B")){
 		type = NaInstArgType.Integer;
 		if (strData.length == 2)
-			r.value!integer = 0;
+			r.value!ptrdiff_t = 0;
 		if (strData[0 .. 2] == "0x")
-			r.value!integer = readHexadecimal(strData[2 .. $]);
+			r.value!ptrdiff_t = readHexadecimal(strData[2 .. $]);
 		else
-			r.value!integer = readBinary(strData[2 .. $]);
+			r.value!ptrdiff_t = readBinary(strData[2 .. $]);
 	}else if (strData[0] == '@'){
 		type = NaInstArgType.Address;
 		if (strData.length == 1)
 			r.value!NaInstArgAddress = NaInstArgAddress(0);
 		else if (strData[1 .. $].isNum(false))
-			r.value!NaInstArgAddress = NaInstArgAddress(strData[1 .. $].to!integer);
+			r.value!NaInstArgAddress = NaInstArgAddress(strData[1 .. $].to!ptrdiff_t);
 		else{
 			strData = strData[1 .. $];
-			integer commaIndex = strData.indexOf(',');
+			ptrdiff_t commaIndex = strData.indexOf(',');
 			NaInstArgAddress addr;
 			if (commaIndex == -1 && !strData.isNum(false)){
 				addr.labelOffset = strData;
@@ -788,7 +789,7 @@ public NaData readData(string strData, ref NaInstArgType type){
 				if (commaIndex + 1 < strData.length){
 					strData = strData[commaIndex + 1 .. $];
 					if (strData.isNum(false))
-						addr.address = strData.to!integer;
+						addr.address = strData.to!ptrdiff_t;
 					else
 						throw new Exception("invalid address");
 				}
@@ -822,11 +823,11 @@ unittest{
 	assert("false".readData(type) == NaData(false));
 	assert(type == NaInstArgType.Boolean);
 	
-	assert("15".readData(type).value!integer == 15);
+	assert("15".readData(type).value!ptrdiff_t == 15);
 	assert(type == NaInstArgType.Integer);
-	assert("0".readData(type).value!integer == 0);
+	assert("0".readData(type).value!ptrdiff_t == 0);
 	assert(type == NaInstArgType.Integer);
-	assert("-1".readData(type).value!integer == -1);
+	assert("-1".readData(type).value!ptrdiff_t == -1);
 	assert(type == NaInstArgType.Integer);
 	assert("\"str\\t\"".readData(type).value!string == "str\t");
 	assert(type == NaInstArgType.String);
@@ -844,61 +845,6 @@ unittest{
 	assert(type == NaInstArgType.Address);
 }
 
-/// Reads a hexadecimal number from string
-/// 
-/// Returns: the number in a uinteger
-/// 
-/// Throws: Exception in case string is not a hexadecimal number, or too big to store in uinteger, or empty string
-private uinteger readHexadecimal(string str){
-	import std.range : iota, array;
-	if (str.length == 0)
-		throw new Exception("cannot read hexadecimal number from empty string");
-	if (str.length > uinteger.sizeof * 2) // str.length / 2 = numberOfBytes 
-		throw new Exception("hexadecimal number is too big to store in uinteger");
-	static char[16] DIGITS = iota('0', '9'+1).array ~ iota('a', 'f'+1).array;
-	str = str.lowercase;
-	if (!(cast(char[])str).matchElements(DIGITS))
-		throw new Exception("invalid character in hexadecimal number");
-	uinteger r;
-	immutable uinteger lastInd = str.length - 1;
-	foreach (i, c; str){
-		r |= DIGITS.indexOf(c) << 4 * (lastInd-i);
-	}
-	return r;
-}
-/// 
-unittest{
-	assert("FF".readHexadecimal == 0xFF);
-	assert("F0".readHexadecimal == 0xF0);
-	assert("EF".readHexadecimal == 0xEF);
-	assert("A12F".readHexadecimal == 0xA12F);
-}
-
-/// Reads a binary number from string
-/// 
-/// Returns: the number in a uinteger
-/// 
-/// Throws: Exception in case string is not a binary number, or too big to store in uinteger, or empty string
-private uinteger readBinary(string str){
-	if (str.length == 0)
-		throw new Exception("cannot read binary number from empty string");
-	if (str.length > uinteger.sizeof * 8)
-		throw new Exception("binary number is too big to store in uinteger");
-	if (!(cast(char[])str).matchElements(['0','1']))
-		throw new Exception("invalid character in binary number");
-	uinteger r;
-	immutable uinteger lastInd = str.length-1;
-	foreach (i, c; str){
-		if (c == '1')
-			r |= 1 << (lastInd - i);
-	}
-	return r;
-}
-/// 
-unittest{
-	assert("01010101".readBinary == 0B01010101);
-}
-
 /// reads a string into substrings separated by whitespace. Strings are read as a whole
 /// 
 /// Returns: substrings
@@ -906,7 +852,7 @@ unittest{
 /// Throws: Exception if string not closed
 private string[] separateWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string line){
 	string[] r;
-	for (uinteger i, readFrom; i < line.length; i++){
+	for (size_t i, readFrom; i < line.length; i++){
 		immutable char c = line[i];
 		if (c == comment){
 			if (readFrom < i)
@@ -917,7 +863,7 @@ private string[] separateWhitespace(char[] whitespace=[' ','\t'], char comment='
 			if (readFrom < i)
 				r ~= line[readFrom .. i].dup;
 			readFrom = i;
-			immutable integer endIndex = line.strEnd(i);
+			immutable ptrdiff_t endIndex = line.strEnd(i);
 			if (endIndex < 0)
 				throw new Exception("string not closed");
 			r ~= line[readFrom .. endIndex+1].dup;
@@ -925,10 +871,10 @@ private string[] separateWhitespace(char[] whitespace=[' ','\t'], char comment='
 			i = endIndex;
 			continue;
 		}
-		if (whitespace.hasElement(c)){
+		if (whitespace.canFind(c)){
 			if (readFrom < i)
 				r ~= line[readFrom .. i].dup;
-			while (i < line.length && whitespace.hasElement(line[i]))
+			while (i < line.length && whitespace.canFind(line[i]))
 				i ++;
 			readFrom = i;
 			i --; // back to whitespace, i++ in for(..;..;) exists
@@ -963,8 +909,8 @@ private string[][] separateWhitespace(string[] lines){
 }
 
 /// Returns: the index where a string ends, -1 if not terminated
-private integer strEnd(char specialCharBegin='\\')(string s, uinteger startIndex){
-	uinteger i;
+private ptrdiff_t strEnd(char specialCharBegin='\\')(string s, size_t startIndex){
+	size_t i;
 	immutable char strTerminator = s[startIndex];
 	for (i = startIndex+1; i < s.length; i ++){
 		if (s[i] == strTerminator){
@@ -986,7 +932,7 @@ unittest{
 private string strReplaceSpecial(char specialCharBegin='\\')
 (string s, char[char] map = ['t' : '\t', 'n' : '\n','\\':'\\']){
 	char[] r = [];
-	for (uinteger i = 0; i < s.length; i ++){
+	for (size_t i = 0; i < s.length; i ++){
 		if (s[i] == specialCharBegin && i + 1 < s.length && s[i+1] in map){
 			r ~= map[s[i+1]];
 			i++;

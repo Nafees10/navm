@@ -20,7 +20,7 @@ private:
 public:
 	/// constructor
 	/// size is the size in bytes, default is 64 KiB
-	this(uinteger size = 1 << 16){
+	this(size_t size = 1 << 16){
 		_stack.length = size;
 		_lastPtr = _stack.ptr + size;
 		_ptr = _stack.ptr;
@@ -35,7 +35,7 @@ public:
 		return r;
 	}
 	/// seek index (number of bytes used on stack)
-	@property uinteger seek(){
+	@property size_t seek(){
 		return _ptr - _stack.ptr;
 	}
 	/// empty stack, sets all bytes to zero, resets seek
@@ -57,7 +57,7 @@ public:
 	/// 
 	/// Either all are pushed, or none if there isn't enough space
 	void pushArray(T)(T[] elements){
-		immutable uinteger lenBytes = T.sizeof * elements.length;
+		immutable size_t lenBytes = T.sizeof * elements.length;
 		if (_ptr + lenBytes > _lastPtr){
 			_errored = true;
 			return;
@@ -80,7 +80,7 @@ public:
 	/// 
 	/// Writes popped values to `vals`. If there arent enough elements on stack, will not pop anything
 	void popArray(T)(ref T[] vals){
-		immutable uinteger lenBytes = T.sizeof * vals.length;
+		immutable size_t lenBytes = T.sizeof * vals.length;
 		if (_ptr < _stack.ptr + lenBytes){
 			_errored = true;
 			return;
@@ -92,33 +92,33 @@ public:
 /// 
 unittest{
 	NaStack s = new NaStack();
-	s.push!integer(integer.max);
+	s.push!ptrdiff_t(ptrdiff_t.max);
 	s.push!ubyte(255);
 	s.push!byte(127);
 	byte b;
 	b = 0;
 	ubyte ub;
 	ub = 0;
-	integer[] iA = [0];
+	ptrdiff_t[] iA = [0];
 	assert(s.errored == false);
 	s.pop(b);
 	s.pop(ub);
 	s.pop(iA[0]);
 	assert(b == 127);
 	assert(ub == 255);
-	assert(iA[0] == integer.max);
-	iA = [integer.max, integer.max >> 1, 0, 1025];
+	assert(iA[0] == ptrdiff_t.max);
+	iA = [ptrdiff_t.max, ptrdiff_t.max >> 1, 0, 1025];
 	s.pushArray(iA);
 	iA[] = 0;
 	s.popArray(iA);
-	assert(iA == [integer.max, integer.max >> 1, 0, 1025]);
-	s.push(cast(integer)integer.max);
-	s.push(cast(integer)integer.max >> 1);
-	s.push(cast(integer)0);
-	s.push(cast(integer)1025);
+	assert(iA == [ptrdiff_t.max, ptrdiff_t.max >> 1, 0, 1025]);
+	s.push(cast(ptrdiff_t)ptrdiff_t.max);
+	s.push(cast(ptrdiff_t)ptrdiff_t.max >> 1);
+	s.push(cast(ptrdiff_t)0);
+	s.push(cast(ptrdiff_t)1025);
 	iA[] = 0;
 	s.popArray(iA);
-	assert(iA == [integer.max, integer.max >> 1, 0, 1025]);
+	assert(iA == [ptrdiff_t.max, ptrdiff_t.max >> 1, 0, 1025]);
 	assert(s.errored == false);
 	.destroy(s);
 }
@@ -128,10 +128,10 @@ public abstract class NaVM{
 protected:
 	void delegate()[] _instructions; /// the instruction pointers
 	ubyte[] _args; /// stores arguments
-	uinteger _instIndex; /// index of next instruction
-	uinteger _argIndex; /// index next argument
-	uinteger[] _labelInstIndexes; /// instruction indexes for labels
-	uinteger[] _labelArgIndexes; /// argument indexes for labels
+	size_t _instIndex; /// index of next instruction
+	size_t _argIndex; /// index next argument
+	size_t[] _labelInstIndexes; /// instruction indexes for labels
+	size_t[] _labelArgIndexes; /// argument indexes for labels
 	string[] _labelNames; /// label names
 
 	NaInstTable _instTable; /// instruction table
@@ -143,13 +143,13 @@ protected:
 		return r;
 	}
 	/// ditto
-	T _readArg(T)(uinteger argAddr){
+	T _readArg(T)(size_t argAddr){
 		return *(cast(T*)(_args.ptr + argAddr*(argAddr + T.sizeof <= _args.length)));
 	}
 	/// Reads an array from arguments. Will try to read enough bytes to fill `array`
 	void _readArgArray(T)(T[] array){
-		immutable uinteger lenBytes = T.sizeof * array.length;
-		immutable uinteger altLenBytes = _args.length - _argIndex;
+		immutable size_t lenBytes = T.sizeof * array.length;
+		immutable size_t altLenBytes = _args.length - _argIndex;
 		if (lenBytes > altLenBytes){
 			(cast(ubyte*)array.ptr)[0 .. altLenBytes] = _args[_argIndex .. $];
 			_argIndex = _args.length;
@@ -161,7 +161,7 @@ protected:
 	/// Changes value of an argument. **Do not use this when argument is array (string)**
 	/// 
 	/// Returns: true if done, false if argument address is out of bounds
-	bool _writeArg(T)(uinteger argAddr, T val){
+	bool _writeArg(T)(size_t argAddr, T val){
 		if (argAddr + T.sizeof > _args.length)
 			return false;
 		*cast(T*)(_args.ptr + argAddr) = val;
@@ -222,7 +222,7 @@ public:
 		foreach (i, ref arg; code.instArgs){
 			immutable NaInstArgType type = code.instArgTypes[i];
 			if (type == NaInstArgType.String){
-				ByteUnion!integer sizeStore;
+				ByteUnion!ptrdiff_t sizeStore;
 				string str = arg.value!string;
 				sizeStore.data = str.length;
 				_args ~= sizeStore.array ~ cast(ubyte[])str;
@@ -234,8 +234,8 @@ public:
 				_args ~= valStore.array;
 			}else if (type == NaInstArgType.Integer || type == NaInstArgType.Label ||
 				type == NaInstArgType.Address){
-				ByteUnion!integer valStore;
-				valStore.data = arg.value!integer;
+				ByteUnion!ptrdiff_t valStore;
+				valStore.data = arg.value!ptrdiff_t;
 				_args ~= valStore.array;
 			}
 		}
@@ -243,12 +243,12 @@ public:
 	}
 	/// starts execution from a label. Will do nothing if label invalid or doesnt exist
 	void execute(string labelName){
-		integer index = _labelNames.indexOf(labelName);
+		ptrdiff_t index = _labelNames.indexOf(labelName);
 		if (index > -1)
 			execute(index);
 	}
 	/// ditto
-	void execute(uinteger labelIndex){
+	void execute(size_t labelIndex){
 		if (labelIndex >= _labelInstIndexes.length)
 			return;
 		_argIndex = _labelArgIndexes[labelIndex];
