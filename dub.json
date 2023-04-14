@@ -4,7 +4,7 @@
 	],
 	"copyright": "Copyright © 2019-2022, Nafees Hassan",
 	"dependencies": {
-		"utils": "~>0.6.0"
+		"utils": "~>0.7.0"
 	},
 	"configurations": [
 		{
