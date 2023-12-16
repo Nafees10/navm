@@ -16,13 +16,7 @@ public struct Statement{
 	string[] arguments;
 	/// comment, if any
 	string comment;
-	/// postblit
-	this(this){
-		this.label = this.label.dup;
-		this.instName = this.instName.dup;
-		this.arguments = this.arguments.dup;
-		this.comment = this.comment.dup;
-	}
+
 	/// constructor, for instruction + args + comment
 	this(string instName, string[] arguments=[], string comment = ""){
 		this.instName = instName;
@@ -30,18 +24,19 @@ public struct Statement{
 		this.comment = comment;
 	}
 	/// constructor, for label + instruction
-	this(string label, string instName, string[] arguments=[], string comment = ""){
+	this(string label, string instName, string[] arguments=[],
+			string comment = ""){
 		this.label = label;
 		this.instName = instName;
 		this.arguments = arguments.dup;
 		this.comment = comment;
 	}
+
 	/// Reads statement from string
 	void fromString(string statement){
-		label = "";
-		instName = "";
-		arguments.length = 0;
-		string[] separated = statement.separateWhitespace();
+		label = instName = null;
+		arguments = null;
+		string[] separated = statement.separateWhitespace;
 		if (separated.length == 0)
 			return;
 		if (separated[0].length && separated[0][$-1] == ':'){
@@ -57,8 +52,9 @@ public struct Statement{
 		if (separated.length)
 			this.arguments = separated;
 	}
+
 	/// Returns: string representation of this statement
-	string toString(){
+	string toString() const {
 		string r;
 		if (label.length)
 			r = label ~ ": ";
@@ -70,7 +66,8 @@ public struct Statement{
 		return r;
 	}
 }
-/// 
+
+///
 unittest{
 	Statement s;
 	s.fromString("someLabel: someInst arg1 arg2#comment");
@@ -81,7 +78,7 @@ unittest{
 	assert(s == Statement("load", ["0"]));
 }
 
-/// stores an data about available instruction
+/// stores data about available instruction
 public struct NaInst{
 	/// name of instruction, **in lowercase**
 	string name;
@@ -89,6 +86,7 @@ public struct NaInst{
 	ushort code = 0x0000;
 	/// what type of arguments are expected
 	NaInstArgType[] arguments;
+
 	/// constructor
 	this (string name, size_t code, NaInstArgType[] arguments = []){
 		this.name = name;
@@ -105,19 +103,20 @@ public struct NaInst{
 
 /// Types of instruction arguments, for validation
 public enum NaInstArgType : ubyte{
-	Integer, /// singed ptrdiff_t (ptrdiff_t)
-	Double, /// a double (float)
-	Address, /// Address to some argument
-	String, /// a string (char[])
-	Label, /// a label (name is stored)
-	Char, /// a 1 byte character
-	Boolean, /// boolean
+	Integer,		/// singed integer (ptrdiff_t)
+	Double,			/// a double (float)
+	Address,		/// Address to some argument
+	String,			/// a string (char[])
+	Label,			/// a label (name is stored)
+	Char,				/// a 1 byte character
+	Boolean,		/// boolean
 }
 
 /// For storing argument that is an Address
 public struct NaInstArgAddress{
 	string labelOffset; /// label, if any
 	size_t address; /// the address itself
+
 	/// constructor
 	this (string labelOffset, size_t address = 0){
 		this.labelOffset = labelOffset;
@@ -131,6 +130,7 @@ public struct NaInstArgAddress{
 	private this(ubyte[] binaryData){
 		this._binData = binaryData;
 	}
+
 	/// Returns: this address, when stored as stream of bytes
 	private @property ubyte[] _binData(){
 		ubyte[] r;
@@ -142,6 +142,7 @@ public struct NaInstArgAddress{
 		r[8 .. $] = cast(ubyte[])labelOffset;
 		return r;
 	}
+
 	/// ditto
 	private @property ubyte[] _binData(ubyte[] newVal){
 		labelOffset = [];
@@ -159,18 +160,20 @@ public struct NaInstArgAddress{
 public struct NaData{
 	/// the actual data
 	ubyte[] argData;
+
 	/// value. ** do not use this for arrays, aside from string **
-	/// 
+	///
 	/// Returns: stored value, or `T.init` if invalid type
 	@property T value(T)(){
-		static if (is (T == string))
+		static if (is (T == string)){
 			return cast(string)cast(char[])argData;
-		else static if (is (T == NaInstArgAddress))
+		} else static if (is (T == NaInstArgAddress)){
 			return NaInstArgAddress(argData);
-		else if (argData.length < T.sizeof)
-			return T.init;
-		else
+		} else {
+			if (argData.length < T.sizeof)
+				return T.init;
 			return *(cast(T*)argData.ptr);
+		}
 	}
 	/// ditto
 	@property T value(T)(T newVal){
@@ -181,10 +184,11 @@ public struct NaData{
 		}else static if (is (T == NaInstArgAddress)){
 			argData = newVal._binData;
 			return newVal;
-		}else if (argData.length >= T.sizeof){
-			argData[0 .. T.sizeof] = (cast(ubyte*)&newVal)[0 .. T.sizeof];
-			return newVal;
 		}else{
+			if (argData.length >= T.sizeof){
+				argData[0 .. T.sizeof] = (cast(ubyte*)&newVal)[0 .. T.sizeof];
+				return newVal;
+			}
 			argData.length = T.sizeof;
 			return this.value!T = newVal;
 		}
@@ -194,7 +198,7 @@ public struct NaData{
 		this.value!T = value;
 	}
 }
-/// 
+///
 unittest{
 	assert(NaData(cast(ptrdiff_t)1025).value!ptrdiff_t == 1025);
 	assert(NaData("hello").value!string == "hello");
@@ -214,14 +218,17 @@ private:
 	NaInstTable _instTable; /// the instruction table
 	bool _lastWasArgOnly; /// if last statement appended was args without instName
 protected:
+
 	/// Returns: size in bytes of argument at an index
 	size_t argSize(size_t argIndex){
 		if (argIndex > _instArgs.length)
 			return 0;
-		if (_instArgTypes[argIndex] == NaInstArgType.Address || _instArgTypes[argIndex] == NaInstArgType.Integer || 
-			_instArgTypes[argIndex] == NaInstArgType.Label)
+		if (_instArgTypes[argIndex] == NaInstArgType.Address ||
+				_instArgTypes[argIndex] == NaInstArgType.Integer ||
+				_instArgTypes[argIndex] == NaInstArgType.Label)
 			return ptrdiff_t.sizeof;
-		else if (_instArgTypes[argIndex] == NaInstArgType.Boolean || _instArgTypes[argIndex] == NaInstArgType.Char)
+		else if (_instArgTypes[argIndex] == NaInstArgType.Boolean
+				|| _instArgTypes[argIndex] == NaInstArgType.Char)
 			return 1;
 		else if (_instArgTypes[argIndex] == NaInstArgType.Double)
 			return double.sizeof;
@@ -229,10 +236,11 @@ protected:
 			return  _instArgs[argIndex].value!string.length + ptrdiff_t.sizeof;
 		return 0;
 	}
+
 	/// Changes labels to label indexes, and resolves addresses, in arguments
-	/// 
+	///
 	/// called by this.verify
-	/// 
+	///
 	/// Returns: false if there are invalid labels or addresses
 	bool resolveArgs(){
 		foreach (i; 0 .. _instArgs.length){
@@ -322,9 +330,9 @@ public:
 		_labelNames.length = 0;
 		_lastWasArgOnly = false;
 	}
-	/// Verifies a loaded bytecode, to make sure only valid instructions exist, and correct number of arguments and types are loaded  
+	/// Verifies a loaded bytecode, to make sure only valid instructions exist, and correct number of arguments and types are loaded
 	/// No more statements should be added after this has been called
-	/// 
+	///
 	/// Returns: true if verified without errors, false if there were errors.
 	bool verify(string error){
 		if (_labelNames.length != _labelIndexes.length || _instArgTypes.length != _instArgs.length){
@@ -361,7 +369,7 @@ public:
 		return verify(dummyError);
 	}
 	/// Adds a statement at end of existing bytecode
-	/// 
+	///
 	/// Returns: true if no errors, false if not done due to errors
 	bool append(Statement statement, ref string error){
 		if (statement.label.length){
@@ -423,7 +431,7 @@ public:
 		return this.append(statement);
 	}
 	/// Loads bytecode. Discards any existing bytecode
-	/// 
+	///
 	/// Returns: [] if done without errors. error descriptions if there were errors
 	string[] load(Statement[] statements){
 		this.clear();
@@ -445,7 +453,7 @@ public:
 		return load(statements);
 	}
 }
-/// 
+///
 unittest{
 	string[] source = [
 		"start: instA l2",
@@ -549,7 +557,7 @@ public:
 		}
 	}
 	/// Reads binary bytecode. Any existing bytecode is `clear()`ed
-	/// 
+	///
 	/// Returns: true on success, false if file is malformed
 	bool readBinCode(){
 		this.clear;
@@ -606,7 +614,7 @@ public:
 		return true;
 	}
 }
-/// 
+///
 unittest{
 	NaInstTable iTable = new NaInstTable();
 	NaInst inst = NaInst("insta",[NaInstArgType.Label]);
@@ -624,7 +632,7 @@ unittest{
 	status = status && binCode.append("instc \"tab:\\tnewline:\\n\" true");
 	status = status && binCode.append("end: instD 'c' start");
 	assert(status == true); // all those functions returned true
-	
+
 	binCode.metadata = cast(ubyte[])"METADATA-metadata-0123456789";
 	assert(binCode.verify());
 	binCode.writeBinCode();
@@ -661,11 +669,11 @@ public:
 	}
 	/// destructor
 	~this(){}
-	/// Adds a new instruction.  
-	/// If `inst.code == 0`, Finds an available code, assigns `inst.code` that code.  
+	/// Adds a new instruction.
+	/// If `inst.code == 0`, Finds an available code, assigns `inst.code` that code.
 	/// Otherwise `inst.code` is used, if available, or -1 returned.
-	/// 
-	/// Returns: instruction code if success, or -1 in case of error  
+	///
+	/// Returns: instruction code if success, or -1 in case of error
 	/// Error can be: code!=0 and code already used. No more codes left. Or another instruction with same name and arg types exists
 	ptrdiff_t addInstruction(ref NaInst inst, void delegate() ptr = null){
 		if (inst.code == 0){
@@ -689,9 +697,9 @@ public:
 		return -1;
 	}
 	/// Finds the instruction with matching code
-	/// 
+	///
 	/// Returns: the instruction.
-	/// 
+	///
 	/// Throws: Exception if doesnt exist
 	NaInst getInstruction(ushort code){
 		foreach (inst; _instructions){
@@ -701,7 +709,7 @@ public:
 		throw new Exception("instruction with code=" ~ code.to!string ~ " does not exist");
 	}
 	/// Finds an instruction that can be called with arguments with a matching name
-	/// 
+	///
 	/// Returns: the instruction code for an instruction that can be called, or -1 if doesnt exist
 	ptrdiff_t getInstruction(string name, NaInstArgType[] arguments){
 		foreach (j, inst; _instructions){
@@ -720,9 +728,9 @@ public:
 		return -1;
 	}
 	/// gets pointer for an instruction. **This can be null**
-	/// 
+	///
 	/// Returns: instruction pointer
-	/// 
+	///
 	/// Throws: Exception if instruction does not exist
 	void delegate() getInstructionPtr(ushort code){
 		if (code in _instPtrs)
@@ -745,11 +753,11 @@ public:
 }
 
 /// Reads data from a string (which can be string, char, double, ptrdiff_t, bool)
-/// 
+///
 /// Addresses are read as integers
-/// 
+///
 /// Returns: the data in NaInstArg
-/// 
+///
 /// Throws: Exception if data is invalid
 public NaData readData(string strData, ref NaInstArgType type){
 	NaData r;
@@ -815,14 +823,14 @@ public NaData readData(string strData, ref NaInstArgType type){
 	}
 	return r;
 }
-/// 
+///
 unittest{
 	NaInstArgType type;
 	assert("true".readData(type) == NaData(true));
 	assert(type == NaInstArgType.Boolean);
 	assert("false".readData(type) == NaData(false));
 	assert(type == NaInstArgType.Boolean);
-	
+
 	assert("15".readData(type).value!ptrdiff_t == 15);
 	assert(type == NaInstArgType.Integer);
 	assert("0".readData(type).value!ptrdiff_t == 0);
@@ -846,9 +854,9 @@ unittest{
 }
 
 /// reads a string into substrings separated by whitespace. Strings are read as a whole
-/// 
+///
 /// Returns: substrings
-/// 
+///
 /// Throws: Exception if string not closed
 private string[] separateWhitespace(char[] whitespace=[' ','\t'], char comment='#')(string line){
 	string[] r;
