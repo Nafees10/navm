@@ -13,7 +13,7 @@ The binary file contains these sections of bytecode in the this order:
 7. labels
 
 ## Magic Number & Version & Magic Number Postfix
-This part is always 17 bytes.  
+This part is always 17 bytes.
 
 The first 7 bytes are to be:
 
@@ -26,7 +26,8 @@ hexadecimal:
 ```
 4E 41 56 4D 42 43 2D
 ```
-These are followed by 2 bytes, which are used to identify version information.  
+These are followed by 2 bytes, which are used to identify version information.
+
 8 bytes after these bytes are ignored, these are the magic number postfix.
 
 ### Version Identifying Bytes
@@ -34,6 +35,7 @@ These are followed by 2 bytes, which are used to identify version information.
 | Version number, ushort|	First NaVM Version		|
 | --------------------- | --------------------- |
 | 		`0x0001`					| 		v1.2							|
+| 		`0x0002`					| 		v2.0							|
 
 Since all integers are stored in little endian, `0x0001` will be stored as:
 `01 00`
