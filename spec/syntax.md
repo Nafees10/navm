@@ -69,9 +69,9 @@ start:	add2	50	250
 
 In this case, `<ADDRESS>` can be written as:
 
-* `@0` to point to `50`
-* `@1` to point to `250`
-* `@2` to point to itself
+* `@+0` to point to `50`
+* `@+1` to point to `250`
+* `@+2` to point to itself
 * `@start+0` to point to `50`
 * `@start+1` to point to `250`
 * `@start+2` to point to itself
@@ -91,7 +91,7 @@ These are read as of type Integer, and are written like: `0xFFF`, where `FFF`
 is the number.
 
 ### Binary Integer
-Integer can be written in binary as: `0B1111`, where `1111` is the number.
+Integer can be written in binary as: `0b1111`, where `1111` is the number.
 
 ## Comments
 Anything following a `#` (including the `#`) are considered comments and are
