@@ -152,7 +152,9 @@ private NaData parseData(string s){
 		return NaData(true);
 	if (s == "false")
 		return NaData(false);
-	if (s[0] != '@' && s[0] != '"' && s[0] != '\'')
+	if (s[0] == '"' || s[0] == '\'')
+		return NaData(s[1 .. $ - 1].unescape);
+	if (s[0] != '@')
 		return NaData();
 	return NaData(s);
 }
@@ -233,7 +235,7 @@ unittest{
 }
 
 /// Returns: unescaped string
-private string strUnescape(string s){
+private string unescape(string s){
 	if (s.length == 0)
 		return null;
 	char[] r = [];
@@ -255,5 +257,5 @@ private string strUnescape(string s){
 }
 ///
 unittest{
-	assert("newline:\\ntab:\\t".strUnescape == "newline:\ntab:\t", "newline:\\ntab:\\t".strUnescape);
+	assert("newline:\\ntab:\\t".unescape == "newline:\ntab:\t", "newline:\\ntab:\\t".strUnescape);
 }
