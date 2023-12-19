@@ -48,10 +48,9 @@ unittest{
 	assert(NaData(true).value!bool == true);
 }
 
-public ByteCode parseByteCode(
+package ByteCode parseByteCode(
 		string[] Insts,
-		uint[] InstArgC,
-		ushort[] InstCodes)
+		uint[] InstArgC)
 	(
 		string[] lines){
 	ByteCode ret;
@@ -79,11 +78,12 @@ public ByteCode parseByteCode(
 						throw new Exception("line " ~ i.to!string ~ ": " ~ name ~
 								" instruction expects " ~ InstArgC[ind].to!string ~
 								" arguments, got " ~ (splits.length - 1).to!string);
-					ret.instructions ~= InstCodes[ind];
+					ret.instructions ~= ind;
 					break caser;
 			}
 			default:
-				throw new Exception("line " ~ i.to!string ~ ": Instruction expected");
+				throw new Exception("line " ~ i.to!string ~
+						": Instruction expected, got `" ~ splits[0] ~ "`");
 				break caser;
 		}
 		splits = splits[1 .. $];
@@ -119,7 +119,8 @@ public ByteCode parseByteCode(
 			size_t pos = ret.labels[label][1] + offset;
 			if (pos > absPos.length)
 				throw new Exception("Invalid offset `" ~ arg ~ "`");
-			ret.data[index] = NaData(absPos[pos]);
+			//ret.data[index] = NaData(absPos[pos]);
+			ret.data[index] = NaData(pos);
 			continue;
 		}
 		// its a label address
@@ -128,9 +129,9 @@ public ByteCode parseByteCode(
 		ret.data[index] = NaData(ret.labels[arg][0]);
 	}
 
-	// resolve label data indexes to data addresses using absPos
-	foreach (label; ret.labels.keys)
-		ret.labels[label][1] = absPos[ret.labels[label][1]];
+	// resolve label data indexes to data addresses
+	/*foreach (label; ret.labels.keys)
+		ret.labels[label][1] = absPos[ret.labels[label][1]];*/
 	return ret;
 }
 
@@ -138,8 +139,7 @@ public ByteCode parseByteCode(
 unittest{
 	alias parse = parseByteCode!(
 			["push", "pop", "add", "print"],
-			[1, 1, 0, 0],
-			[1, 2, 3, 4]);
+			[1, 1, 0, 0]);
 	string[] source = [
 		"data: push 50",
 		"start: push 50",
@@ -154,7 +154,7 @@ unittest{
 	assert("start" in code.labels);
 	assert(code.labels["data"] == [0, 0]);
 	assert(code.labels["start"] == [1, 8]);
-	assert(code.instructions == [1, 1, 1, 3, 4]);
+	assert(code.instructions == [0, 0, 0, 2, 3]);
 	// tests for code.data are missing
 }
 
