@@ -10,13 +10,8 @@ A statement is a single line. A statement in NaVM can be:
 * Empty or whitespace
 * Label
 * Instruction
-* Data
 * Instruction + optional args
 * Label + Instruction + optional args
-* Label + Data
-
-Data and argument are treated the same under the hood. Data is just argument(s)
-to a no-op instruction.
 
 ## Instructions
 

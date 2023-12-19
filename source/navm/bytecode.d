@@ -29,7 +29,7 @@ public struct NaData{
 		}
 	}
 
-	/// value. ** do not use this for arrays, aside from string **
+	/// value. **do not use this for arrays, aside from string**
 	@property T value(T)(){
 		static if (is (T == string)){
 			return cast(string)cast(char[])argData;
@@ -49,78 +49,107 @@ unittest{
 	assert(NaData(true).value!bool == true);
 }
 
-public ByteCode parse(
+public ByteCode parseByteCode(
 		string[N] Insts,
 		uint[N] InstArgC,
 		ushort[N] InstCodes,
 		size_t N)(
 		string[] lines){
 	ByteCode ret;
+	size_t[] absPos = [0];
+	size_t[] toResolve; /// indexes of datas to be resolved
 
 	foreach (i, line; lines){
 		string[] splits = line.separateWhitespace;
 		if (splits.length == 0)
 			continue;
 		if (splits[0][$ - 1] == ':'){
-			ret.labels[splits[0][0 .. $ - 1]] =
-				[ret.instructions.length, ret.data.length];
+			ret.labels[splits[0][0 .. $ - 1]] = [
+				ret.instructions.length,
+				absPos[$ - 1]
+			];
 			splits = splits[1 .. $];
+			if (splits.length == 0)
+				continue;
 		}
-		uint index = uint.max;
 
 		switch (splits[0]){
 			static foreach (ind, name; Insts){
 				case name:
-					if (splits.length - 1 != InstArgC[ind])
+					if (cast(ptrdiff_t)splits.length - 1 != InstArgC[ind])
 						throw new Exception("line " ~ i.to!string ~ ": " ~ name ~
 								" instruction expects " ~ InstArgC[ind].to!string ~
 								" arguments, got " ~ splits.length - 1);
-						index = ind;
+					ret.instructions ~= InstCodes[ind];
 					break;
 			}
-			default: break;
+			default:
+				throw new Exception("line " ~ i.to!string ~ ": Instruction expected");
+				break;
 		}
-
-		if (index != uint.max){
-			ret.instructions ~= InstCodes[index];
-			splits = splits[1 .. $];
-		}
+		splits = splits[1 .. $];
 		foreach (split; splits){
+			if (split.length && split[0] == '@'){
+				toResolve ~= ret.data.length;
+				ret.data ~= NaData(split);
+				absPos ~= absPos[$ - 1] + size_t.sizeof;
+				continue;
+			}
 			NaData data = parseData(split);
 			if (data.argData == null)
 				throw new Exception("line " ~ i.to!string ~ ": Invalid data `" ~
 						split ~ "`");
 			ret.data ~= data;
+			absPos ~= absPos[$ - 1] + data.argData.length;
+		}
+	}
+
+	// resolve addresses
+	foreach (index; toResolve){
+		string arg = ret.data[index].value!string[1 .. $];
+		string plusInd = arg.indexOf('+');
+		if (plusInd != -1){
+			string label = arg[0 .. plusInd];
+			size_t offset = size_t.max;
+			try{
+				offset = arg[plusInd + 1 .. $].to!size_t;
+			} catch (Exception){
+				throw new Exception("Invalid Address `" ~ arg ~ "`");
+			}
+			// TODO continue from here
 		}
 	}
 	return ret;
 }
 
-NaData parseData(string s){
+/// Parses data into NaData.
+///
+/// Returns: resulting NaData, or `NaData()` if invalid or address or label
+private NaData parseData(string s){
 	assert(s.length);
 	if (isNum(s, true)){
 		if (isNum(s, false))
 			return NaData(s.to!ptrdiff_t);
 		return NaData(s.to!double);
 	}
+	if (s.length > 2 && s[0] == '0'){
+		try{
+			if (s[2] == 'b')
+				return NaData(cast(ptrdiff_t)readBinary(s[2 .. $]));
+			else if (s[2] == 'x')
+				return NaData(cast(ptrdiff_t)readHexadecimal(s[2 .. $]));
+		} catch (Exception){
+			return NaData();
+		}
+	}
 	if (s == "true")
 		return NaData(true);
 	if (s == "false")
 		return NaData(false);
-	if (s[0] == '"')
-		return NaData(str[1 .. $ - 1].strUnescape);
-	if (s[0] != '@')
+	if (s[0] != '@' && s[0] != '"' && s[0] != '\'')
 		return NaData();
-	// return labels and addresses as is, they will be resolved later
 	return NaData(s);
 }
-
-NaData parseInteger(string s){
-	assert(s.length > 2 && s[0 .. 2] == "0b");
-	return NaData(cast(ptrdiff_t)readBinary(s[2 .. $]));
-}
-
-NaData parse
 
 /// reads a string into substrings separated by whitespace. Strings are read
 /// as a whole
@@ -202,7 +231,7 @@ private string strUnescape(string s){
 	if (s.length == 0)
 		return null;
 	char[] r = [];
-	for (size_t i = 0, end = s.length - 1; i < end; i ++){
+	for (size_t i = 0, end = cast(ptrdiff_t)s.length - 1; i < end; i ++){
 		if (s[i] != '\\'){
 			r ~= s[i];
 			continue;
