@@ -6,11 +6,10 @@ import utils.ds,
 import std.conv,
 			 std.uni,
 			 std.array,
-			 std.string,
 			 std.algorithm;
 
 public struct ByteCode{
-	uint[2][string] labels; /// [codeIndex, dataIndex] for each labal
+	size_t[2][string] labels; /// [codeIndex, dataIndex] for each labal
 	ushort[] instructions; /// instruction codes
 	NaData[] data; /// instruction data
 }
@@ -66,26 +65,26 @@ public ByteCode parseByteCode(
 		if (splits[0][$ - 1] == ':'){
 			ret.labels[splits[0][0 .. $ - 1]] = [
 				ret.instructions.length,
-				absPos[$ - 1]
+				ret.data.length
 			];
 			splits = splits[1 .. $];
 			if (splits.length == 0)
 				continue;
 		}
 
-		switch (splits[0]){
+		caser: switch (splits[0]){
 			static foreach (ind, name; Insts){
 				case name:
 					if (cast(ptrdiff_t)splits.length - 1 != InstArgC[ind])
 						throw new Exception("line " ~ i.to!string ~ ": " ~ name ~
 								" instruction expects " ~ InstArgC[ind].to!string ~
-								" arguments, got " ~ splits.length - 1);
+								" arguments, got " ~ (splits.length - 1).to!string);
 					ret.instructions ~= InstCodes[ind];
-					break;
+					break caser;
 			}
 			default:
 				throw new Exception("line " ~ i.to!string ~ ": Instruction expected");
-				break;
+				break caser;
 		}
 		splits = splits[1 .. $];
 		foreach (split; splits){
@@ -107,7 +106,7 @@ public ByteCode parseByteCode(
 	// resolve addresses
 	foreach (index; toResolve){
 		string arg = ret.data[index].value!string[1 .. $];
-		string plusInd = arg.indexOf('+');
+		ptrdiff_t plusInd = arg.indexOf('+');
 		// its a data address
 		if (plusInd != -1){
 			string label = arg[0 .. plusInd];
@@ -116,17 +115,50 @@ public ByteCode parseByteCode(
 				offset = arg[plusInd + 1 .. $].to!size_t;
 			}catch (Exception){}
 			if (offset == size_t.max || label !in ret.labels)
-				throw new Exception("Invalid Address `" ~ arg ~ "`");
-			ret.data[index] = NaData(ret.labels[label][1] + offset);
+				throw new Exception("Invalid address `" ~ arg ~ "`");
+			size_t pos = ret.labels[label][1] + offset;
+			if (pos > absPos.length)
+				throw new Exception("Invalid offset `" ~ arg ~ "`");
+			ret.data[index] = NaData(absPos[pos]);
 			continue;
 		}
 		// its a label address
 		if (arg !in ret.labels)
-			throw new Exception("Invalid Address `" ~ arg ~ "`");
+			throw new Exception("Invalid address `" ~ arg ~ "`");
 		ret.data[index] = NaData(ret.labels[arg][0]);
 	}
+
+	// resolve label data indexes to data addresses using absPos
+	foreach (label; ret.labels.keys)
+		ret.labels[label][1] = absPos[ret.labels[label][1]];
 	return ret;
 }
+
+///
+unittest{
+	alias parse = parseByteCode!(
+			["push", "pop", "add", "print"],
+			[1, 1, 0, 0],
+			[1, 2, 3, 4]);
+	string[] source = [
+		"data: push 50",
+		"start: push 50",
+		"push @data+2",
+		"add",
+		"print"
+	];
+	ByteCode code = parse(source);
+	import std.stdio;
+	assert(code.labels.length == 2);
+	assert("data" in code.labels);
+	assert("start" in code.labels);
+	assert(code.labels["data"] == [0, 0]);
+	assert(code.labels["start"] == [1, 8]);
+	assert(code.instructions == [1, 1, 1, 3, 4]);
+	// tests for code.data are missing
+}
+
+// TODO implement binary file read/write
 
 /// Parses data into NaData.
 ///
@@ -140,9 +172,9 @@ private NaData parseData(string s){
 	}
 	if (s.length > 2 && s[0] == '0'){
 		try{
-			if (s[2] == 'b')
+			if (s[1] == 'b')
 				return NaData(cast(ptrdiff_t)readBinary(s[2 .. $]));
-			else if (s[2] == 'x')
+			else if (s[1] == 'x')
 				return NaData(cast(ptrdiff_t)readHexadecimal(s[2 .. $]));
 		} catch (Exception){
 			return NaData();
@@ -157,6 +189,17 @@ private NaData parseData(string s){
 	if (s[0] != '@')
 		return NaData();
 	return NaData(s);
+}
+
+///
+unittest{
+	assert("true".parseData.value!bool == true);
+	assert("false".parseData.value!bool == false);
+	assert("0x50".parseData.value!size_t == 0x50);
+	assert("0b101010".parseData.value!size_t == 0b101010);
+	assert("12345".parseData.value!size_t == 1_2345);
+	assert("\"bla bla\"".parseData.value!string == "bla bla");
+	assert("5.5".parseData.value!double == "5.5".to!double);
 }
 
 /// reads a string into substrings separated by whitespace. Strings are read
@@ -239,17 +282,19 @@ private string unescape(string s){
 	if (s.length == 0)
 		return null;
 	char[] r = [];
-	for (size_t i = 0, end = cast(ptrdiff_t)s.length - 1; i < end; i ++){
+	for (size_t i = 0; i < s.length; i ++){
 		if (s[i] != '\\'){
 			r ~= s[i];
 			continue;
 		}
-		char c = s[i + 1];
-		switch (c){
-			case 't': r ~= '\t'; i ++; continue;
-			case 'n': r ~= '\n'; i ++; continue;
-			case '\\': r ~= '\\'; i ++; continue;
-			default: break;
+		if (i + 1 < s.length){
+			char c = s[i + 1];
+			switch (c){
+				case 't': r ~= '\t'; i ++; continue;
+				case 'n': r ~= '\n'; i ++; continue;
+				case '\\': r ~= '\\'; i ++; continue;
+				default: break;
+			}
 		}
 		r ~= s[i];
 	}
@@ -257,5 +302,6 @@ private string unescape(string s){
 }
 ///
 unittest{
-	assert("newline:\\ntab:\\t".unescape == "newline:\ntab:\t", "newline:\\ntab:\\t".strUnescape);
+	assert("newline:\\ntab:\\t".unescape ==
+			"newline:\ntab:\t", "newline:\\ntab:\\t".unescape);
 }
