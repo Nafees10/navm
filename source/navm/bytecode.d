@@ -50,10 +50,10 @@ unittest{
 }
 
 public ByteCode parseByteCode(
-		string[N] Insts,
-		uint[N] InstArgC,
-		ushort[N] InstCodes,
-		size_t N)(
+		string[] Insts,
+		uint[] InstArgC,
+		ushort[] InstCodes)
+	(
 		string[] lines){
 	ByteCode ret;
 	size_t[] absPos = [0];
@@ -108,16 +108,22 @@ public ByteCode parseByteCode(
 	foreach (index; toResolve){
 		string arg = ret.data[index].value!string[1 .. $];
 		string plusInd = arg.indexOf('+');
+		// its a data address
 		if (plusInd != -1){
 			string label = arg[0 .. plusInd];
 			size_t offset = size_t.max;
 			try{
 				offset = arg[plusInd + 1 .. $].to!size_t;
-			} catch (Exception){
+			}catch (Exception){}
+			if (offset == size_t.max || label !in ret.labels)
 				throw new Exception("Invalid Address `" ~ arg ~ "`");
-			}
-			// TODO continue from here
+			ret.data[index] = NaData(ret.labels[label][1] + offset);
+			continue;
 		}
+		// its a label address
+		if (arg !in ret.labels)
+			throw new Exception("Invalid Address `" ~ arg ~ "`");
+		ret.data[index] = NaData(ret.labels[arg][0]);
 	}
 	return ret;
 }
