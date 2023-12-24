@@ -9,7 +9,7 @@ import std.conv,
 			 std.algorithm;
 
 public struct ByteCode{
-	size_t[string] labelNames; /// label index against each labelName
+	string[] labelNames; /// label index against each labelName
 	size_t[2][] labels; /// [codeIndex, dataIndex] for each labal
 	ushort[] instructions; /// instruction codes
 	ubyte[] data; /// instruction data
@@ -63,10 +63,10 @@ package ByteCode parseByteCode(
 			continue;
 		if (splits[0].length && splits[0][$ - 1] == ':'){
 			string name = splits[0][0 .. $ - 1];
-			if (name in ret.labelNames)
+			if (ret.labelNames.canFind(name))
 				throw new Exception("line " ~ (i + 1).to!string ~
 						" label name redeclared");
-			ret.labelNames[name] = ret.labels.length;
+			ret.labelNames ~= name;
 			ret.labels ~= [
 				ret.instructions.length,
 				ret.data.length
@@ -89,7 +89,6 @@ package ByteCode parseByteCode(
 			default:
 				throw new Exception("line " ~ (i + 1).to!string ~
 						": Instruction expected, got `" ~ splits[0] ~ "`");
-				break caser;
 		}
 
 		splits = splits[1 .. $];
@@ -119,20 +118,21 @@ package ByteCode parseByteCode(
 			try {
 				offset = arg[plusInd + 1 .. $].to!size_t;
 			} catch (Exception){}
-			if (offset == size_t.max || (label.length && label !in ret.labelNames))
+			if (offset == size_t.max || (
+						label.length && !ret.labelNames.canFind(label)))
 				throw new Exception("Invalid address `" ~ arg ~ "`");
 			size_t pos = offset +
-				(label.length ? ret.labels[ret.labelNames[label]][1] : 0);
+				(label.length ? ret.labels[ret.labelNames.indexOf(label)][1] : 0);
 			if (pos > absPos.length)
 				throw new Exception("Invalid offset `" ~ arg ~ "`");
 			ret.data[index .. index + size_t.sizeof] = absPos[pos].asBytes;
 			continue;
 		}
 		// its a label address
-		if (arg !in ret.labelNames)
+		if (!ret.labelNames.canFind(arg))
 			throw new Exception("Invalid address `" ~ arg ~ "`");
 		ret.data[index .. index + size_t.sizeof] =
-			ret.labelNames[arg].asBytes;
+			ret.labelNames.indexOf(arg).asBytes;
 	}
 	return ret;
 }
