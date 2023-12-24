@@ -11,41 +11,40 @@ import std.conv,
 public struct ByteCode{
 	size_t[2][string] labels; /// [codeIndex, dataIndex] for each labal
 	ushort[] instructions; /// instruction codes
-	NaData[] data; /// instruction data
+	ubyte[] data; /// instruction data
 }
 
-/// For storing data of varying data types
-public struct NaData{
-	/// the actual data
-	ubyte[] argData = null;
-
-	this(T)(T val){
-		static if (is (T == string)){
-			argData = cast(ubyte[])(cast(char[])val);
-		} else {
-			argData.length = T.sizeof;
-			argData[0 .. T.sizeof] = (cast(ubyte*)&val)[0 .. T.sizeof];
-		}
-	}
-
-	/// value. **do not use this for arrays, aside from string**
-	@property T value(T)(){
-		static if (is (T == string)){
-			return cast(string)cast(char[])argData;
-		} else {
-			if (argData.length < T.sizeof)
-				assert(false, "NaData.value.argData.length < T.sizeof");
-			return *(cast(T*)argData.ptr);
-		}
+/// Reads a ubyte[] as a type
+/// Returns: value in type T
+pragma(inline, true);
+package T as(T)(ubyte[] data){
+	static if (is (T == string)){
+		return cast(string)cast(char[])data;
+	} else {
+		assert(data.length >= T.sizeof);
+		return *(cast(T*)data.ptr);
 	}
 }
+
+/// Returns: ubyte[] against a value of type T
+pragma(inline, true);
+package ubyte[] asBytes(T)(T val){
+	static if (is (T == string)){
+		return cast(ubyte[])cast(char[])val;
+	} else {
+		ubyte[] ret;
+		ret.length = T.sizeof;
+		return ret[] = (cast(ubyte*)&val)[0 .. T.sizeof];
+	}
+}
+
 ///
 unittest{
-	assert(NaData(cast(ptrdiff_t)1025).value!ptrdiff_t == 1025);
-	assert(NaData("hello").value!string == "hello");
-	assert(NaData(cast(double)50.5).value!double == 50.5);
-	assert(NaData('a').value!char == 'a');
-	assert(NaData(true).value!bool == true);
+	assert((cast(ptrdiff_t)1025).asBytes.as!ptrdiff_t == 1025);
+	assert("hello".asBytes.as!string == "hello");
+	assert((cast(double)50.5).asBytes.as!double == 50.5);
+	assert('a'.asBytes.as!char == 'a');
+	assert(true.asBytes.as!bool == true);
 }
 
 package ByteCode parseByteCode(
@@ -55,7 +54,7 @@ package ByteCode parseByteCode(
 		string[] lines){
 	ByteCode ret;
 	size_t[] absPos = [0];
-	size_t[] toResolve; /// indexes of datas to be resolved
+	size_t[string] toResolve; /// indexes of datas to be resolved
 
 	foreach (i, line; lines){
 		string[] splits = line.separateWhitespace;
@@ -86,52 +85,47 @@ package ByteCode parseByteCode(
 						": Instruction expected, got `" ~ splits[0] ~ "`");
 				break caser;
 		}
+
 		splits = splits[1 .. $];
 		foreach (split; splits){
 			if (split.length && split[0] == '@'){
-				toResolve ~= ret.data.length;
-				ret.data ~= NaData(split);
+				toResolve[split[1 .. $]] = ret.data.length;
+				ret.data.length += size_t.sizeof;
 				absPos ~= absPos[$ - 1] + size_t.sizeof;
 				continue;
 			}
-			NaData data = parseData(split);
-			if (data.argData == null)
+			ubyte[] data = parseData(split);
+			if (data == null)
 				throw new Exception("line " ~ i.to!string ~ ": Invalid data `" ~
 						split ~ "`");
 			ret.data ~= data;
-			absPos ~= absPos[$ - 1] + data.argData.length;
+			absPos ~= absPos[$ - 1] + data.length;
 		}
 	}
 
 	// resolve addresses
-	foreach (index; toResolve){
-		string arg = ret.data[index].value!string[1 .. $];
+	foreach (arg, index; toResolve){
 		ptrdiff_t plusInd = arg.indexOf('+');
 		// its a data address
 		if (plusInd != -1){
 			string label = arg[0 .. plusInd];
 			size_t offset = size_t.max;
-			try{
+			try {
 				offset = arg[plusInd + 1 .. $].to!size_t;
-			}catch (Exception){}
-			if (offset == size_t.max || label !in ret.labels)
+			} catch (Exception){}
+			if (offset == size_t.max || (label.length && label !in ret.labels))
 				throw new Exception("Invalid address `" ~ arg ~ "`");
-			size_t pos = ret.labels[label][1] + offset;
+			size_t pos = offset + (label.length ? ret.labels[label][1] : 0);
 			if (pos > absPos.length)
 				throw new Exception("Invalid offset `" ~ arg ~ "`");
-			//ret.data[index] = NaData(absPos[pos]);
-			ret.data[index] = NaData(pos);
+			ret.data[index .. index + size_t.sizeof] = absPos[pos].asBytes;
 			continue;
 		}
 		// its a label address
 		if (arg !in ret.labels)
 			throw new Exception("Invalid address `" ~ arg ~ "`");
-		ret.data[index] = NaData(ret.labels[arg][0]);
+		ret.data[index .. index + size_t.sizeof] = ret.labels[arg][0].asBytes;
 	}
-
-	// resolve label data indexes to data addresses
-	/*foreach (label; ret.labels.keys)
-		ret.labels[label][1] = absPos[ret.labels[label][1]];*/
 	return ret;
 }
 
@@ -160,46 +154,46 @@ unittest{
 
 // TODO implement binary file read/write
 
-/// Parses data into NaData.
+/// Parses data, asBytes it into ubyte[].
 ///
-/// Returns: resulting NaData, or `NaData()` if invalid or address or label
-private NaData parseData(string s){
+/// Returns: resulting ubyte[], or `null` if invalid or address or label
+private ubyte[] parseData(string s){
 	assert(s.length);
 	if (isNum(s, true)){
 		if (isNum(s, false))
-			return NaData(s.to!ptrdiff_t);
-		return NaData(s.to!double);
+			return s.to!ptrdiff_t.asBytes;
+		return s.to!double.asBytes;
 	}
 	if (s.length > 2 && s[0] == '0'){
 		try{
 			if (s[1] == 'b')
-				return NaData(cast(ptrdiff_t)readBinary(s[2 .. $]));
+				return (cast(ptrdiff_t)readBinary(s[2 .. $])).asBytes;
 			else if (s[1] == 'x')
-				return NaData(cast(ptrdiff_t)readHexadecimal(s[2 .. $]));
+				return (cast(ptrdiff_t)readHexadecimal(s[2 .. $])).asBytes;
 		} catch (Exception){
-			return NaData();
+			return null;
 		}
 	}
 	if (s == "true")
-		return NaData(true);
+		return true.asBytes;
 	if (s == "false")
-		return NaData(false);
+		return false.asBytes;
 	if (s[0] == '"' || s[0] == '\'')
-		return NaData(s[1 .. $ - 1].unescape);
+		return s[1 .. $ - 1].unescape.asBytes;
 	if (s[0] != '@')
-		return NaData();
-	return NaData(s);
+		return null;
+	return s.asBytes;
 }
 
 ///
 unittest{
-	assert("true".parseData.value!bool == true);
-	assert("false".parseData.value!bool == false);
-	assert("0x50".parseData.value!size_t == 0x50);
-	assert("0b101010".parseData.value!size_t == 0b101010);
-	assert("12345".parseData.value!size_t == 1_2345);
-	assert("\"bla bla\"".parseData.value!string == "bla bla");
-	assert("5.5".parseData.value!double == "5.5".to!double);
+	assert("true".parseData.as!bool == true);
+	assert("false".parseData.as!bool == false);
+	assert("0x50".parseData.as!size_t == 0x50);
+	assert("0b101010".parseData.as!size_t == 0b101010);
+	assert("12345".parseData.as!size_t == 1_2345);
+	assert("\"bla bla\"".parseData.as!string == "bla bla");
+	assert("5.5".parseData.as!double == "5.5".to!double);
 }
 
 /// reads a string into substrings separated by whitespace. Strings are read
