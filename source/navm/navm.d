@@ -6,8 +6,6 @@ import std.conv,
 
 public import navm.bytecode;
 
-interface Shared{}
-
 /// Parse string[] lines into bytecode
 /// Template parameters are functions for instructions
 /// Throws: Exception on invalid bytecode
@@ -22,21 +20,27 @@ private template InstNames(T...) if (allSatisfy!(isCallable, T)){
 		InstNames = AliasSeq!(InstNames, __traits(identifier, sym));
 }
 
-/// Function arity (instruction arguments only)
-private template InstArity(alias T) if (isCallable!T){
-	enum InstArity = getArity();
-	private size_t getArity(){
-		size_t sub = 0;
-		foreach (i, pT; Parameters!T){
-			if (is (pT : navm.navm.Shared) ||
-					is (pT == navm.bytecode.ByteCode) || (
-						is (pT == size_t*) && (
-							ParameterIdentifierTuple!T[i] == "_ic" ||
-							ParameterIdentifierTuple!T[i] == "_dc")))
-				sub ++;
-		}
-		return arity!T - sub;
+/// Whether N'th parameter of an Instruction is an argument
+private template InstParamIsArg(alias T, size_t N) if (isCallable!T){
+	enum InstParamIsArg =
+		!is (Parameters!T[N] == navm.bytecode.ByteCode) &&
+		ParameterIdentifierTuple!T[N] != "_ic" &&
+		ParameterIdentifierTuple!T[N] != "_dc" &&
+		ParameterIdentifierTuple!T[N] != "_state";
+}
+
+/// Instruction Function's argument types (these exclude stuff like _ic...)
+private template InstArgs(alias T) if (isCallable!T){
+	alias InstArgs = AliasSeq!();
+	static foreach (i; 0 .. Parameters!T.length){
+		static if (InstParamIsArg!(T, i))
+			InstArgs = AliasSeq!(InstArgs, Parameters!T[i]);
 	}
+}
+
+/// Function arity (instruction arguments only)
+private template InstArity(alias T){
+	enum InstArity = InstArgs!T.length;
 }
 
 /// ditto
@@ -46,66 +50,102 @@ private template InstArities(T...) if (allSatisfy!(isCallable, T)){
 		InstArities = AliasSeq!(InstArities, InstArity!sym);
 }
 
-/// Number of parameters of function T that are of a type TT
-private template ParamTypeCount(T, TT) if (isCallable!T){
-	enum ParamTypeCount = getTypeCount();
-	private size_t getTypeCount(){
-		size_t ret = 0;
-		foreach (sym; Parameters!T){
-			if (is(sym == TT))
-				ret ++;
+/// A struct storing an Instruction's InstParams
+private template InstArgsStruct(alias T) if (isCallable!T){
+	struct InstArgsStruct{
+		InstArgs!T params;
+	}
+}
+
+/// A union containing InstParamStruct for every function
+private template InstArgsUnion(T...) if (allSatisfy!(isCallable, T)){
+	union InstArgsUnion{
+		staticMap!(InstArgsStruct, T) structs;
+	}
+}
+
+/// If a T can be .sizeof'd
+private enum HasSizeof(alias T) = __traits(compiles, T.sizeof);
+
+/// sum of sizes
+private template SizeofSum(T...) if (allSatisfy!(HasSizeof, T)){
+	static if (T.length == 0){
+		enum SizeofSum = 0;
+	} else static if (T.length == 1){
+		enum SizeofSum = T[0].sizeof;
+	} else static if (T.length == 2){
+		enum SizeofSum = T[0].sizeof + T[1].sizeof;
+	} else {
+		enum SizeofSum = T[0].sizeof + SizeofSum!(T[1 .. $]);
+	}
+}
+
+/// Mapping of Args to Params for an instruction. size_t.max for unmapped
+private template InstParamArgMapping(alias T) if (isCallable!T){
+	enum InstParamArgMapping = getMapping;
+	size_t[Parameters!T.length] getMapping(){
+		size_t[Parameters!T.length] ret;
+		size_t count = 0;
+		static foreach (i; 0 .. Parameters!T.length){
+			static if (InstParamIsArg!(T, i)){
+				ret[i] = count ++;
+			} else {
+				ret[i] = size_t.max;
+			}
 		}
 		return ret;
 	}
 }
 
-/// sum of sizes
-private template SizeofSum(T...) if (__traits(compiles, T[0].sizeof)){
-	enum SizeofSum = getSizeofSum();
-	private size_t getSizeofSum(){
-		size_t ret = 0;
-		foreach (sym; T)
-			ret += sym.sizeof;
-		return ret;
+/// Instruction's Parameters alias for calling
+private template InstCallStatement(alias Inst) if (isCallable!Inst){
+	enum InstCallStatement = getStatement();
+	private string getStatement(){
+		string ret = "sym(";
+		static foreach (i, mapTo; InstParamArgMapping!Inst){
+			static if (mapTo == size_t.max){
+				static if (ParameterIdentifierTuple!Inst[i] == "_ic"){
+					ret ~= "ic, ";
+				} else static if (ParameterIdentifierTuple!Inst[i] == "_dc"){
+					ret ~= "dc, ";
+				} else static if (ParameterIdentifierTuple!Inst[i] == "_state"){
+					ret ~= "state, ";
+				} else static if (is (Parameters!Inst[i] == navm.bytecode.ByteCode)){
+					ret ~= "code, ";
+				}
+			} else {
+				ret ~= "pun.structs[ind].params[" ~ mapTo.to!string ~ "], ";
+			}
+		}
+		if (ret[$ - 1] == '(')
+			return ret ~ ");";
+		return ret[0 .. $ - 2] ~ ");";
 	}
 }
 
-public void execute(T...)(
+public void execute(S, T...)(
 		ByteCode code,
-		Shared obj = null,
-		string label = null)
-	if (
-		allSatisfy!(isCallable, T)){
+		S state,
+		size_t label = size_t.max) if (allSatisfy!(isCallable, T)){
 	size_t ic, dc;
-	if (label != null){
+	if (label != size_t.max){
 		ic = code.labels[label][0];
 		dc = code.labels[label][1];
 	}
+	InstArgsUnion!T pun;
 	const len = code.instructions.length;
 	while (ic < len){
 		switcher: switch (code.instructions[ic]){
 			foreach (ind, sym; T){
 				case ind:
-					Parameters!sym params;
-					static foreach (i; 0 .. params.length){
-						static if (is (typeof(params[i]) : Shared)){
-							params[i] = cast(typeof(params[i]))obj;
-						} else static if (is (typeof(params[i]) == ByteCode)){
-							params[i] = code;
-						} else static if (is (typeof(params[i]) == size_t*) &&
-								ParameterIdentifierTuple!sym[i] == "_ic"){
-							params[i] = &ic;
-						} else static if (is (typeof(params[i]) == size_t*) &&
-								ParameterIdentifierTuple!sym[i] == "_dc"){
-							params[i] = &dc;
-						} else {
-							params[i] = code.data[dc].value!(typeof(params[i]));
-						}
+					static foreach (i; 0 .. pun.structs[ind].params.length){
+						pun.structs[ind].params[i] =
+							code.data[dc + SizeofSum!(pun.structs[ind].params[0 .. i]) .. $]
+							.as!(typeof(pun.structs[ind].params[i]));
 					}
 					ic ++;
-					dc += InstArity!sym;
-					sym(params);
-					import std.stdio;writeln(ic);
+					dc += SizeofSum!(InstArgs!sym);
+					mixin(InstCallStatement!sym);
 					break switcher;
 			}
 			default:

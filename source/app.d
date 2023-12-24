@@ -10,24 +10,24 @@ version(demo){
 
 	enum Bar;
 
-	class Stack : Shared{
+	class Stack{
 	public:
 		ptrdiff_t[512] stack;
 		size_t seek;
 	}
 
-	pragma(inline, true) void push(Stack stack, ptrdiff_t i){
+	pragma(inline, true) void push(Stack _state, ptrdiff_t i){
 		writefln!"pushing %d"(i);
-		stack.stack[stack.seek ++] = i;
+		_state.stack[_state.seek ++] = i;
 	}
-	pragma(inline, true) void pop(Stack stack){
-		stack.seek --;
-		writefln!"popped %d"(stack.stack[stack.seek]);
+	pragma(inline, true) void pop(Stack _state){
+		_state.seek --;
+		writefln!"popped %d"(_state.stack[_state.seek]);
 	}
-	pragma(inline, true) void jump(size_t* _ic, size_t* _dc, ByteCode code,
-			string label){
-		*_ic = code.labels[label][0];
-		*_dc = code.labels[label][1];
+	pragma(inline, true) void jump(ref size_t _ic, ref size_t _dc,
+			ref ByteCode code, size_t label){
+		_ic = code.labels[label][0];
+		_dc = code.labels[label][1];
 	}
 
 	alias InstructionSet = AliasSeq!(push, pop, jump);
@@ -40,10 +40,10 @@ version(demo){
 			"push 100",
 			"pop",
 			"pop",
-			"jump \"start\""
+			"jump @start"
 		];
 		ByteCode code = parseByteCode!(InstructionSet)(source);
 		writeln(code);
-		execute!(InstructionSet)(code, stack, "start");
+		execute!(Stack, InstructionSet)(code, stack, code.labelNames["start"]);
 	}
 }
