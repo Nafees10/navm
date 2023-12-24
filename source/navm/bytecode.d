@@ -18,7 +18,7 @@ public struct ByteCode{
 /// Reads a ubyte[] as a type
 /// Returns: value in type T
 pragma(inline, true);
-package T as(T)(ubyte[] data){
+public T as(T)(ubyte[] data){
 	static if (is (T == string)){
 		return cast(string)cast(char[])data;
 	} else {
@@ -29,7 +29,7 @@ package T as(T)(ubyte[] data){
 
 /// Returns: ubyte[] against a value of type T
 pragma(inline, true);
-package ubyte[] asBytes(T)(T val){
+public ubyte[] asBytes(T)(T val){
 	static if (is (T == string)){
 		return cast(ubyte[])cast(char[])val;
 	} else {
@@ -58,10 +58,10 @@ package ByteCode parseByteCode(
 	size_t[string] toResolve; /// indexes of datas to be resolved
 
 	foreach (i, line; lines){
-		string[] splits = line.separateWhitespace;
+		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
 		if (splits.length == 0)
 			continue;
-		if (splits[0][$ - 1] == ':'){
+		if (splits[0].length && splits[0][$ - 1] == ':'){
 			string name = splits[0][0 .. $ - 1];
 			if (name in ret.labelNames)
 				throw new Exception("line " ~ (i + 1).to!string ~
@@ -132,7 +132,7 @@ package ByteCode parseByteCode(
 		if (arg !in ret.labelNames)
 			throw new Exception("Invalid address `" ~ arg ~ "`");
 		ret.data[index .. index + size_t.sizeof] =
-			ret.labels[ret.labelNames[arg]][0].asBytes;
+			ret.labelNames[arg].asBytes;
 	}
 	return ret;
 }
