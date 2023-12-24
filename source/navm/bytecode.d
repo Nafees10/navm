@@ -247,7 +247,8 @@ unittest{
 	assert(" a b \"str\"".separateWhitespace == ["a", "b", "\"str\""]);
 	assert("a b 'c' \"str\"".separateWhitespace == ["a", "b", "'c'", "\"str\""]);
 	assert("\ta   \t b\"str\"".separateWhitespace == ["a", "b", "\"str\""]);
-	assert("   a   b  'c'\"str\"'c'".separateWhitespace == ["a", "b", "'c'", "\"str\"", "'c'"]);
+	assert("   a   b  'c'\"str\"'c'".separateWhitespace ==
+			["a", "b", "'c'", "\"str\"", "'c'"]);
 	assert("a 'b'#c".separateWhitespace == ["a", "'b'"]);
 	assert("a: a b#c".separateWhitespace == ["a:","a", "b"]);
 	assert("a 'b' #c".separateWhitespace == ["a", "'b'"]);
