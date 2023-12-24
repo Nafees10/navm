@@ -55,7 +55,8 @@ package ByteCode parseByteCode(
 		string[] lines){
 	ByteCode ret;
 	size_t[] absPos = [0];
-	size_t[string] toResolve; /// indexes of datas to be resolved
+	size_t[] toResolveAddr;
+	string[] toResolveArg;
 
 	foreach (i, line; lines){
 		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
@@ -94,7 +95,8 @@ package ByteCode parseByteCode(
 		splits = splits[1 .. $];
 		foreach (split; splits){
 			if (split.length && split[0] == '@'){
-				toResolve[split[1 .. $]] = ret.data.length;
+				toResolveArg ~= split[1 .. $];
+				toResolveAddr ~= ret.data.length;
 				ret.data.length += size_t.sizeof;
 				absPos ~= absPos[$ - 1] + size_t.sizeof;
 				continue;
@@ -109,7 +111,8 @@ package ByteCode parseByteCode(
 	}
 
 	// resolve addresses
-	foreach (arg, index; toResolve){
+	foreach (ind, index; toResolveAddr){
+		string arg = toResolveArg[ind];
 		ptrdiff_t plusInd = arg.indexOf('+');
 		// its a data address
 		if (plusInd != -1){
