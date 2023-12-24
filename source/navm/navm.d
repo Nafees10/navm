@@ -123,9 +123,10 @@ private template InstCallStatement(alias Inst) if (isCallable!Inst){
 	}
 }
 
+/// Execute a ByteCode, with a shared struct of type S among instructions
 public void execute(S, T...)(
 		ByteCode code,
-		S state,
+		ref S state,
 		size_t label = size_t.max) if (allSatisfy!(isCallable, T)){
 	size_t ic, dc;
 	if (label != size_t.max){
