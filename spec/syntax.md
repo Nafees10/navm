@@ -9,7 +9,6 @@ A statement is a single line. A statement in NaVM can be:
 
 * Empty or whitespace
 * Label
-* Instruction
 * Instruction + optional args
 * Label + Instruction + optional args
 
@@ -54,8 +53,8 @@ types:
 
 ### Address
 
-This is translated to the data location, but can be written in a
-number of ways. Assuming this code:
+This is translated to the data location, and can be written in a number of
+ways. Assuming this code:
 
 ```
 start:	add2	50	250
