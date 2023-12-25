@@ -67,20 +67,22 @@ version(demo){
 
 	void main(string[] args){
 		if (args.length < 2)
-			args = [args[0], "test"];
+			args = [args[0], "tests/default"];
 		immutable size_t count = args.length > 2 && args[2].isNum
 			? args[2].to!size_t : 1;
 		StopWatch sw;
-		sw = StopWatch(AutoStart.no);
 		ByteCode code = parseByteCode!InstructionSet(fileToArray(args[1]));
-		writeln(code);
+		//writeln(code);
+
 		Store store;
 		immutable ptrdiff_t startIndex = code.labelNames.indexOf("start");
 		if (startIndex == -1){
 			writeln("label `start` not found");
 			return;
 		}
+
 		size_t min = size_t.max ,max = 0 ,avg = 0;
+		sw = StopWatch(AutoStart.no);
 		foreach (i; 0 .. count){
 			sw.start;
 			execute!(Store, InstructionSet)(code, store, startIndex);
@@ -91,6 +93,7 @@ version(demo){
 			avg = sw.peek.total!"msecs";
 		}
 		avg = sw.peek.total!"msecs" / count;
+
 		writeln("executed `",args[1],"` ",count," times:");
 		writeln("min\tmax\tavg\ttotal");
 		writeln(min,'\t',max,'\t',avg,'\t',sw.peek.total!"msecs");
