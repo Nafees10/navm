@@ -1,6 +1,8 @@
 # NaVM
 A barebones VM, intended to be used for scripting applications.
 
+Created primarily for use in [qscript](https://github.com/nafees10/qscript).
+
 ---
 
 ## Getting Started
