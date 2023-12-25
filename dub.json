@@ -2,7 +2,7 @@
 	"authors": [
 		"Nafees Hassan"
 	],
-	"copyright": "Copyright © 2019-2022, Nafees Hassan",
+	"copyright": "Copyright © 2019-2023, Nafees Hassan",
 	"dependencies": {
 		"utils": "~>0.7.0"
 	},
