@@ -91,7 +91,7 @@ The most common use case for jumps would be jumping to some label. A jump to a
 label could be implemented as:
 
 ```d
-void jump(ref ByteCode code, ref size_t _ic, ref size_t _dc, size_t label){
+void jump(ref ByteCode _code, ref size_t _ic, ref size_t _dc, size_t label){
 	// code.labels is an array of [instructionIndex, dataIndex] for each label,
 	// where index is the label index
 	_ic = code.labels[label][0];
