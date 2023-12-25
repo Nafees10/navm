@@ -129,6 +129,13 @@ void push(ref Stack _state, size_t value){
 void pop(ref Stack _state){
 	_state.top --;
 }
+import std.meta : AliasSeq;
+alias InstrucionSet = AliasSeq!(push, pop);
+// load
+ByteCode code = parseByteCode!InstrucionSet(bytecodeSource);
+Stack stack;
+// execute
+execute!(Stack, InstrucionSet)(code, stack);
 ```
 
 ---
