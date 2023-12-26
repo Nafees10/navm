@@ -17,7 +17,7 @@ public struct ByteCode{
 
 /// Reads a ubyte[] as a type
 /// Returns: value in type T
-pragma(inline, true);
+pragma(inline, true)
 public T as(T)(ubyte[] data){
 	static if (is (T == string)){
 		return cast(string)cast(char[])data;
@@ -28,7 +28,7 @@ public T as(T)(ubyte[] data){
 }
 
 /// Returns: ubyte[] against a value of type T
-pragma(inline, true);
+pragma(inline, true)
 public ubyte[] asBytes(T)(T val){
 	static if (is (T == string)){
 		return cast(ubyte[])cast(char[])val;
@@ -143,23 +143,24 @@ package ByteCode parseByteCode(
 ///
 unittest{
 	alias parse = parseByteCode!(
-			["push", "pop", "add", "print"],
-			[1, 1, 0, 0]);
+			["push", "push2", "pop", "add", "print"],
+			[1, 2, 1, 0, 0]);
 	string[] source = [
 		"data: push 50",
 		"start: push 50",
 		"push @data+2",
+		"push2 1 2",
 		"add",
 		"print"
 	];
 	ByteCode code = parse(source);
 	import std.stdio;
 	assert(code.labels.length == 2);
-	assert("data" in code.labels);
-	assert("start" in code.labels);
-	assert(code.labels["data"] == [0, 0]);
-	assert(code.labels["start"] == [1, 8]);
-	assert(code.instructions == [0, 0, 0, 2, 3]);
+	assert(code.labelNames.canFind("data"));
+	assert(code.labelNames.canFind("start"));
+	assert(code.labels[0] == [0, 0]);
+	assert(code.labels[1] == [1, 8]);
+	assert(code.instructions == [0, 0, 0, 1, 3, 4]);
 	// tests for code.data are missing
 }
 
