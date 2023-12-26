@@ -1,7 +1,6 @@
 module navm.bytecode;
 
-import utils.ds,
-			 utils.misc;
+import utils.misc;
 
 import std.conv,
 			 std.uni,
@@ -165,6 +164,71 @@ unittest{
 }
 
 // TODO implement binary file read/write
+
+/// Union with array of ubytes
+private union ByteUnion(T, ubyte N = T.sizeof){
+	T data;
+	ubyte[N] bytes;
+	this(T data){
+		this.data = data;
+	}
+}
+
+/// Writes ByteCode to a binary stream
+///
+/// Returns: binary date in a ubyte[]
+public ubyte[] toBin(ref ByteCode code, ushort versionCode = 2,
+		ubyte[7] magicPostfix = 0, ubyte[] metadata){
+	// figure out expected length
+	size_t expectedSize = 17 + 8 + metadata.length +
+		8 + (code.instructions.length * 2) +
+		8 + code.data.length +
+		8 + ((8 * 3) * code.labels.length);
+	// count label names sizes, add those
+	foreach (name; code.labelNames)
+		expectedSize += name.length;
+	ubyte[] stream = new ubyte[expectedSize];
+
+	// header
+	stream[0 .. 7] = cast(ubyte[])cast(char[])"NAVMBC-";
+	stream[7 .. 9] = ByteUnion!ushort(versionCode).bytes;
+	stream[9 .. 16] = magicPostfix;
+
+	// metadata
+	stream[17 .. 25] = ByteUnion!(size_t, 8)(metadata.length).bytes;
+	stream[25 .. 25 + metadata.length] = metadata;
+	size_t seek = 25 + metadata.length;
+
+	// instructions
+	stream[seek .. seek + 8] =
+		ByteUnion!(size_t, 8)(code.instructions.length).bytes;
+	seek += 8;
+	foreach (inst; code.instructions){
+		stream[seek .. seek + 2] = ByteUnion!(ushort, 2)(inst).bytes;
+		seek += 2;
+	}
+
+	// data
+	stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.data.length).bytes;
+	seek += 8;
+	stream[seek .. seek + code.data.length] = code.data;
+	seek += code.data.length;
+
+	// labels
+	stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels.length).bytes;
+	seek += 8;
+	foreach (i, name; code.labelNames){
+		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels[i][0]).bytes;
+		seek += 8;
+		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels[i][0]).bytes;
+		seek += 8;
+		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(name.length).bytes;
+		seek += 8;
+		stream[seek .. seek + name.length] = cast(ubyte[])cast(char[])name;
+		seek += name.length;
+	}
+	return stream;
+}
 
 /// Parses data, asBytes it into ubyte[].
 ///
