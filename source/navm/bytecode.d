@@ -1,10 +1,11 @@
 module navm.bytecode;
 
-import utils.misc;
+import utils.misc : readHexadecimal, readBinary, isNum;
 
 import std.conv,
 			 std.uni,
 			 std.array,
+			 std.string,
 			 std.algorithm;
 
 public struct ByteCode{
@@ -124,7 +125,7 @@ package ByteCode parseByteCode(
 						label.length && !ret.labelNames.canFind(label)))
 				throw new Exception("Invalid address `" ~ arg ~ "`");
 			size_t pos = offset +
-				(label.length ? ret.labels[ret.labelNames.indexOf(label)][1] : 0);
+				(label.length ? ret.labels[ret.labelNames.countUntil(label)][1] : 0);
 			if (pos > absPos.length)
 				throw new Exception("Invalid offset `" ~ arg ~ "`");
 			ret.data[index .. index + size_t.sizeof] = absPos[pos].asBytes;
@@ -134,7 +135,7 @@ package ByteCode parseByteCode(
 		if (!ret.labelNames.canFind(arg))
 			throw new Exception("Invalid address `" ~ arg ~ "`");
 		ret.data[index .. index + size_t.sizeof] =
-			ret.labelNames.indexOf(arg).asBytes;
+			ret.labelNames.countUntil(arg).asBytes;
 	}
 	return ret;
 }
