@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/stackvm
+stackvm.so
+stackvm.dylib
+stackvm.dll
+stackvm.a
+stackvm.lib
+stackvm-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

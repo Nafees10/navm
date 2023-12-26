@@ -1,0 +1,8 @@
+name "stackvm"
+description "A basic stack based VM using NaVM"
+authors "Nafees Hassan"
+copyright "Copyright © 2023, Nafees Hassan"
+license "MIT"
+dependency "navm" path="../"
+targetPath "../"
+targetName "svm"
