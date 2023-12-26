@@ -167,8 +167,6 @@ unittest{
 	// tests for code.data are missing
 }
 
-// TODO implement binary file read/write
-
 /// Union with array of ubytes
 private union ByteUnion(T, ubyte N = T.sizeof){
 	T data;
