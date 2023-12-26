@@ -1,6 +1,7 @@
 # Binary Bytecode
+
 This document describes how `NaBytecodeBinary` class stores bytecode in binary
-format.
+format. The version described in this document is the latest, see table below.
 
 The binary file contains these sections of bytecode in the this order:
 
@@ -9,10 +10,11 @@ The binary file contains these sections of bytecode in the this order:
 3. magic number postfix
 4. metadata
 5. instruction codes
-6. instruction arguments
+6. instruction data
 7. labels
 
 ## Magic Number & Version & Magic Number Postfix
+
 This part is always 17 bytes.
 
 The first 7 bytes are to be:
@@ -43,25 +45,23 @@ Since all integers are stored in little endian, `0x0001` will be stored as:
 Byte combinations not present in table above are reserved for future versions.
 
 ## Metadata
+
 An 8 byte (64 bit) unsigned integer used to store number of bytes in metadata,
 followed by the metadata.
 
 ## Instruction Codes
+
 An 8 byte (64 bit) unsigned integer stores the _number of bytes_ used for
 storing instruction codes. Each instruction code is a `ushort`, so 2 bytes are
 used for 1 instruction code.
 
-## Instruction Arguments
-An 8 byte (64 bit) unsigned integer stores the number of arguments. This is
-followed by the arguments.
+## Instruction Data
 
-An argument is stored as:
-
-1. 1 byte for `NaInstArgType`
-2. 8 byte unsigned integer for number of bytes in argument
-3. the bytes for argument.
+An 8 byte (64 bit) unsigned integer stores the _number of bytes_ used for
+storing instructio data. This is followed by that many number of bytes of data.
 
 ## Labels
+
 An 8 byte (64 bit) unsigned integer stores the number of labels. This is
 followed by the labels.
 
