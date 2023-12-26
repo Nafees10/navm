@@ -201,7 +201,7 @@ private size_t binStreamExpectedSize(
 ///
 /// Returns: binary date in a ubyte[]
 public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
-		ubyte[] metadata){
+		ubyte[] metadata = null){
 	// figure out expected length
 	size_t expectedSize = binStreamExpectedSize(
 			metadata.length, code.instructions.length, code.data.length,
@@ -223,7 +223,7 @@ public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
 
 	// instructions
 	stream[seek .. seek + 8] =
-		ByteUnion!(size_t, 8)(code.instructions.length).bytes;
+		ByteUnion!(size_t, 8)(code.instructions.length * 2).bytes;
 	seek += 8;
 	foreach (inst; code.instructions){
 		stream[seek .. seek + 2] = ByteUnion!(ushort, 2)(inst).bytes;
@@ -242,7 +242,7 @@ public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
 	foreach (i, name; code.labelNames){
 		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels[i][0]).bytes;
 		seek += 8;
-		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels[i][0]).bytes;
+		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels[i][1]).bytes;
 		seek += 8;
 		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(name.length).bytes;
 		seek += 8;
@@ -250,6 +250,18 @@ public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
 		seek += name.length;
 	}
 	return stream;
+}
+
+///
+unittest{
+	ByteCode code;/// empty code
+	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7], [8, 9, 10]);
+	assert(bin.length == 17 + 8 + 3 + 8 + 8 + 8);
+	assert(bin[0 .. 7] == "NAVMBC-"); // magic bytes
+	assert(bin[7 .. 9] == [2, 0]); // version
+	assert(bin[9 .. 16] == [1, 2, 3, 4, 5, 6, 7]); // magic postfix
+	assert(bin[16 .. 24] == [3, 0, 0, 0, 0, 0, 0, 0]); // length of metadata
+	assert(bin[24 .. 27] == [8, 9, 10]); // metadata
 }
 
 /// Reads ByteCode from a byte stream in ubyte[]
@@ -275,7 +287,7 @@ public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 	ByteCode code;
 	// instructions
 	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
-	if (binStreamExpectedSize(metadata.length, len) > stream.length)
+	if (binStreamExpectedSize(metadata.length, len / 2) > stream.length)
 		throw new Exception("Invalid stream length");
 	seek += 8;
 	code.instructions = (cast(ushort*)(stream.ptr + seek))[0 .. len / 2];
@@ -286,6 +298,7 @@ public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 	if (binStreamExpectedSize(metadata.length, code.instructions.length, len)
 			> stream.length)
 		throw new Exception("Invalid stream length");
+	seek += 8;
 	code.data = stream[seek .. seek + len];
 	seek += len;
 
@@ -311,6 +324,41 @@ public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 		seek += len;
 	}
 	return code;
+}
+
+///
+unittest{
+	import std.functional, std.range;
+	ByteCode code;
+	ushort[] instructions = iota(cast(ushort)1, ushort.max, 50).array;
+	ubyte[] data = iota(cast(ubyte)0, ubyte.max).cycle.take(3000).array;
+	code.instructions = instructions.dup;
+	code.data = data.dup;
+	code.labelNames = ["data", "start", "loop", "end"];
+	code.labels = [
+		[0, 0],
+		[2, 8],
+		[1025, 2020],
+		[1300, 3000]
+	];
+
+	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7], [1, 2, 3]).dup;
+	ubyte[7] postfix;
+	ubyte[] metadata;
+	ByteCode decoded = bin.fromBin(postfix, metadata);
+	assert(postfix == [1, 2, 3, 4, 5, 6, 7]);
+	assert(metadata == [1, 2, 3]);
+	assert(decoded.instructions == instructions);
+	assert(decoded.data == data);
+	assert(decoded.labels.length == 4);
+	assert(decoded.labels[0] == [0, 0]);
+	assert(decoded.labels[1] == [2, 8], decoded.labels[1].to!string);
+	assert(decoded.labels[2] == [1025, 2020]);
+	assert(decoded.labels[3] == [1300, 3000]);
+	assert(decoded.labelNames[0] == "data");
+	assert(decoded.labelNames[1] == "start");
+	assert(decoded.labelNames[2] == "loop");
+	assert(decoded.labelNames[3] == "end");
 }
 
 /// Parses data, asBytes it into ubyte[].
