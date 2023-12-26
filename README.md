@@ -7,7 +7,8 @@ Created primarily for use in [qscript](https://github.com/nafees10/qscript).
 
 ## Getting Started
 
-These instructions will build the demo configuration of NaVM.
+NaVM comes with a demo stack based VM `stackvm` or `svm`. These instructions
+will build that.
 
 See the documents:
 
@@ -28,15 +29,15 @@ You need to have these present on your machine to build NaVM:
 ```bash
 git clone https://github.com/Nafees10/navm.git
 cd navm
-dub build -b=release -c=demo # --compiler=ldc
+dub build :stackvm -b=release -c=demo # --compiler=ldc
 ```
 
-This will compile the NaVM demo binary named `demo`.
+This will compile the NaVM demo binary named `svm`.
 
 You can now run NaVM bytecode using:
 
 ```bash
-./demo tests/default [numberOfTimesToRun]
+./svm tests/default [numberOfTimesToRun]
 ```
 
 Replace `tests/default` with a path to a bytecode file.
