@@ -15,6 +15,9 @@ public struct ByteCode{
 	ubyte[] data; /// instruction data
 }
 
+/// ByteCode version
+public enum ushort NAVMBC_VERSION = 0x02;
+
 /// Reads a ubyte[] as a type
 /// Returns: value in type T
 pragma(inline, true)
@@ -170,21 +173,39 @@ unittest{
 private union ByteUnion(T, ubyte N = T.sizeof){
 	T data;
 	ubyte[N] bytes;
+	this(ubyte[N] bytes){
+		this.bytes = bytes;
+	}
+	this(ubyte[] bytes){
+		assert(bytes.length >= N);
+		this.bytes = bytes[0 .. N];
+	}
 	this(T data){
 		this.data = data;
 	}
 }
 
+/// Returns: Expected stream size
+private size_t binStreamExpectedSize(
+		size_t metadataLen = 0,
+		size_t instructionsCount = 0,
+		size_t dataLen = 0,
+		size_t labelsCount = 0){
+	return 17 + 8 + metadataLen +
+		8 + (instructionsCount * 2) +
+		8 + dataLen +
+		8 + ((8 * 3) * labelsCount);
+}
+
 /// Writes ByteCode to a binary stream
 ///
 /// Returns: binary date in a ubyte[]
-public ubyte[] toBin(ref ByteCode code, ushort versionCode = 2,
-		ubyte[7] magicPostfix = 0, ubyte[] metadata){
+public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
+		ubyte[] metadata){
 	// figure out expected length
-	size_t expectedSize = 17 + 8 + metadata.length +
-		8 + (code.instructions.length * 2) +
-		8 + code.data.length +
-		8 + ((8 * 3) * code.labels.length);
+	size_t expectedSize = binStreamExpectedSize(
+			metadata.length, code.instructions.length, code.data.length,
+			code.labels.length);
 	// count label names sizes, add those
 	foreach (name; code.labelNames)
 		expectedSize += name.length;
@@ -192,13 +213,13 @@ public ubyte[] toBin(ref ByteCode code, ushort versionCode = 2,
 
 	// header
 	stream[0 .. 7] = cast(ubyte[])cast(char[])"NAVMBC-";
-	stream[7 .. 9] = ByteUnion!ushort(versionCode).bytes;
+	stream[7 .. 9] = ByteUnion!ushort(NAVMBC_VERSION).bytes;
 	stream[9 .. 16] = magicPostfix;
 
 	// metadata
-	stream[17 .. 25] = ByteUnion!(size_t, 8)(metadata.length).bytes;
-	stream[25 .. 25 + metadata.length] = metadata;
-	size_t seek = 25 + metadata.length;
+	stream[16 .. 24] = ByteUnion!(size_t, 8)(metadata.length).bytes;
+	stream[24 .. 24 + metadata.length] = metadata;
+	size_t seek = 24 + metadata.length;
 
 	// instructions
 	stream[seek .. seek + 8] =
@@ -229,6 +250,67 @@ public ubyte[] toBin(ref ByteCode code, ushort versionCode = 2,
 		seek += name.length;
 	}
 	return stream;
+}
+
+/// Reads ByteCode from a byte stream in ubyte[]
+/// Throws: Exception in case of error
+/// Returns: ByteCode
+public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
+		ref ubyte[] metadata){
+	if (stream.length < binStreamExpectedSize)
+		throw new Exception("Stream size if less than minimum possible size");
+	if (stream[0 .. 7] != "NAVMBC-")
+		throw new Exception("Invalid header in stream");
+	if (stream[7 .. 9] != ByteUnion!(ushort, 2)(NAVMBC_VERSION).bytes)
+		throw new Exception("Stream is of different ByteCode version.\n" ~
+				"\tStream: " ~ ByteUnion!ushort(stream[7 .. 9]).data.to!string ~
+				"\tSupported: " ~ NAVMBC_VERSION);
+	magicPostfix = stream[9 .. 16];
+	size_t len = ByteUnion!(size_t, 8)(stream[16 .. 24]).data;
+	if (binStreamExpectedSize(len) > stream.length)
+		throw new Exception("Invalid stream length");
+	metadata = stream[24 .. 24 + len];
+	size_t seek = 24 + len;
+
+	ByteCode code;
+	// instructions
+	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
+	if (binStreamExpectedSize(metadata.length, len) > stream.length)
+		throw new Exception("Invalid stream length");
+	seek += 8;
+	code.instructions = (cast(ushort*)(stream.ptr + seek))[0 .. len / 2];
+	seek += len;
+
+	// data
+	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
+	if (binStreamExpectedSize(metadata.length, code.instructions.length, len)
+			> stream.length)
+		throw new Exception("Invalid stream length");
+	code.data = stream[seek .. seek + len];
+	seek += len;
+
+	// labels
+	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
+	if (binStreamExpectedSize(metadata.length,
+				code.instructions.length,
+				code.data.length, len) > stream.length)
+		throw new Exception("Invalid stream length");
+	seek += 8;
+	code.labels.length = len;
+	code.labelNames.length = len;
+	foreach (i, ref label; code.labels){
+		label[0] = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
+		seek += 8;
+		label[1] = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
+		seek += 8;
+		len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
+		seek += 8;
+		if (seek + len > stream.length)
+			throw new Exception("Invalid stream length");
+		code.labelNames[i] = cast(immutable char[])stream[seek .. seek + len];
+		seek += len;
+	}
+	return code;
 }
 
 /// Parses data, asBytes it into ubyte[].
