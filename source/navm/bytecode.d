@@ -6,6 +6,7 @@ import std.conv,
 			 std.uni,
 			 std.array,
 			 std.string,
+			 std.traits,
 			 std.algorithm;
 
 public struct ByteCode{
@@ -21,9 +22,10 @@ public enum ushort NAVMBC_VERSION = 0x02;
 /// Reads a ubyte[] as a type
 /// Returns: value in type T
 pragma(inline, true)
-public T as(T)(ubyte[] data){
+public T as(T)(ubyte[] data) if (!isArray!T || is (T == string)){
 	static if (is (T == string)){
-		return cast(string)cast(char[])data;
+		immutable size_t len = data[0 .. size_t.sizeof].as!size_t;
+		return cast(string)cast(char[])data[size_t.sizeof .. size_t.sizeof + len];
 	} else {
 		assert(data.length >= T.sizeof);
 		return *(cast(T*)data.ptr);
@@ -32,9 +34,12 @@ public T as(T)(ubyte[] data){
 
 /// Returns: ubyte[] against a value of type T
 pragma(inline, true)
-public ubyte[] asBytes(T)(T val){
+public ubyte[] asBytes(T)(T val) if (!isArray!T || is (T == string)){
 	static if (is (T == string)){
-		return cast(ubyte[])cast(char[])val;
+		ubyte[] ret = new ubyte[size_t.sizeof + val.length];
+		ret[0 .. size_t.sizeof] = ByteUnion!(size_t)(val.length).bytes;
+		ret[size_t.sizeof .. $] = cast(ubyte[])cast(char[])val;
+		return ret;
 	} else {
 		ubyte[] ret;
 		ret.length = T.sizeof;
