@@ -53,3 +53,9 @@ A Demo VM built using NaVM.
 * `call labal` - Pushes stack offset, `_ic`, and `_dc`, sets offset to top,
 	and jumps to label
 * `ret` - pops `_dc`, `_ic`, and stack offset and sets them.
+
+### Printing
+
+* `printI` - Prints top integer popped from stack
+* `printF` - Prints top float popped from stack
+* `printS s` - Prints the string `s`
