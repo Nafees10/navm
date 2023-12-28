@@ -153,6 +153,10 @@ void off(ref Stack _state, int n){
 	_state.base += n;
 }
 
+void off0(ref Stack _state){
+	_state.base = 0;
+}
+
 void pshO(ref Stack _state){
 	_state.push!int(_state.base);
 }
@@ -161,17 +165,13 @@ void popO(ref Stack _state){
 	_state.base = cast(ushort)_state.pop!int;
 }
 
-void off0(ref Stack _state){
-	_state.base = 0;
-}
-
 void get(ref Stack _state, int offset){
 	_state.push!int(*(cast(int*)(_state.stack.ptr + _state.base + offset)));
 }
 
 void getR(ref Stack _state){
 	immutable int offset = _state.pop!int;
-	_state.push!int(*(cast(int*)(_state.stack.ptr + _state.base + offset)));
+	_state.push!int(_state.base + offset);
 }
 
 void put(ref Stack _state, int offset){
@@ -179,8 +179,8 @@ void put(ref Stack _state, int offset){
 }
 
 void putR(ref Stack _state){
-	immutable int val = _state.pop!int, offset = _state.pop!int;
-	*cast(int*)(_state.stack.ptr + _state.base + offset) = val;
+	immutable int val = _state.pop!int, addr = _state.pop!int;
+	*cast(int*)(_state.stack.ptr + addr) = val;
 }
 
 void jmp(ref size_t _ic, ref size_t _dc, ref ByteCode _code, size_t label){
