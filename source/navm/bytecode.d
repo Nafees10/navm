@@ -2,13 +2,17 @@ module navm.bytecode;
 
 import utils.misc : readHexadecimal, readBinary, isNum;
 
+import navm.common;
+
 import std.conv,
 			 std.uni,
+			 std.meta,
 			 std.array,
 			 std.string,
 			 std.traits,
 			 std.algorithm;
 
+/// Byte Code (labels, label names, instructions, and data)
 public struct ByteCode{
 	string[] labelNames; /// label index against each labelName
 	size_t[2][] labels; /// [codeIndex, dataIndex] for each labal
@@ -19,48 +23,12 @@ public struct ByteCode{
 /// ByteCode version
 public enum ushort NAVMBC_VERSION = 0x02;
 
-/// Reads a ubyte[] as a type
-/// Returns: value in type T
-pragma(inline, true)
-public T as(T)(ubyte[] data) if (!isArray!T || is (T == string)){
-	static if (is (T == string)){
-		immutable size_t len = data[0 .. size_t.sizeof].as!size_t;
-		return cast(string)cast(char[])data[size_t.sizeof .. size_t.sizeof + len];
-	} else {
-		assert(data.length >= T.sizeof);
-		return *(cast(T*)data.ptr);
-	}
-}
-
-/// Returns: ubyte[] against a value of type T
-pragma(inline, true)
-public ubyte[] asBytes(T)(T val) if (!isArray!T || is (T == string)){
-	static if (is (T == string)){
-		ubyte[] ret = new ubyte[size_t.sizeof + val.length];
-		ret[0 .. size_t.sizeof] = ByteUnion!(size_t)(val.length).bytes;
-		ret[size_t.sizeof .. $] = cast(ubyte[])cast(char[])val;
-		return ret;
-	} else {
-		ubyte[] ret;
-		ret.length = T.sizeof;
-		return ret[] = (cast(ubyte*)&val)[0 .. T.sizeof];
-	}
-}
-
-///
-unittest{
-	assert((cast(ptrdiff_t)1025).asBytes.as!ptrdiff_t == 1025);
-	assert("hello".asBytes.as!string == "hello");
-	assert((cast(double)50.5).asBytes.as!double == 50.5);
-	assert('a'.asBytes.as!char == 'a');
-	assert(true.asBytes.as!bool == true);
-}
-
-package ByteCode parseByteCode(
-		string[] Insts,
-		uint[] InstArgC)
-	(
-		string[] lines){
+/// Parse string[] lines into bytecode
+/// Template parameters are functions for instructions
+/// Throws: Exception on invalid bytecode
+/// Returns: ByteCode
+public ByteCode parseByteCode(T...)(string[] lines) if (
+		allSatisfy!(isCallable, T)){
 	ByteCode ret;
 	size_t[] absPos = [0];
 	size_t[] toResolveAddr;
@@ -86,35 +54,21 @@ package ByteCode parseByteCode(
 		}
 
 		caser: switch (splits[0]){
-			static foreach (ind, name; Insts){
-				case name:
-					if (cast(ptrdiff_t)splits.length - 1 != InstArgC[ind])
-						throw new Exception("line " ~ (i + 1).to!string ~ ": " ~ name ~
-								" instruction expects " ~ InstArgC[ind].to!string ~
-								" arguments, got " ~ (splits.length - 1).to!string);
+			static foreach (ind, Inst; T){
+				case __traits(identifier, Inst):
+					splits = splits[1 .. $];
+					if (splits.length!= InstArity!Inst)
+						throw new Exception("line " ~ (i + 1).to!string ~ ": " ~
+								__traits(identifier, Inst) ~
+								" instruction expects " ~ InstArity!Inst.to!string ~
+								" arguments, got " ~ (splits.length).to!string);
 					ret.instructions ~= ind;
+					readArgs!Inst(ret, splits, toResolveArg, toResolveAddr, absPos);
 					break caser;
 			}
 			default:
 				throw new Exception("line " ~ (i + 1).to!string ~
 						": Instruction expected, got `" ~ splits[0] ~ "`");
-		}
-
-		splits = splits[1 .. $];
-		foreach (split; splits){
-			if (split.length && split[0] == '@'){
-				toResolveArg ~= split[1 .. $];
-				toResolveAddr ~= ret.data.length;
-				ret.data.length += size_t.sizeof;
-				absPos ~= absPos[$ - 1] + size_t.sizeof;
-				continue;
-			}
-			ubyte[] data = parseData(split);
-			if (data == null)
-				throw new Exception("line " ~ (i + 1).to!string ~ ": Invalid data `" ~
-						split ~ "`");
-			ret.data ~= data;
-			absPos ~= absPos[$ - 1] + data.length;
 		}
 	}
 
@@ -148,11 +102,37 @@ package ByteCode parseByteCode(
 	return ret;
 }
 
+private void readArgs(alias Inst)(
+		ref ByteCode ret,
+		string[] args,
+		ref string[] toResolveArg,
+		ref size_t[] toResolveAddr,
+		ref size_t[] absPos){
+	static foreach (i, Arg; InstArgs!Inst){
+		if (args[i].length && args[i][0] == '@'){
+			toResolveArg ~= args[i][1 .. $];
+			toResolveAddr ~= ret.data.length;
+			ret.data.length += size_t.sizeof;
+			absPos ~= absPos[$ - 1] + size_t.sizeof;
+		} else {
+			ubyte[] data = parseData!Arg(args[i]);
+			if (data == null)
+				throw new Exception("line " ~ (i + 1).to!string ~
+						": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
+			ret.data ~= data;
+			absPos ~= absPos[$ - 1] + data.length;
+		}
+	}
+}
+
 ///
 unittest{
-	alias parse = parseByteCode!(
-			["push", "push2", "pop", "add", "print"],
-			[1, 2, 1, 0, 0]);
+	void push(size_t){}
+	void push2(size_t, size_t){}
+	void pop(){}
+	void add(){}
+	void print(){}
+	alias parse = parseByteCode!(push, push2, pop, add, print);
 	string[] source = [
 		"data: push 50",
 		"start: push 50",
@@ -162,7 +142,6 @@ unittest{
 		"print"
 	];
 	ByteCode code = parse(source);
-	import std.stdio;
 	assert(code.labels.length == 2);
 	assert(code.labelNames.canFind("data"));
 	assert(code.labelNames.canFind("start"));
@@ -170,22 +149,6 @@ unittest{
 	assert(code.labels[1] == [1, 8]);
 	assert(code.instructions == [0, 0, 0, 1, 3, 4]);
 	// tests for code.data are missing
-}
-
-/// Union with array of ubytes
-private union ByteUnion(T, ubyte N = T.sizeof){
-	T data;
-	ubyte[N] bytes;
-	this(ubyte[N] bytes){
-		this.bytes = bytes;
-	}
-	this(ubyte[] bytes){
-		assert(bytes.length >= N);
-		this.bytes = bytes[0 .. N];
-	}
-	this(T data){
-		this.data = data;
-	}
 }
 
 /// Returns: Expected stream size
@@ -367,146 +330,69 @@ unittest{
 /// Parses data, asBytes it into ubyte[].
 ///
 /// Returns: resulting ubyte[], or `null` if invalid or address or label
-private ubyte[] parseData(string s){
-	assert(s.length);
-	if (isNum(s, true)){
+private ubyte[] parseData(T)(string s){
+	static if (isIntegral!T){
+		// can be just an int
 		if (isNum(s, false))
-			return s.to!ptrdiff_t.asBytes;
-		return s.to!double.asBytes;
-	}
-	if (s.length > 2 && s[0] == '0'){
+			return s.to!T.asBytes;
+		// can be a binary or hex literal
+		if (s.length > 2 && s[0] == '0'){
+			try{
+				if (s[1] == 'b')
+					return (cast(T)readBinary(s[2 .. $])).asBytes;
+				else if (s[1] == 'x')
+					return (cast(T)readHexadecimal(s[2 .. $])).asBytes;
+			} catch (Exception){
+				return null;
+			}
+		}
+		// or it can be a address
+		if (s[0] == '@')
+			return s.asBytes;
+		return null;
+
+	} else static if (isFloatingPoint!T){
+		if (isNum(s, true))
+			return s.to!T.asBytes;
+		return null;
+	} else static if (is (T == bool)){
+		if (s == "true")
+			return true.asBytes;
+		if (s == "false")
+			return false.asBytes;
+		return null;
+
+	} else static if (isSomeChar!T){
+		if (s.length < T.sizeof + 2 || s[0] != s[$ - 1] || s[0] != '\'')
+			return null;
+		s = s[1 .. $ - 1];
 		try{
-			if (s[1] == 'b')
-				return (cast(ptrdiff_t)readBinary(s[2 .. $])).asBytes;
-			else if (s[1] == 'x')
-				return (cast(ptrdiff_t)readHexadecimal(s[2 .. $])).asBytes;
+			return s.to!T;
 		} catch (Exception){
 			return null;
 		}
+
+	} else static if (isSomeString!T){
+		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\"')
+			return null;
+		s = s[1 .. $ - 1];
+		try{
+			return s.to!T.asBytes;
+		} catch (Exception){
+			return null;
+		}
+	} else {
+		static assert(false, "Unsupported argument type " ~ T.stringof);
 	}
-	if (s == "true")
-		return true.asBytes;
-	if (s == "false")
-		return false.asBytes;
-	if (s[0] == '"' || s[0] == '\'')
-		return s[1 .. $ - 1].unescape.asBytes;
-	if (s[0] != '@')
-		return null;
-	return s.asBytes;
 }
 
 ///
 unittest{
-	assert("true".parseData.as!bool == true);
-	assert("false".parseData.as!bool == false);
-	assert("0x50".parseData.as!size_t == 0x50);
-	assert("0b101010".parseData.as!size_t == 0b101010);
-	assert("12345".parseData.as!size_t == 1_2345);
-	assert("\"bla bla\"".parseData.as!string == "bla bla");
-	assert("5.5".parseData.as!double == "5.5".to!double);
-}
-
-/// reads a string into substrings separated by whitespace. Strings are read
-/// as a whole
-///
-/// Returns: substrings
-///
-/// Throws: Exception if string not closed
-private string[] separateWhitespace(string line){
-	string[] r;
-	size_t i, start;
-	for (; i < line.length; i++){
-		immutable char c = line[i];
-		if (c == '#'){
-			if (start < i)
-				r ~= line[start .. i];
-			break;
-		}
-		if (c == '"' || c == '\''){
-			if (start < i)
-				r ~= line[start .. i];
-			start = i;
-			immutable ptrdiff_t endIndex = i + line[i .. $].strEnd;
-			if (endIndex <= i)
-				throw new Exception("string not closed");
-			r ~= line[start .. endIndex + 1];
-			start = endIndex + 1;
-			i = endIndex;
-			continue;
-		}
-
-		if (c == ' ' || c == '\t'){
-			if (start < i)
-				r ~= line[start .. i];
-			while (i < line.length && (line[i] == ' ' || line[i] == '\t'))
-				i ++;
-			start = i;
-			i --; // back to whitespace, i++ in for(..;..;) exists
-			continue;
-		}
-
-	}
-	if (i == line.length && start <= i - 1)
-		r ~= line[start .. $].dup;
-	return r;
-}
-///
-unittest{
-	assert("potato".separateWhitespace == ["potato"]);
-	assert("potato potato".separateWhitespace == ["potato", "potato"]);
-	assert(" a b \"str\"".separateWhitespace == ["a", "b", "\"str\""]);
-	assert("a b 'c' \"str\"".separateWhitespace == ["a", "b", "'c'", "\"str\""]);
-	assert("\ta   \t b\"str\"".separateWhitespace == ["a", "b", "\"str\""]);
-	assert("   a   b  'c'\"str\"'c'".separateWhitespace ==
-			["a", "b", "'c'", "\"str\"", "'c'"]);
-	assert("a 'b'#c".separateWhitespace == ["a", "'b'"]);
-	assert("a: a b#c".separateWhitespace == ["a:","a", "b"]);
-	assert("a 'b' #c".separateWhitespace == ["a", "'b'"]);
-}
-
-/// Returns: the index where a string ends, -1 if not terminated
-private ptrdiff_t strEnd(string s){
-	if (s.length == 0)
-		return -1;
-	immutable char strTerminator = s[0];
-	size_t i;
-	for (i = 1; i < s.length; i ++){
-		if (s[i] == strTerminator)
-			return i;
-		i += s[i] == '\\';
-	}
-	return -1;
-}
-///
-unittest{
-	assert(2 + "st\"sdfsdfsd\"0"[2 .. $].strEnd == 11);
-}
-
-/// Returns: unescaped string
-private string unescape(string s){
-	if (s.length == 0)
-		return null;
-	char[] r = [];
-	for (size_t i = 0; i < s.length; i ++){
-		if (s[i] != '\\'){
-			r ~= s[i];
-			continue;
-		}
-		if (i + 1 < s.length){
-			char c = s[i + 1];
-			switch (c){
-				case 't': r ~= '\t'; i ++; continue;
-				case 'n': r ~= '\n'; i ++; continue;
-				case '\\': r ~= '\\'; i ++; continue;
-				default: break;
-			}
-		}
-		r ~= s[i];
-	}
-	return cast(string)r;
-}
-///
-unittest{
-	assert("newline:\\ntab:\\t".unescape ==
-			"newline:\ntab:\t", "newline:\\ntab:\\t".unescape);
+	assert("true".parseData!bool.as!bool == true);
+	assert("false".parseData!bool.as!bool == false);
+	assert("0x50".parseData!size_t.as!size_t == 0x50);
+	assert("0b101010".parseData!size_t.as!size_t == 0b101010);
+	assert("12345".parseData!size_t.as!size_t == 1_2345);
+	assert("\"bla bla\"".parseData!string.as!string == "bla bla");
+	assert("5.5".parseData!double.as!double == "5.5".to!double);
 }
