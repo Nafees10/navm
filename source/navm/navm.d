@@ -8,9 +8,9 @@ import navm.common;
 
 public import navm.bytecode;
 
-/// Execute a ByteCode, with a shared struct of type S among instructions
+/// Execute a ByteCode
 public void execute(S, T...)(
-		ByteCode code,
+		ref ByteCode code,
 		ref S state,
 		size_t label = size_t.max) if (allSatisfy!(isCallable, T)){
 	size_t ic, dc;
@@ -31,8 +31,8 @@ public void execute(S, T...)(
 					}
 					/*debug{
 						import std.stdio;
-						writef!"calling %s at ic=%d dc=%d; "(__traits(identifier, sym),
-								ic, dc);
+						writef!"calling %d %s at ic=%d dc=%d; "(
+								ind, __traits(identifier, sym), ic, dc);
 						writeln(code.data[dc .. dc + SizeofSum!(InstArgs!sym)]);
 					}*/
 					ic ++;
@@ -44,4 +44,11 @@ public void execute(S, T...)(
 				break;
 		}
 	}
+}
+
+/// ditto
+public void execute(T...)(ref ByteCode code, size_t label = size_t.max) if (
+		allSatisfy!(isCallable, T) && !InstsIsStateful!T){
+	ubyte dummyState;
+	execute!(ubyte, T)(code, dummyState, label);
 }
