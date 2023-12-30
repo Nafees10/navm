@@ -1,0 +1,24 @@
+fib:
+	get -16
+	pshI 3
+	lesI
+	jmpC @fibRecCall
+	ret
+	fibRecCall:
+		get -16
+		pshI -1
+		addI
+		call @fib
+
+		get -16
+		pshI -2
+		addI
+		call @fib
+
+		addI
+		put -16
+		ret
+start:
+	pshI 36
+	call @fib
+	printI
