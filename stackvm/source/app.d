@@ -20,6 +20,10 @@ struct Stack{
 		seek -= T.sizeof;
 		return *(cast(T*)(stack.ptr + seek));
 	}
+	pragma(inline, true) T top(T)() if (!isArray!T){
+		assert(seek >= T.sizeof);
+		return *(cast(T*)(stack.ptr + seek - T.sizeof));
+	}
 	pragma(inline, true) void push(T)(T val) if (!isArray!T){
 		assert(seek + T.sizeof <= stack.length);
 		stack[seek .. seek + T.sizeof] = (cast(ubyte*)&val)[0 .. T.sizeof];
@@ -91,12 +95,12 @@ void cmp(ref Stack _state){
 
 void lesI(ref Stack _state){
 	immutable int a = _state.pop!int;
-	_state.push!int(_state.pop!int < a);
+	_state.push!int(a < _state.pop!int);
 }
 
 void lesF(ref Stack _state){
 	immutable float a = _state.pop!float;
-	_state.push!int(_state.pop!float < a);
+	_state.push!int(a < _state.pop!float);
 }
 
 // boolean
@@ -147,6 +151,10 @@ void pop(ref Stack _state){
 
 void popN(ref Stack _state, ptrdiff_t n){
 	_state.seek -= int.sizeof * n;
+}
+
+void seek(ref Stack _state){
+	_state.push!int(_state.top!int);
 }
 
 void off(ref Stack _state, ptrdiff_t n){
@@ -211,21 +219,25 @@ void jmpC(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state,
 void call(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state,
 		size_t label){
 	_state.push!int(_state.base);
-	_state.push!size_t(_ic);
-	_state.push!size_t(_dc);
+	_state.push!int(cast(int)_ic);
+	_state.push!int(cast(int)_dc);
 	_state.base = _state.seek;
 	_ic = _code.labels[label][0];
 	_dc = _code.labels[label][1];
 }
 
 void ret(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state){
-	_dc = _state.pop!size_t;
-	_ic = _state.pop!size_t;
+	_dc = _state.pop!int;
+	_ic = _state.pop!int;
 	_state.base = cast(ushort)_state.pop!int;
 }
 
+void dbg(ref Stack _state){
+	writefln!"base: %d\tseek: %d"(_state.base, _state.seek);
+}
+
 void printI(ref Stack _state){
-	write(_state.pop!int);
+	writeln(_state.pop!int);
 }
 
 void printF(ref Stack _state){
@@ -238,8 +250,8 @@ void printS(string s){
 
 alias InstructionSet = AliasSeq!(addI, subI, mulI, divI, modI, addF, subF,
 		mulF, divF, cmp, lesI, lesF, notB, andB, orB, not, and, or, pshI, pshF,
-		pop, popN, off, pshO, popO, off0, get, getR, put, putR, incA, incR, jmp,
-		jmpC, call, ret, printI, printF, printS);
+		pop, popN, seek, off, pshO, popO, off0, get, getR, put, putR, incA, incR,
+		jmp, jmpC, call, ret, dbg, printI, printF, printS);
 
 void main(string[] args){
 	if (args.length < 2)
