@@ -45,6 +45,8 @@ A Demo VM built using NaVM.
 * `getR n` - Pushes address of `offset + n`
 * `put n` - Pops 32 bit value. Writes to `offset + n`
 * `putR` - Pops a 32 bit value, address. Writes value to stack at address.
+* `incA n` - Increments integer at `offset + n`
+* `incR` - Pops a 32 bit address. Increments integer at that address
 
 ### Jumps
 
