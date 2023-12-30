@@ -96,7 +96,7 @@ void lesI(ref Stack _state){
 
 void lesF(ref Stack _state){
 	immutable float a = _state.pop!float;
-	_state.push!int(a < _state.pop!float);
+	_state.push!int(_state.pop!float < a);
 }
 
 // boolean
