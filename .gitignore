@@ -8,3 +8,4 @@ sample
 tempcode
 callgrind*
 svm
+*-test-library
