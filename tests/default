@@ -2,8 +2,8 @@ start:
 	pshI 0
 loop:
 	incA 0
-	get 0
 	pshI 100000
+	get 0
 	lesI
 	jmpC @loop
 end:
