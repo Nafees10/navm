@@ -1,18 +1,18 @@
 fib:
 	get -16
-	pshI 3
+	pshI 1
 	lesI
 	jmpC @fibRecCall
 	ret
 	fibRecCall:
+		pshI 1
 		get -16
-		pshI -1
-		addI
+		subI
 		call @fib
 
+		pshI 2
 		get -16
-		pshI -2
-		addI
+		subI
 		call @fib
 
 		addI
