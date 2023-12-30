@@ -1,8 +1,9 @@
 start:
-	load 0
+	pshI 0
 loop:
-	add 1
-	cmp 100000
-	jumpIf @end
-	jump @loop
+	incA 0
+	get 0
+	pshI 100000
+	lesI
+	jmpC @loop
 end:
