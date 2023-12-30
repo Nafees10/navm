@@ -260,7 +260,7 @@ void main(string[] args){
 		? args[2].to!size_t : 1;
 	StopWatch sw;
 	ByteCode code = parseByteCode!InstructionSet(fileToArray(args[1]));
-	writeln(code);
+	//writeln(code);
 
 	Stack state;
 	immutable ptrdiff_t startIndex = code.labelNames.indexOf("start");
