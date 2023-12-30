@@ -91,7 +91,7 @@ void cmp(ref Stack _state){
 
 void lesI(ref Stack _state){
 	immutable int a = _state.pop!int;
-	_state.push!int(a < _state.pop!int);
+	_state.push!int(_state.pop!int < a);
 }
 
 void lesF(ref Stack _state){
@@ -102,7 +102,7 @@ void lesF(ref Stack _state){
 // boolean
 
 void notB(ref Stack _state){
-	_state.push!int(_state.pop!int != 0);
+	_state.push!int(_state.pop!int == 0);
 }
 
 void andB(ref Stack _state){
@@ -133,8 +133,8 @@ void or(ref Stack _state){
 
 // stack manipulation
 
-void pshI(ref Stack _state, int val){
-	_state.push!int(val);
+void pshI(ref Stack _state, ptrdiff_t val){
+	_state.push!int(cast(int)val);
 }
 
 void pshF(ref Stack _state, float val){
@@ -145,11 +145,11 @@ void pop(ref Stack _state){
 	_state.seek -= int.sizeof;
 }
 
-void popN(ref Stack _state, int n){
+void popN(ref Stack _state, ptrdiff_t n){
 	_state.seek -= int.sizeof * n;
 }
 
-void off(ref Stack _state, int n){
+void off(ref Stack _state, ptrdiff_t n){
 	_state.base += n;
 }
 
@@ -165,7 +165,7 @@ void popO(ref Stack _state){
 	_state.base = cast(ushort)_state.pop!int;
 }
 
-void get(ref Stack _state, int offset){
+void get(ref Stack _state, ptrdiff_t offset){
 	_state.push!int(*(cast(int*)(_state.stack.ptr + _state.base + offset)));
 }
 
@@ -174,7 +174,7 @@ void getR(ref Stack _state){
 	_state.push!int(_state.base + offset);
 }
 
-void put(ref Stack _state, int offset){
+void put(ref Stack _state, ptrdiff_t offset){
 	*cast(int*)(_state.stack.ptr + _state.base + offset) = _state.pop!int;
 }
 
@@ -183,6 +183,18 @@ void putR(ref Stack _state){
 	*cast(int*)(_state.stack.ptr + addr) = val;
 }
 
+void incA(ref Stack _state, ptrdiff_t offset){
+	int *ptr = cast(int*)(_state.stack.ptr + _state.base + offset);
+	*ptr = *ptr + 1;
+}
+
+void incR(ref Stack _state){
+	int *ptr = cast(int*)(_state.stack.ptr + _state.pop!int);
+	*ptr = *ptr + 1;
+}
+
+// jumps
+
 void jmp(ref size_t _ic, ref size_t _dc, ref ByteCode _code, size_t label){
 	_ic = _code.labels[label][0];
 	_dc = _code.labels[label][1];
@@ -190,7 +202,7 @@ void jmp(ref size_t _ic, ref size_t _dc, ref ByteCode _code, size_t label){
 
 void jmpC(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state,
 		size_t label){
-	if (_state.pop!int){
+	if (_state.pop!int != 0){
 		_ic = _code.labels[label][0];
 		_dc = _code.labels[label][1];
 	}
@@ -226,8 +238,8 @@ void printS(string s){
 
 alias InstructionSet = AliasSeq!(addI, subI, mulI, divI, modI, addF, subF,
 		mulF, divF, cmp, lesI, lesF, notB, andB, orB, not, and, or, pshI, pshF,
-		pop, popN, off, pshO, popO, off0, get, getR, put, putR, jmp, jmpC, call,
-		ret, printI, printF, printS);
+		pop, popN, off, pshO, popO, off0, get, getR, put, putR, incA, incR, jmp,
+		jmpC, call, ret, printI, printF, printS);
 
 void main(string[] args){
 	if (args.length < 2)
@@ -236,6 +248,7 @@ void main(string[] args){
 		? args[2].to!size_t : 1;
 	StopWatch sw;
 	ByteCode code = parseByteCode!InstructionSet(fileToArray(args[1]));
+	writeln(code);
 
 	Stack state;
 	immutable ptrdiff_t startIndex = code.labelNames.indexOf("start");
@@ -247,6 +260,7 @@ void main(string[] args){
 	size_t min = size_t.max ,max = 0 ,avg = 0;
 	sw = StopWatch(AutoStart.no);
 	foreach (i; 0 .. count){
+		state = Stack.init;
 		sw.start;
 		execute!(Stack, InstructionSet)(code, state, startIndex);
 		sw.stop;
