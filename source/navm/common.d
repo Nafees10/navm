@@ -4,6 +4,24 @@ import std.meta,
 			 std.conv,
 			 std.traits;
 
+/// Whether an instruction is stateful
+package template InstIsStateful(alias T) if (isCallable!T){
+	enum InstIsStateful = getInstIsStateful;
+	private bool getInstIsStateful(){
+		foreach (name; ParameterIdentifierTuple!T){
+			if (name == "_state")
+				return true;
+		}
+		return false;
+	}
+}
+
+/// Whether any of the instructions in a set require state
+package template InstsIsStateful(T...) if (allSatisfy!(isCallable, T)){
+	private enum IsTrue(T) = T == true;
+	enum InstIsStateful = anySatisfy!(IsTrue, staticMap!(InstIsStateful, T));
+}
+
 /// Whether N'th parameter of an Instruction is an argument
 package template InstParamIsArg(alias T, size_t N) if (isCallable!T){
 	enum InstParamIsArg =
