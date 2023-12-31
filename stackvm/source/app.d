@@ -9,23 +9,24 @@ import utils.misc;
 import navm.navm;
 import navm.bytecode;
 
-enum Bar;
-
 struct Stack{
 	ubyte[4096] stack;
 	ushort seek;
 	ushort base;
 	pragma(inline, true) T pop(T)() if (!isArray!T){
-		assert(seek >= T.sizeof);
+		assert(seek >= T.sizeof, "Cannot pop `" ~ T.stringof ~ "` " ~ " seek is "
+				~ seek.to!string);
 		seek -= T.sizeof;
 		return *(cast(T*)(stack.ptr + seek));
 	}
 	pragma(inline, true) T top(T)() if (!isArray!T){
-		assert(seek >= T.sizeof);
+		assert(seek >= T.sizeof, "Cannot pop `" ~ T.stringof ~ "` " ~ " seek is "
+				~ seek.to!string);
 		return *(cast(T*)(stack.ptr + seek - T.sizeof));
 	}
 	pragma(inline, true) void push(T)(T val) if (!isArray!T){
-		assert(seek + T.sizeof <= stack.length);
+		assert(seek + T.sizeof <= stack.length, "Cannot push `" ~ T.stringof ~
+				"` seek is " ~ seek.to!string);
 		stack[seek .. seek + T.sizeof] = (cast(ubyte*)&val)[0 .. T.sizeof];
 		seek += T.sizeof;
 	}
