@@ -53,7 +53,6 @@ A Demo VM built using NaVM.
 
 * `jmp label` - Jumps execution to label
 * `jmpC label` - Jumps execution to label, if top integer is non-zero.
-* `ssav` - Saves current state, to be able to return to using `ret`. 
 * `call label` - Pushes stack offset, `_ic`, and `_dc`, sets offset to top,
 	and jumps to label. Pushed data equals 12 bytes or 3 ints.
 * `ret` - pops `_dc`, `_ic`, and stack offset and sets them.
