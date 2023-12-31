@@ -30,18 +30,15 @@ public enum ushort NAVMBC_VERSION = 0x02;
 public ByteCode parseByteCode(T...)(string[] lines) if (
 		allSatisfy!(isCallable, T)){
 	ByteCode ret;
-	size_t[] absPos = [0];
-	size_t[] toResolveAddr;
-	string[] toResolveArg;
-
-	foreach (i, line; lines){
+	size_t[] absPos = [0]; /// index of arguments in data array
+	foreach (lineNo, line; lines){
 		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
 		if (splits.length == 0)
 			continue;
 		if (splits[0].length && splits[0][$ - 1] == ':'){
 			string name = splits[0][0 .. $ - 1];
 			if (ret.labelNames.canFind(name))
-				throw new Exception("line " ~ (i + 1).to!string ~
+				throw new Exception("line " ~ (lineNo + 1).to!string ~
 						" label name redeclared");
 			ret.labelNames ~= name;
 			ret.labels ~= [
@@ -58,46 +55,50 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 				case __traits(identifier, Inst):
 					splits = splits[1 .. $];
 					if (splits.length!= InstArity!Inst)
-						throw new Exception("line " ~ (i + 1).to!string ~ ": " ~
+						throw new Exception("line " ~ (lineNo + 1).to!string ~ ": " ~
 								__traits(identifier, Inst) ~
 								" instruction expects " ~ InstArity!Inst.to!string ~
 								" arguments, got " ~ (splits.length).to!string);
 					ret.instructions ~= ind;
-					readArgs!Inst(ret, splits, toResolveArg, toResolveAddr, absPos);
+					readArgs!Inst(ret, splits, absPos);
 					break caser;
 			}
 			default:
-				throw new Exception("line " ~ (i + 1).to!string ~
+				throw new Exception("line " ~ (lineNo + 1).to!string ~
 						": Instruction expected, got `" ~ splits[0] ~ "`");
 		}
 	}
 
-	// resolve addresses
-	foreach (ind, index; toResolveAddr){
-		string arg = toResolveArg[ind];
-		ptrdiff_t plusInd = arg.indexOf('+');
-		// its a data address
-		if (plusInd != -1){
-			string label = arg[0 .. plusInd];
-			size_t offset = size_t.max;
-			try {
-				offset = arg[plusInd + 1 .. $].to!size_t;
-			} catch (Exception){}
-			if (offset == size_t.max || (
-						label.length && !ret.labelNames.canFind(label)))
-				throw new Exception("Invalid address `" ~ arg ~ "`");
-			size_t pos = offset +
-				(label.length ? ret.labels[ret.labelNames.countUntil(label)][1] : 0);
-			if (pos > absPos.length)
-				throw new Exception("Invalid offset `" ~ arg ~ "`");
-			ret.data[index .. index + size_t.sizeof] = absPos[pos].asBytes;
+	size_t dc;
+	foreach (lineNo, line; lines){
+		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
+		if (splits.length == 0)
 			continue;
+		if (splits[0].length && splits[0][$ - 1] == ':')
+			splits = splits[1 .. $];
+		if (splits.length == 0)
+			continue;
+		switcharoo: switch (splits[0]){
+			static foreach (ind, Inst; T){
+				case __traits(identifier, Inst):
+					splits = splits[1 .. $];
+					static foreach (argInd, Arg; InstArgs!Inst){
+						immutable string arg = splits[argInd];
+						static if (isIntegral!Arg){
+							if (arg.length && arg[0] == '@'){
+								size_t addr = arg[1 .. $].resolveAddress(ret, absPos);
+								ret.data[absPos[dc] .. absPos[dc] + Arg.sizeof] =
+									(cast(Arg)addr).asBytes;
+							}
+						}
+						dc ++;
+					}
+					break switcharoo;
+			}
+			default:
+				throw new Exception("line " ~ (lineNo + 1).to!string ~
+						": Instruction expected, got `" ~ splits[0] ~ "`");
 		}
-		// its a label address
-		if (!ret.labelNames.canFind(arg))
-			throw new Exception("Invalid address `" ~ arg ~ "`");
-		ret.data[index .. index + size_t.sizeof] =
-			ret.labelNames.countUntil(arg).asBytes;
 	}
 	return ret;
 }
@@ -105,15 +106,11 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 private void readArgs(alias Inst)(
 		ref ByteCode ret,
 		string[] args,
-		ref string[] toResolveArg,
-		ref size_t[] toResolveAddr,
 		ref size_t[] absPos){
 	static foreach (i, Arg; InstArgs!Inst){
 		if (args[i].length && args[i][0] == '@'){
-			toResolveArg ~= args[i][1 .. $];
-			toResolveAddr ~= ret.data.length;
-			ret.data.length += size_t.sizeof;
-			absPos ~= absPos[$ - 1] + size_t.sizeof;
+			ret.data.length += Arg.sizeof;
+			absPos ~= absPos[$ - 1] + Arg.sizeof;
 		} else {
 			ubyte[] data = parseData!Arg(args[i]);
 			if (data == null)
@@ -123,6 +120,29 @@ private void readArgs(alias Inst)(
 			absPos ~= absPos[$ - 1] + data.length;
 		}
 	}
+}
+
+private size_t resolveAddress(string arg, ref ByteCode code, size_t[] absPos){
+	ptrdiff_t plusInd = arg.indexOf('+');
+	if (plusInd != -1){
+		string label = arg[0 .. plusInd];
+		size_t offset = size_t.max;
+		try {
+			offset = arg[plusInd + 1 .. $].to!size_t;
+		} catch (Exception){}
+		if (offset == size_t.max || (
+					label.length && !code.labelNames.canFind(label)))
+			throw new Exception("Invalid address `" ~ arg ~ "`");
+		size_t pos = offset +
+			(label.length ? code.labels[code.labelNames.countUntil(label)][1] : 0);
+		if (pos > absPos.length)
+			throw new Exception("Invalid offset `" ~ arg ~ "`");
+		return absPos[pos];
+	}
+	// its a label address
+	if (!code.labelNames.canFind(arg))
+		throw new Exception("Invalid address `" ~ arg ~ "`");
+	return code.labelNames.countUntil(arg);
 }
 
 ///
