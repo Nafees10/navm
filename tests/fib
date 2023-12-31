@@ -1,0 +1,42 @@
+fib:
+	get -16
+	pshI 1
+	lesI
+	jmpC @fibCalc
+	ret
+	fibCalc:
+		# decrement n by 2
+		get -16
+		pshI -1
+		addI # reverse counter at 0
+		pshI 0 # prev, at 4
+		pshI 1 # current, at 8
+	fibLoopCond:
+		get 0
+		jmpC @fibLoop
+		get 8
+		put -16
+		popN 3
+		ret
+	fibLoop:
+		# decrement n
+		pshI -1
+		get 0
+		addI
+		put 0
+
+		# prev + pprev, hold in stack
+		get 4
+		get 8
+		addI
+		# prev = current
+		get 8
+		put 4
+		# save current
+		put 8
+		jmp @fibLoopCond
+
+start:
+	pshI 36
+	call @fib
+	#printI
