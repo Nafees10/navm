@@ -62,7 +62,7 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 								" instruction expects " ~ InstArity!Inst.to!string ~
 								" arguments, got " ~ (splits.length).to!string);
 					ret.instructions ~= ind;
-					readArgs!Inst(ret, splits, dataAddr, absPos);
+					readArgs!Inst(ret, splits, cdataAddr, cdata, absPos);
 					break caser;
 			}
 			default:
@@ -126,8 +126,8 @@ private void readArgs(alias Inst)(
 							": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
 				}
 				cdataAddr ~= [ret.data.length, cdata.length];
-				ret.data ~= cdata.length.asBytes;
 				ret.data ~= size_t.max.asBytes;
+				ret.data ~= data.length.asBytes;
 				absPos ~= absPos[$ - 1] + size_t.sizeof + size_t.sizeof;
 				cdata ~= data;
 			} else {
@@ -420,7 +420,7 @@ private ubyte[] parseData(T)(string s){
 		return null;
 
 	} else static if (isSomeChar!T){
-		if (s.length < T.sizeof + 2 || s[0] != s[$ - 1] || s[0] != '\'')
+		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\'')
 			return null;
 		s = s[1 .. $ - 1].unescape;
 		try{
@@ -432,9 +432,10 @@ private ubyte[] parseData(T)(string s){
 	} else static if (isSomeString!T){
 		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\"')
 			return null;
-		s = s[1 .. $ - 1];
+		s = s[1 .. $ - 1].unescape;
 		try{
-			return s.to!T.asBytes;
+			T str = s.to!T;
+			return (cast(ubyte*)(str.ptr))[0 .. str.length * ForeachType!T.sizeof];
 		} catch (Exception){
 			return null;
 		}

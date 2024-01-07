@@ -22,32 +22,32 @@ public void execute(S, T...)(
 	const len = code.instructions.length;
 	while (ic < len){
 		switcher: switch (code.instructions[ic]){
-			foreach (ind, sym; T){
+			foreach (ind, Inst; T){
 				case ind:
-					static foreach (i, Arg; InstArgs!sym){
-						static if (is (isSomeString!Arg)){
-							immutable size_t pos = code.data
+					/*debug{
+						import std.stdio;
+						writef!"calling %d %s at ic=%d dc=%d; "(
+								ind, __traits(identifier, Inst), ic, dc);
+						writeln(code.data[dc .. dc + SizeofSum!(InstArgs!Inst)]);
+					}*/
+					static foreach (i, Arg; InstArgs!Inst){
+						static if (isSomeString!Arg){
+							immutable size_t p = code.data
 								[dc .. dc + size_t.sizeof].as!size_t;
-							immutable size_t len = code.data
-								[size_t.sizeof + dc .. dc + 2 * size_t.size_t].as!size_t;
+							immutable size_t c = code.data
+								[size_t.sizeof + dc .. dc + 2 * size_t.sizeof].as!size_t;
 							pun.structs[ind].params[i] =
-								(cast(ForeachType!Arg*)(code.data.ptr + pos))
-								[0 .. (len / Arg.sizeof)];
+								(cast(ForeachType!Arg*)(code.data[p .. $].ptr))
+								[0 .. (c / ForeachType!Arg.sizeof)];
 						} else {
 							pun.structs[ind].params[i] =
 								code.data[
 								dc + SizeofSum!(pun.structs[ind].params[0 .. i]) .. $].as!Arg;
 						}
 					}
-					debug{
-						import std.stdio;
-						writef!"calling %d %s at ic=%d dc=%d; "(
-								ind, __traits(identifier, sym), ic, dc);
-						writeln(code.data[dc .. dc + SizeofSum!(InstArgs!sym)]);
-					}
 					ic ++;
-					dc += SizeofSum!(InstArgs!sym);
-					mixin(InstCallStatement!sym);
+					dc += SizeofSum!(InstArgs!Inst);
+					mixin(InstCallStatement!Inst);
 					break switcher;
 			}
 			default:

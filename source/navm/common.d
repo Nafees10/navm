@@ -112,7 +112,7 @@ package template InstParamArgMapping(alias T) if (isCallable!T){
 package template InstCallStatement(alias Inst) if (isCallable!Inst){
 	enum InstCallStatement = getStatement();
 	private string getStatement(){
-		string ret = "sym(";
+		string ret = "Inst(";
 		static foreach (i, mapTo; InstParamArgMapping!Inst){
 			static if (mapTo == size_t.max){
 				static if (ParameterIdentifierTuple!Inst[i] == "_ic"){
