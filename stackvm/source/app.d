@@ -238,7 +238,7 @@ void dbg(ref Stack _state){
 }
 
 void printI(ref Stack _state){
-	writeln(_state.pop!int);
+	write(_state.pop!int);
 }
 
 void printF(ref Stack _state){
