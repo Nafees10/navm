@@ -69,10 +69,10 @@ package template InstArgsUnion(T...) if (allSatisfy!(isCallable, T)){
 /// If a T can be .sizeof'd
 package enum HasSizeof(alias T) = __traits(compiles, T.sizeof);
 
-/// Sizeof, but if string, it is 8
+/// Sizeof, but if string, it is `size_t.sizeof x2`
 package template SizeofCustom(alias T) if (HasSizeof!T){
 	static if	(is (T == string)){
-		enum SizeofCustom = 8;
+		enum SizeofCustom = size_t.sizeof + size_t.sizeof;
 	} else {
 		enum SizeofCustom = T.sizeof;
 	}
