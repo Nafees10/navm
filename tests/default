@@ -1,6 +1,10 @@
 start:
 	pshI 0
 loop:
+	get 0
+	printI
+	printS "\n"
+
 	incA 0
 	pshI 100000
 	get 0
