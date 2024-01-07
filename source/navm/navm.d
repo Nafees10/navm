@@ -24,17 +24,27 @@ public void execute(S, T...)(
 		switcher: switch (code.instructions[ic]){
 			foreach (ind, sym; T){
 				case ind:
-					static foreach (i; 0 .. pun.structs[ind].params.length){
-						pun.structs[ind].params[i] =
-							code.data[dc + SizeofSum!(pun.structs[ind].params[0 .. i]) .. $]
-							.as!(typeof(pun.structs[ind].params[i]));
+					static foreach (i, Arg; InstArgs!sym){
+						static if (is (isSomeString!Arg)){
+							immutable size_t pos = code.data
+								[dc .. dc + size_t.sizeof].as!size_t;
+							immutable size_t len = code.data
+								[size_t.sizeof + dc .. dc + 2 * size_t.size_t].as!size_t;
+							pun.structs[ind].params[i] =
+								(cast(ForeachType!Arg*)(code.data.ptr + pos))
+								[0 .. (len / Arg.sizeof)];
+						} else {
+							pun.structs[ind].params[i] =
+								code.data[
+								dc + SizeofSum!(pun.structs[ind].params[0 .. i]) .. $].as!Arg;
+						}
 					}
-					/*debug{
+					debug{
 						import std.stdio;
 						writef!"calling %d %s at ic=%d dc=%d; "(
 								ind, __traits(identifier, sym), ic, dc);
 						writeln(code.data[dc .. dc + SizeofSum!(InstArgs!sym)]);
-					}*/
+					}
 					ic ++;
 					dc += SizeofSum!(InstArgs!sym);
 					mixin(InstCallStatement!sym);
