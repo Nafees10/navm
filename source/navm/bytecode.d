@@ -31,6 +31,8 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 		allSatisfy!(isCallable, T)){
 	ByteCode ret;
 	size_t[] absPos = [0]; /// index of arguments in data array
+	size_t[2][] cdataAddr; /// [index in data, index in cdata]
+	ubyte[] cdata;
 	foreach (lineNo, line; lines){
 		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
 		if (splits.length == 0)
@@ -60,7 +62,7 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 								" instruction expects " ~ InstArity!Inst.to!string ~
 								" arguments, got " ~ (splits.length).to!string);
 					ret.instructions ~= ind;
-					readArgs!Inst(ret, splits, absPos);
+					readArgs!Inst(ret, splits, dataAddr, absPos);
 					break caser;
 			}
 			default:
@@ -68,6 +70,12 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 						": Instruction expected, got `" ~ splits[0] ~ "`");
 		}
 	}
+
+	foreach (indexes; cdataAddr){
+		ret.data[indexes[0] .. indexes[0] + size_t.sizeof] =
+			(ret.data.length + indexes[1]).asBytes;
+	}
+	ret.data ~= cdata;
 
 	size_t dc;
 	foreach (lineNo, line; lines){
@@ -106,11 +114,40 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 private void readArgs(alias Inst)(
 		ref ByteCode ret,
 		string[] args,
+		ref size_t[2][] cdataAddr,
+		ref ubyte[] cdata,
 		ref size_t[] absPos){
 	static foreach (i, Arg; InstArgs!Inst){
-		if (args[i].length && args[i][0] == '@'){
-			ret.data.length += Arg.sizeof;
-			absPos ~= absPos[$ - 1] + Arg.sizeof;
+		static if (isSomeString!Arg){
+			if (args[i].length && args[i][0] == '"'){
+				ubyte[] data = parseData!Arg(args[i]);
+				if (data == null){
+					throw new Exception("line " ~ (i + 1).to!string ~
+							": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
+				}
+				cdataAddr ~= [ret.data.length, cdata.length];
+				ret.data ~= cdata.length.asBytes;
+				ret.data ~= size_t.max.asBytes;
+				absPos ~= absPos[$ - 1] + size_t.sizeof + size_t.sizeof;
+				cdata ~= data;
+			} else {
+				throw new Exception("line " ~ (i + 1).to!string ~
+						": Expected string, got `" ~ args[i] ~ "`");
+			}
+
+		} else static if (isIntegral!Arg){
+			if (args[i].length && args[i][0] == '@'){
+				ret.data.length += Arg.sizeof;
+				absPos ~= absPos[$ - 1] + Arg.sizeof;
+			} else {
+				ubyte[] data = parseData!Arg(args[i]);
+				if (data == null)
+					throw new Exception("line " ~ (i + 1).to!string ~
+							": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
+				ret.data ~= data;
+				absPos ~= absPos[$ - 1] + data.length;
+			}
+
 		} else {
 			ubyte[] data = parseData!Arg(args[i]);
 			if (data == null)
@@ -385,7 +422,7 @@ private ubyte[] parseData(T)(string s){
 	} else static if (isSomeChar!T){
 		if (s.length < T.sizeof + 2 || s[0] != s[$ - 1] || s[0] != '\'')
 			return null;
-		s = s[1 .. $ - 1];
+		s = s[1 .. $ - 1].unescape;
 		try{
 			return s.to!T;
 		} catch (Exception){
