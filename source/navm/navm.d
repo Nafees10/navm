@@ -18,7 +18,7 @@ public void execute(S, T...)(
 		ic = code.labels[label][0];
 		dc = code.labels[label][1];
 	}
-	InstArgsUnion!T pun;
+	InstArgsUnion!T un;
 	const len = code.instructions.length;
 	while (ic < len){
 		switcher: switch (code.instructions[ic]){
@@ -36,13 +36,13 @@ public void execute(S, T...)(
 								[dc .. dc + size_t.sizeof].as!size_t;
 							immutable size_t c = code.data
 								[size_t.sizeof + dc .. dc + 2 * size_t.sizeof].as!size_t;
-							pun.structs[ind].params[i] =
+							un.s[ind].p[i] =
 								(cast(ForeachType!Arg*)(code.data[p .. $].ptr))
 								[0 .. (c / ForeachType!Arg.sizeof)];
 						} else {
-							pun.structs[ind].params[i] =
+							un.s[ind].p[i] =
 								code.data[
-								dc + SizeofSum!(pun.structs[ind].params[0 .. i]) .. $].as!Arg;
+								dc + SizeofSum!(un.s[ind].p[0 .. i]) .. $].as!Arg;
 						}
 					}
 					ic ++;

@@ -55,14 +55,14 @@ package template InstArities(T...) if (allSatisfy!(isCallable, T)){
 /// A struct storing an Instruction's InstParams
 package template InstArgsStruct(alias T) if (isCallable!T){
 	struct InstArgsStruct{
-		InstArgs!T params;
+		InstArgs!T p;
 	}
 }
 
 /// A union containing InstParamStruct for every function
 package template InstArgsUnion(T...) if (allSatisfy!(isCallable, T)){
 	union InstArgsUnion{
-		staticMap!(InstArgsStruct, T) structs;
+		staticMap!(InstArgsStruct, T) s;
 	}
 }
 
@@ -125,7 +125,7 @@ package template InstCallStatement(alias Inst) if (isCallable!Inst){
 					ret ~= "code, ";
 				}
 			} else {
-				ret ~= "pun.structs[ind].params[" ~ mapTo.to!string ~ "], ";
+				ret ~= "un.s[ind].p[" ~ mapTo.to!string ~ "], ";
 			}
 		}
 		if (ret[$ - 1] == '(')
