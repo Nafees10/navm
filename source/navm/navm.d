@@ -31,16 +31,8 @@ public void execute(S, T...)(
 						writeln(code.data[dc .. dc + SizeofSum!(InstArgs!Inst)]);
 					}*/
 					static foreach (i, Arg; InstArgs!Inst){
-						static if (is (Arg == string)){
-							size_t[2] posLen = code.data[dc .. dc + (size_t.sizeof * 2)]
-								.as!(size_t[2]);
-							un.s[ind].p[i] = cast(string)cast(char[])code.data.ptr[
-								posLen[0] .. posLen[0] + posLen[1]];
-						} else {
-							un.s[ind].p[i] =
-								code.data[
-								dc + SizeofSum!(un.s[ind].p[0 .. i]) .. $].as!Arg;
-						}
+						un.s[ind].p[i] =
+							code.data[dc + SizeofSum!(un.s[ind].p[0 .. i]) .. $].as!Arg;
 					}
 					ic ++;
 					dc += SizeofSum!(InstArgs!Inst);

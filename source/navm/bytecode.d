@@ -39,7 +39,7 @@ public PICode parseByteCode(T...)(string[] lines) if (
 		allSatisfy!(isCallable, T)){
 	PICode ret;
 	size_t[] absPos = [0]; /// index of arguments in data array
-	size_t[2][] cdataAddr; /// [index in data, index in cdata]
+	size_t[3][] cdataAddr; /// [index in data, index in cdata, length]
 	ubyte[] cdata;
 	foreach (lineNo, line; lines){
 		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
@@ -79,13 +79,12 @@ public PICode parseByteCode(T...)(string[] lines) if (
 		}
 	}
 
-	foreach (indexes; cdataAddr){
-		//ret.data[indexes[0] .. indexes[0] + string.sizeof] =
-
-		ret.data[indexes[0] .. indexes[0] + size_t.sizeof] =
-			(ret.data.length + indexes[1]).asBytes;
-	}
+	immutable size_t dataLen = ret.data.length;
 	ret.data ~= cdata;
+	foreach (ind; cdataAddr){
+		ret.data[ind[0] .. ind[0] + string.sizeof] =
+			(ret.data[dataLen + ind[1] .. dataLen + ind[1] + ind[2]]).asBytes;
+	}
 
 	size_t dc;
 	foreach (lineNo, line; lines){
@@ -124,7 +123,7 @@ public PICode parseByteCode(T...)(string[] lines) if (
 private void readArgs(alias Inst)(
 		ref PICode ret,
 		string[] args,
-		ref size_t[2][] cdataAddr,
+		ref size_t[3][] cdataAddr,
 		ref ubyte[] cdata,
 		ref size_t[] absPos){
 	static foreach (i, Arg; InstArgs!Inst){
@@ -136,7 +135,7 @@ private void readArgs(alias Inst)(
 							": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
 				}
 				ret.rel ~= ret.data.length;
-				cdataAddr ~= [ret.data.length, cdata.length];
+				cdataAddr ~= [ret.data.length, cdata.length, data.length];
 				ret.data ~= size_t.max.asBytes;
 				ret.data ~= data.length.asBytes;
 				// add any extra bytes that string might have
