@@ -8,9 +8,9 @@ import navm.common;
 
 public import navm.bytecode;
 
-/// Execute a ByteCode
+/// Execute a Code
 public void execute(S, T...)(
-		ref ByteCode code,
+		ref Code code,
 		ref S state,
 		size_t label = size_t.max) if (allSatisfy!(isCallable, T)){
 	size_t ic, dc;
@@ -31,14 +31,11 @@ public void execute(S, T...)(
 						writeln(code.data[dc .. dc + SizeofSum!(InstArgs!Inst)]);
 					}*/
 					static foreach (i, Arg; InstArgs!Inst){
-						static if (isSomeString!Arg){
-							immutable size_t p = code.data
-								[dc .. dc + size_t.sizeof].as!size_t;
-							immutable size_t c = code.data
-								[size_t.sizeof + dc .. dc + 2 * size_t.sizeof].as!size_t;
-							un.s[ind].p[i] =
-								(cast(ForeachType!Arg*)(code.data[p .. $].ptr))
-								[0 .. (c / ForeachType!Arg.sizeof)];
+						static if (is (Arg == string)){
+							size_t[2] posLen = code.data[dc .. dc + (size_t.sizeof * 2)]
+								.as!(size_t[2]);
+							un.s[ind].p[i] = cast(string)cast(char[])code.data.ptr[
+								posLen[0] .. posLen[0] + posLen[1]];
 						} else {
 							un.s[ind].p[i] =
 								code.data[
@@ -57,7 +54,7 @@ public void execute(S, T...)(
 }
 
 /// ditto
-public void execute(T...)(ref ByteCode code, size_t label = size_t.max) if (
+public void execute(T...)(ref Code code, size_t label = size_t.max) if (
 		allSatisfy!(isCallable, T) && !InstsIsStateful!T){
 	ubyte dummyState;
 	execute!(ubyte, T)(code, dummyState, label);

@@ -204,12 +204,12 @@ void incR(ref Stack _state){
 
 // jumps
 
-void jmp(ref size_t _ic, ref size_t _dc, ref ByteCode _code, uint label){
+void jmp(ref size_t _ic, ref size_t _dc, ref Code _code, uint label){
 	_ic = _code.labels[label][0];
 	_dc = _code.labels[label][1];
 }
 
-void jmpC(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state,
+void jmpC(ref size_t _ic, ref size_t _dc, ref Code _code, ref Stack _state,
 		uint label){
 	if (_state.pop!int != 0){
 		_ic = _code.labels[label][0];
@@ -217,7 +217,7 @@ void jmpC(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state,
 	}
 }
 
-void call(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state,
+void call(ref size_t _ic, ref size_t _dc, ref Code _code, ref Stack _state,
 		uint label){
 	_state.push!int(_state.base);
 	_state.push!int(cast(int)_ic);
@@ -227,7 +227,7 @@ void call(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state,
 	_dc = _code.labels[label][1];
 }
 
-void ret(ref size_t _ic, ref size_t _dc, ref ByteCode _code, ref Stack _state){
+void ret(ref size_t _ic, ref size_t _dc, ref Code _code, ref Stack _state){
 	_dc = _state.pop!int;
 	_ic = _state.pop!int;
 	_state.base = cast(ushort)_state.pop!int;
@@ -260,9 +260,11 @@ void main(string[] args){
 	immutable size_t count = args.length > 2 && args[2].isNum
 		? args[2].to!size_t : 1;
 	StopWatch sw;
-	ByteCode code = parseByteCode!InstructionSet(fileToArray(args[1]));
+	PICode picode = parseByteCode!InstructionSet(fileToArray(args[1]));
+	// TODO prepare bytecode
+	Code code = picode._code;
 	debug {
-		writeln("ByteCode: ");
+		writeln("Code: ");
 		writeln(code);
 	}
 

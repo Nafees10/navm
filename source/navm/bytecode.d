@@ -12,8 +12,16 @@ import std.conv,
 			 std.traits,
 			 std.algorithm;
 
-/// Byte Code (labels, label names, instructions, and data)
-public struct ByteCode{
+/// Position Independent Code
+/// (label names, labels, instructions, data, & indexes of relative address)
+public struct PICode{
+	Code _code;
+	alias _code this;
+	size_t[] rel; /// indexes of relative addresses in data, relative to data.ptr
+}
+
+/// Byte Code (ready for execution)
+public struct Code{
 	string[] labelNames; /// label index against each labelName
 	size_t[2][] labels; /// [codeIndex, dataIndex] for each labal
 	ushort[] instructions; /// instruction codes
@@ -27,9 +35,9 @@ public enum ushort NAVMBC_VERSION = 0x02;
 /// Template parameters are functions for instructions
 /// Throws: Exception on invalid bytecode
 /// Returns: ByteCode
-public ByteCode parseByteCode(T...)(string[] lines) if (
+public PICode parseByteCode(T...)(string[] lines) if (
 		allSatisfy!(isCallable, T)){
-	ByteCode ret;
+	PICode ret;
 	size_t[] absPos = [0]; /// index of arguments in data array
 	size_t[2][] cdataAddr; /// [index in data, index in cdata]
 	ubyte[] cdata;
@@ -72,6 +80,8 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 	}
 
 	foreach (indexes; cdataAddr){
+		//ret.data[indexes[0] .. indexes[0] + string.sizeof] =
+
 		ret.data[indexes[0] .. indexes[0] + size_t.sizeof] =
 			(ret.data.length + indexes[1]).asBytes;
 	}
@@ -90,7 +100,7 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 			static foreach (ind, Inst; T){
 				case __traits(identifier, Inst):
 					splits = splits[1 .. $];
-					static foreach (argInd, Arg; InstArgs!Inst){
+					static foreach (argInd, Arg; InstArgs!Inst){{
 						immutable string arg = splits[argInd];
 						static if (isIntegral!Arg){
 							if (arg.length && arg[0] == '@'){
@@ -98,7 +108,7 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 								ret.data[absPos[dc] .. absPos[dc] + Arg.sizeof] =
 									(cast(Arg)addr).asBytes;
 							}
-						}
+						}}
 						dc ++;
 					}
 					break switcharoo;
@@ -112,22 +122,26 @@ public ByteCode parseByteCode(T...)(string[] lines) if (
 }
 
 private void readArgs(alias Inst)(
-		ref ByteCode ret,
+		ref PICode ret,
 		string[] args,
 		ref size_t[2][] cdataAddr,
 		ref ubyte[] cdata,
 		ref size_t[] absPos){
 	static foreach (i, Arg; InstArgs!Inst){
-		static if (isSomeString!Arg){
+		static if (is (Arg == string)){
 			if (args[i].length && args[i][0] == '"'){
 				ubyte[] data = parseData!Arg(args[i]);
 				if (data == null){
 					throw new Exception("line " ~ (i + 1).to!string ~
 							": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
 				}
+				ret.rel ~= ret.data.length;
 				cdataAddr ~= [ret.data.length, cdata.length];
 				ret.data ~= size_t.max.asBytes;
 				ret.data ~= data.length.asBytes;
+				// add any extra bytes that string might have
+				static if (string.sizeof > size_t.sizeof * 2)
+					ret.data.length += string.sizeof - (size_t.size_t * 2);
 				absPos ~= absPos[$ - 1] + size_t.sizeof + size_t.sizeof;
 				cdata ~= data;
 			} else {
@@ -159,7 +173,7 @@ private void readArgs(alias Inst)(
 	}
 }
 
-private size_t resolveAddress(string arg, ref ByteCode code, size_t[] absPos){
+private size_t resolveAddress(string arg, ref PICode code, size_t[] absPos){
 	ptrdiff_t plusInd = arg.indexOf('+');
 	if (plusInd != -1){
 		string label = arg[0 .. plusInd];
@@ -198,7 +212,7 @@ unittest{
 		"add",
 		"print"
 	];
-	ByteCode code = parse(source);
+	PICode code = parse(source);
 	assert(code.labels.length == 2);
 	assert(code.labelNames.canFind("data"));
 	assert(code.labelNames.canFind("start"));
@@ -223,7 +237,7 @@ private size_t binStreamExpectedSize(
 /// Writes ByteCode to a binary stream
 ///
 /// Returns: binary date in a ubyte[]
-public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
+public ubyte[] toBin(ref PICode code, ubyte[7] magicPostfix = 0,
 		ubyte[] metadata = null){
 	// figure out expected length
 	size_t expectedSize = binStreamExpectedSize(
@@ -277,7 +291,7 @@ public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
 
 ///
 unittest{
-	ByteCode code;/// empty code
+	PICode code;/// empty code
 	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7], [8, 9, 10]);
 	assert(bin.length == 17 + 8 + 3 + 8 + 8 + 8);
 	assert(bin[0 .. 7] == "NAVMBC-"); // magic bytes
@@ -290,7 +304,7 @@ unittest{
 /// Reads ByteCode from a byte stream in ubyte[]
 /// Throws: Exception in case of error
 /// Returns: ByteCode
-public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
+public PICode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 		ref ubyte[] metadata){
 	if (stream.length < binStreamExpectedSize)
 		throw new Exception("Stream size if less than minimum possible size");
@@ -307,7 +321,7 @@ public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 	metadata = stream[24 .. 24 + len];
 	size_t seek = 24 + len;
 
-	ByteCode code;
+	PICode code;
 	// instructions
 	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
 	if (binStreamExpectedSize(metadata.length, len / 2) > stream.length)
@@ -352,7 +366,7 @@ public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 ///
 unittest{
 	import std.functional, std.range;
-	ByteCode code;
+	PICode code;
 	ushort[] instructions = iota(cast(ushort)1, ushort.max, 50).array;
 	ubyte[] data = iota(cast(ubyte)0, ubyte.max).cycle.take(3000).array;
 	code.instructions = instructions.dup;
@@ -368,7 +382,7 @@ unittest{
 	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7], [1, 2, 3]).dup;
 	ubyte[7] postfix;
 	ubyte[] metadata;
-	ByteCode decoded = bin.fromBin(postfix, metadata);
+	PICode decoded = bin.fromBin(postfix, metadata);
 	assert(postfix == [1, 2, 3, 4, 5, 6, 7]);
 	assert(metadata == [1, 2, 3]);
 	assert(decoded.instructions == instructions);
@@ -404,8 +418,6 @@ private ubyte[] parseData(T)(string s){
 			}
 		}
 		// or it can be a address
-		if (s[0] == '@')
-			return s.asBytes;
 		return null;
 
 	} else static if (isFloatingPoint!T){
@@ -429,13 +441,13 @@ private ubyte[] parseData(T)(string s){
 			return null;
 		}
 
-	} else static if (isSomeString!T){
+	} else static if (is (T == string)){
 		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\"')
 			return null;
 		s = s[1 .. $ - 1].unescape;
 		try{
 			T str = s.to!T;
-			return (cast(ubyte*)(str.ptr))[0 .. str.length * ForeachType!T.sizeof];
+			return cast(ubyte[])cast(char[])str;
 		} catch (Exception){
 			return null;
 		}

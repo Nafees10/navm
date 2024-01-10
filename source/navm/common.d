@@ -69,25 +69,14 @@ package template InstArgsUnion(T...) if (allSatisfy!(isCallable, T)){
 /// If a T can be .sizeof'd
 package enum HasSizeof(alias T) = __traits(compiles, T.sizeof);
 
-/// Sizeof, but if string, it is `size_t.sizeof x2`
-package template SizeofCustom(alias T) if (HasSizeof!T){
-	static if	(is (T == string)){
-		enum SizeofCustom = size_t.sizeof + size_t.sizeof;
-	} else {
-		enum SizeofCustom = T.sizeof;
-	}
-}
-
 /// sum of sizes
 package template SizeofSum(T...) if (allSatisfy!(HasSizeof, T)){
-	static if (T.length == 0){
-		enum SizeofSum = 0;
-	} else static if (T.length == 1){
-		enum SizeofSum = SizeofCustom!(T[0]);
-	} else static if (T.length == 2){
-		enum SizeofSum = SizeofCustom!(T[0]) + SizeofCustom!(T[1]);
-	} else {
-		enum SizeofSum = SizeofCustom!(T[0]) + SizeofSum!(T[1 .. $]);
+	enum SizeofSum = calculateSizeofSum();
+	private size_t calculateSizeofSum(){
+		size_t ret = 0;
+		foreach (sym; T)
+			ret += sym.sizeof;
+		return ret;
 	}
 }
 
@@ -154,30 +143,16 @@ package union ByteUnion(T, ubyte N = T.sizeof){
 
 /// Reads a ubyte[] as a type
 /// Returns: value in type T
-pragma(inline, true)
-package T as(T)(ubyte[] data) if (!isArray!T || is (T == string)){
-	static if (is (T == string)){
-		immutable size_t len = data[0 .. size_t.sizeof].as!size_t;
-		return cast(string)cast(char[])data[size_t.sizeof .. size_t.sizeof + len];
-	} else {
-		assert(data.length >= T.sizeof);
-		return *(cast(T*)data.ptr);
-	}
+pragma(inline, true) package T as(T)(ubyte[] data) {
+	assert(data.length >= T.sizeof);
+	return *(cast(T*)data.ptr);
 }
 
 /// Returns: ubyte[] against a value of type T
-pragma(inline, true)
-package ubyte[] asBytes(T)(T val) if (!isArray!T || is (T == string)){
-	static if (is (T == string)){
-		ubyte[] ret = new ubyte[size_t.sizeof + val.length];
-		ret[0 .. size_t.sizeof] = ByteUnion!(size_t)(val.length).bytes;
-		ret[size_t.sizeof .. $] = cast(ubyte[])cast(char[])val;
-		return ret;
-	} else {
-		ubyte[] ret;
-		ret.length = T.sizeof;
-		return ret[] = (cast(ubyte*)&val)[0 .. T.sizeof];
-	}
+pragma(inline, true) package ubyte[] asBytes(T)(T val) {
+	ubyte[] ret;
+	ret.length = T.sizeof;
+	return ret[] = (cast(ubyte*)&val)[0 .. T.sizeof];
 }
 
 ///
