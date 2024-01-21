@@ -121,9 +121,9 @@ private ubyte[] parseArgs(alias Inst)(ref ByteCode code, string[] args){
 }
 
 ///
-/*unittest{
-	void push(size_t){}
-	void push2(size_t, size_t){}
+unittest{
+	void push(ushort){}
+	void push2(ushort, ushort){}
 	void pop(){}
 	void add(){}
 	void print(){}
@@ -140,11 +140,9 @@ private ubyte[] parseArgs(alias Inst)(ref ByteCode code, string[] args){
 	assert(code.labels.length == 2);
 	assert(code.labelNames.canFind("data"));
 	assert(code.labelNames.canFind("start"));
-	assert(code.labels[0] == [0, 0]);
-	assert(code.labels[1] == [1, 8]);
-	assert(code.instructions == [0, 0, 0, 1, 3, 4]);
-	// tests for code.data are missing
-}*/
+	assert(code.labels[0] == 0);
+	assert(code.labels[1] == 4);
+}
 
 /// Returns: Expected stream size
 private size_t binStreamExpectedSize(
@@ -370,11 +368,11 @@ private T parseData(T)(string s){
 
 ///
 unittest{
-	assert("true".parseData!bool.as!bool == true);
-	assert("false".parseData!bool.as!bool == false);
-	assert("0x50".parseData!size_t.as!size_t == 0x50);
-	assert("0b101010".parseData!size_t.as!size_t == 0b101010);
-	assert("12345".parseData!size_t.as!size_t == 1_2345);
-	assert("\"bla bla\"".parseData!string.as!string == "bla bla");
-	assert("5.5".parseData!double.as!double == "5.5".to!double);
+	assert("true".parseData!bool == true);
+	assert("false".parseData!bool == false);
+	assert("0x50".parseData!size_t == 0x50);
+	assert("0b101010".parseData!size_t == 0b101010);
+	assert("12345".parseData!size_t == 1_2345);
+	assert("\"bla bla\"".parseData!string == "bla bla");
+	assert("5.5".parseData!double == "5.5".to!double);
 }
