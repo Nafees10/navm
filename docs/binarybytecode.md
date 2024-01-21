@@ -9,9 +9,8 @@ The binary file contains these sections of bytecode in the this order:
 2. version bytes
 3. magic number postfix
 4. metadata
-5. instruction codes
-6. instruction data
 7. labels
+5. instruction & data
 
 ## Magic Number & Version & Magic Number Postfix
 
@@ -49,17 +48,6 @@ Byte combinations not present in table above are reserved for future versions.
 An 8 byte (64 bit) unsigned integer used to store number of bytes in metadata,
 followed by the metadata.
 
-## Instruction Codes
-
-An 8 byte (64 bit) unsigned integer stores the _number of bytes_ used for
-storing instruction codes. Each instruction code is a `ushort`, so 2 bytes are
-used for 1 instruction code.
-
-## Instruction Data
-
-An 8 byte (64 bit) unsigned integer stores the _number of bytes_ used for
-storing instructio data. This is followed by that many number of bytes of data.
-
 ## Labels
 
 An 8 byte (64 bit) unsigned integer stores the number of labels. This is
@@ -71,8 +59,12 @@ A label is stored as:
 2. ArgIndex - fixed length, 8 bytes
 3. Name - variable length (`char` array).
 
----
+## Instructions & Data
 
-Any excess bytes at end of last section are ignored
+An 8 byte (64 bit) unsigned integer stores the _number of bytes_ used for
+storing instruction codes and their data. Following bytes are the `code` part
+of the ByteCode.
+
+---
 
 **All integers are stored in little endian encoding**
