@@ -10,32 +10,27 @@ public import navm.bytecode;
 
 /// Execute a Code
 public void execute(S, T...)(
-		ref Code code,
+		ref ByteCode code,
 		ref S state,
 		size_t label = size_t.max) if (allSatisfy!(isCallable, T)){
-	size_t ic, dc;
-	if (label != size_t.max){
-		ic = code.labels[label][0];
-		dc = code.labels[label][1];
-	}
+	size_t ic;
+	if (label < code.labels.length)
+		ic = code.labels[label];
 	InstArgsUnion!T un;
-	const len = code.instructions.length;
-	while (ic < len){
-		switcher: switch (code.instructions[ic]){
+	while (ic < code.end){
+		immutable ushort inst = code.code[ic .. $].as!ushort;
+		ic += ushort.sizeof;
+		switcher: switch (inst){
 			foreach (ind, Inst; T){
 				case ind:
 					/*debug{
 						import std.stdio;
-						writef!"calling %d %s at ic=%d dc=%d; "(
-								ind, __traits(identifier, Inst), ic, dc);
-						writeln(code.data[dc .. dc + SizeofSum!(InstArgs!Inst)]);
+						writef!"calling %d %s at ic=%d; "(
+								ind, __traits(identifier, Inst), ic);
+						writeln(code.code[ic .. ic + InstArgsStruct!Inst.sizeof]);
 					}*/
-					static foreach (i, Arg; InstArgs!Inst){
-						un.s[ind].p[i] =
-							code.data[dc + SizeofSum!(un.s[ind].p[0 .. i]) .. $].as!Arg;
-					}
-					ic ++;
-					dc += SizeofSum!(InstArgs!Inst);
+					un.s[ind] = code.code[ic .. $].as!(InstArgsStruct!Inst);
+					ic += InstArgsStruct!Inst.sizeof;
 					mixin(InstCallStatement!Inst);
 					break switcher;
 			}
@@ -46,7 +41,7 @@ public void execute(S, T...)(
 }
 
 /// ditto
-public void execute(T...)(ref Code code, size_t label = size_t.max) if (
+public void execute(T...)(ref ByteCode code, size_t label = size_t.max) if (
 		allSatisfy!(isCallable, T) && !InstsIsStateful!T){
 	ubyte dummyState;
 	execute!(ubyte, T)(code, dummyState, label);

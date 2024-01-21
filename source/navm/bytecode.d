@@ -1,6 +1,7 @@
 module navm.bytecode;
 
 import utils.misc : readHexadecimal, readBinary, isNum;
+import utils.ds : FIFOStack;
 
 import navm.common;
 
@@ -10,193 +11,147 @@ import std.conv,
 			 std.array,
 			 std.string,
 			 std.traits,
+			 std.typecons,
 			 std.algorithm;
 
 /// Position Independent Code
 /// (label names, labels, instructions, data, & indexes of relative address)
-public struct PICode{
-	Code _code;
-	alias _code this;
-	size_t[] rel; /// indexes of relative addresses in data, relative to data.ptr
-}
-
-/// Byte Code (ready for execution)
-public struct Code{
+public struct ByteCode{
 	string[] labelNames; /// label index against each labelName
-	size_t[2][] labels; /// [codeIndex, dataIndex] for each labal
-	ushort[] instructions; /// instruction codes
-	ubyte[] data; /// instruction data
+	size_t[] labels; /// [codeIndex, dataIndex] for each labal
+	ubyte[] code; /// instructions and their data
+	size_t end; /// index+1 of last instruction in code
 }
 
 /// ByteCode version
 public enum ushort NAVMBC_VERSION = 0x02;
 
-/// Parse string[] lines into bytecode
-/// Template parameters are functions for instructions
-/// Throws: Exception on invalid bytecode
-/// Returns: ByteCode
-public PICode parseByteCode(T...)(string[] lines) if (
-		allSatisfy!(isCallable, T)){
-	PICode ret;
-	size_t[] absPos = [0]; /// index of arguments in data array
-	size_t[3][] cdataAddr; /// [index in data, index in cdata, length]
-	ubyte[] cdata;
+public ByteCode parseByteCode(T...)(string[] lines)
+		if (allSatisfy!(isCallable, T)){
+	ByteCode ret;
+	string[][] argsAll;
+
+	// pass 1: split args, and read labels
 	foreach (lineNo, line; lines){
 		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
-		if (splits.length == 0)
-			continue;
+		if (splits.length == 0) continue;
 		if (splits[0].length && splits[0][$ - 1] == ':'){
 			string name = splits[0][0 .. $ - 1];
 			if (ret.labelNames.canFind(name))
-				throw new Exception("line " ~ (lineNo + 1).to!string ~
-						" label name redeclared");
+				throw new Exception(format!"line %d: label `%s` redeclared"(
+							lineNo + 1, name));
 			ret.labelNames ~= name;
-			ret.labels ~= [
-				ret.instructions.length,
-				ret.data.length
-			];
+			ret.labels ~= ret.code.length;
 			splits = splits[1 .. $];
 			if (splits.length == 0)
 				continue;
 		}
-
-		caser: switch (splits[0]){
+		immutable string inst = splits[0];
+		splits = splits[1 .. $];
+		pass1S: switch (inst){
 			static foreach (ind, Inst; T){
 				case __traits(identifier, Inst):
-					splits = splits[1 .. $];
 					if (splits.length!= InstArity!Inst)
-						throw new Exception("line " ~ (lineNo + 1).to!string ~ ": " ~
-								__traits(identifier, Inst) ~
-								" instruction expects " ~ InstArity!Inst.to!string ~
-								" arguments, got " ~ (splits.length).to!string);
-					ret.instructions ~= ind;
-					readArgs!Inst(ret, splits, cdataAddr, cdata, absPos);
-					break caser;
+						throw new Exception(format!
+								"line %d: `%s` expects %d arguments, got %d"
+								(lineNo + 1, inst, InstArity!Inst, splits.length));
+					ret.code ~= (cast(ushort)ind).asBytes;
+					ret.code.length += InstArgsStruct!Inst.sizeof;
+					break pass1S;
 			}
 			default:
-				throw new Exception("line " ~ (lineNo + 1).to!string ~
-						": Instruction expected, got `" ~ splits[0] ~ "`");
+				throw new Exception(format!"line %d: Instruction expected, got `%s`"
+						(lineNo + 1, inst));
+		}
+		argsAll ~= splits;
+	}
+
+	// pass 2: read args
+	size_t pos = 0;
+	FIFOStack!string strs = new FIFOStack!string;
+	size_t strsLen;
+	foreach (args; argsAll){
+		immutable ushort inst = ret.code[pos .. $].as!ushort;
+		pos += ushort.sizeof;
+		pass2S: final switch (inst){
+			static foreach (ind, Inst; T){
+				case ind:
+					ret.code[pos .. pos + InstArgsStruct!Inst.sizeof] =
+						parseArgs!Inst(ret, strs, strsLen, args).asBytes;
+					pos += InstArgsStruct!Inst.sizeof;
+					break pass2S;
+			}
 		}
 	}
 
-	immutable size_t dataLen = ret.data.length;
-	ret.data ~= cdata;
-	foreach (ind; cdataAddr){
-		ret.data[ind[0] .. ind[0] + string.sizeof] =
-			(ret.data[dataLen + ind[1] .. dataLen + ind[1] + ind[2]]).asBytes;
-	}
-
-	size_t dc;
-	foreach (lineNo, line; lines){
-		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
-		if (splits.length == 0)
-			continue;
-		if (splits[0].length && splits[0][$ - 1] == ':')
-			splits = splits[1 .. $];
-		if (splits.length == 0)
-			continue;
-		switcharoo: switch (splits[0]){
+	// pass 3: fix strs
+	InstArgsUnion!T un;
+	pos = 0;
+	ret.end = ret.code.length;
+	size_t posE = ret.code.length;
+	ret.code.length += strsLen;
+	while (pos < ret.end){
+		immutable ushort inst = ret.code[pos .. $].as!ushort;
+		pos += ushort.sizeof;
+		pass3S: final switch(inst){
 			static foreach (ind, Inst; T){
-				case __traits(identifier, Inst):
-					splits = splits[1 .. $];
-					static foreach (argInd, Arg; InstArgs!Inst){{
-						immutable string arg = splits[argInd];
-						static if (isIntegral!Arg){
-							if (arg.length && arg[0] == '@'){
-								size_t addr = arg[1 .. $].resolveAddress(ret, absPos);
-								ret.data[absPos[dc] .. absPos[dc] + Arg.sizeof] =
-									(cast(Arg)addr).asBytes;
-							}
-						}}
-						dc ++;
+				case ind:
+					un.s[ind] = ret.code[pos .. $].as!(InstArgsStruct!Inst);
+					static foreach (i, Arg; InstArgs!Inst){
+						static if (is (Arg == string)){
+							string str = strs.pop;
+							ret.code[posE .. posE + str.length] = cast(ubyte[])str;
+							un.s[ind].p[i] = cast(string)ret.code[posE .. posE + str.length];
+							posE += str.length;
+						}
 					}
-					break switcharoo;
+					ret.code[pos .. pos + InstArgsStruct!Inst.sizeof] = un.s[ind].asBytes;
+					pos += InstArgsStruct!Inst.sizeof;
+					break pass3S;
 			}
-			default:
-				throw new Exception("line " ~ (lineNo + 1).to!string ~
-						": Instruction expected, got `" ~ splits[0] ~ "`");
 		}
 	}
 	return ret;
 }
 
-private void readArgs(alias Inst)(
-		ref PICode ret,
-		string[] args,
-		ref size_t[3][] cdataAddr,
-		ref ubyte[] cdata,
-		ref size_t[] absPos){
+private InstArgsStruct!Inst parseArgs(alias Inst)(
+		ref ByteCode code, FIFOStack!string strs, ref size_t strsLen,
+		string[] args){
+	InstArgsStruct!Inst s;
 	static foreach (i, Arg; InstArgs!Inst){
 		static if (is (Arg == string)){
 			if (args[i].length && args[i][0] == '"'){
-				ubyte[] data = parseData!Arg(args[i]);
-				if (data == null){
-					throw new Exception("line " ~ (i + 1).to!string ~
-							": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
-				}
-				ret.rel ~= ret.data.length;
-				cdataAddr ~= [ret.data.length, cdata.length, data.length];
-				ret.data ~= size_t.max.asBytes;
-				ret.data ~= data.length.asBytes;
-				// add any extra bytes that string might have
-				static if (string.sizeof > size_t.sizeof * 2)
-					ret.data.length += string.sizeof - (size_t.size_t * 2);
-				absPos ~= absPos[$ - 1] + size_t.sizeof + size_t.sizeof;
-				cdata ~= data;
+				ubyte[] data = cast(ubyte[])parseData!Arg(args[i]);
+				if (data == null)
+					throw new Exception(format!"Instruction `%s` expected %s, got `%s`"
+							(__traits(identifier, Inst), Arg.stringof, args[i]));
+				strs.push(cast(string)data);
+				strsLen += data.length;
 			} else {
-				throw new Exception("line " ~ (i + 1).to!string ~
-						": Expected string, got `" ~ args[i] ~ "`");
+				throw new Exception(format!
+						"Instruction `%s` expected string for %d-th arg, got `%s`"
+						(__traits(identifier, Inst), i + 1, args[i]));
 			}
 
 		} else static if (isIntegral!Arg){
 			if (args[i].length && args[i][0] == '@'){
-				ret.data.length += Arg.sizeof;
-				absPos ~= absPos[$ - 1] + Arg.sizeof;
+				if (!code.labelNames.canFind(args[i][1 .. $]))
+					throw new Exception(format!"Label `%s` used but not declared"
+							(args[i][1 .. $]));
+				s.p[i] = cast(typeof(s.p[i]))
+					code.labels[code.labelNames.countUntil(args[i][1 .. $])];
 			} else {
-				ubyte[] data = parseData!Arg(args[i]);
-				if (data == null)
-					throw new Exception("line " ~ (i + 1).to!string ~
-							": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
-				ret.data ~= data;
-				absPos ~= absPos[$ - 1] + data.length;
+				s.p[i] = parseData!Arg(args[i]);
 			}
-
 		} else {
-			ubyte[] data = parseData!Arg(args[i]);
-			if (data == null)
-				throw new Exception("line " ~ (i + 1).to!string ~
-						": Invalid data `" ~ args[i] ~ "` for " ~ Arg.stringof);
-			ret.data ~= data;
-			absPos ~= absPos[$ - 1] + data.length;
+			s.p[i] = parseData!Arg(args[i]);
 		}
 	}
-}
-
-private size_t resolveAddress(string arg, ref PICode code, size_t[] absPos){
-	ptrdiff_t plusInd = arg.indexOf('+');
-	if (plusInd != -1){
-		string label = arg[0 .. plusInd];
-		size_t offset = size_t.max;
-		try {
-			offset = arg[plusInd + 1 .. $].to!size_t;
-		} catch (Exception){}
-		if (offset == size_t.max || (
-					label.length && !code.labelNames.canFind(label)))
-			throw new Exception("Invalid address `" ~ arg ~ "`");
-		size_t pos = offset +
-			(label.length ? code.labels[code.labelNames.countUntil(label)][1] : 0);
-		if (pos > absPos.length)
-			throw new Exception("Invalid offset `" ~ arg ~ "`");
-		return absPos[pos];
-	}
-	// its a label address
-	if (!code.labelNames.canFind(arg))
-		throw new Exception("Invalid address `" ~ arg ~ "`");
-	return code.labelNames.countUntil(arg);
+	return s;
 }
 
 ///
-unittest{
+/*unittest{
 	void push(size_t){}
 	void push2(size_t, size_t){}
 	void pop(){}
@@ -206,12 +161,12 @@ unittest{
 	string[] source = [
 		"data: push 50",
 		"start: push 50",
-		"push @data+2",
+		"push @data",
 		"push2 1 2",
 		"add",
 		"print"
 	];
-	PICode code = parse(source);
+	ByteCode code = parse(source);
 	assert(code.labels.length == 2);
 	assert(code.labelNames.canFind("data"));
 	assert(code.labelNames.canFind("start"));
@@ -219,7 +174,7 @@ unittest{
 	assert(code.labels[1] == [1, 8]);
 	assert(code.instructions == [0, 0, 0, 1, 3, 4]);
 	// tests for code.data are missing
-}
+}*/
 
 /// Returns: Expected stream size
 private size_t binStreamExpectedSize(
@@ -236,7 +191,7 @@ private size_t binStreamExpectedSize(
 /// Writes ByteCode to a binary stream
 ///
 /// Returns: binary date in a ubyte[]
-public ubyte[] toBin(ref PICode code, ubyte[7] magicPostfix = 0,
+/*public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
 		ubyte[] metadata = null){
 	// figure out expected length
 	size_t expectedSize = binStreamExpectedSize(
@@ -290,7 +245,7 @@ public ubyte[] toBin(ref PICode code, ubyte[7] magicPostfix = 0,
 
 ///
 unittest{
-	PICode code;/// empty code
+	ByteCode code;/// empty code
 	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7], [8, 9, 10]);
 	assert(bin.length == 17 + 8 + 3 + 8 + 8 + 8);
 	assert(bin[0 .. 7] == "NAVMBC-"); // magic bytes
@@ -303,7 +258,7 @@ unittest{
 /// Reads ByteCode from a byte stream in ubyte[]
 /// Throws: Exception in case of error
 /// Returns: ByteCode
-public PICode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
+public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 		ref ubyte[] metadata){
 	if (stream.length < binStreamExpectedSize)
 		throw new Exception("Stream size if less than minimum possible size");
@@ -320,7 +275,7 @@ public PICode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 	metadata = stream[24 .. 24 + len];
 	size_t seek = 24 + len;
 
-	PICode code;
+	ByteCode code;
 	// instructions
 	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
 	if (binStreamExpectedSize(metadata.length, len / 2) > stream.length)
@@ -365,7 +320,7 @@ public PICode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 ///
 unittest{
 	import std.functional, std.range;
-	PICode code;
+	ByteCode code;
 	ushort[] instructions = iota(cast(ushort)1, ushort.max, 50).array;
 	ubyte[] data = iota(cast(ubyte)0, ubyte.max).cycle.take(3000).array;
 	code.instructions = instructions.dup;
@@ -381,7 +336,7 @@ unittest{
 	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7], [1, 2, 3]).dup;
 	ubyte[7] postfix;
 	ubyte[] metadata;
-	PICode decoded = bin.fromBin(postfix, metadata);
+	ByteCode decoded = bin.fromBin(postfix, metadata);
 	assert(postfix == [1, 2, 3, 4, 5, 6, 7]);
 	assert(metadata == [1, 2, 3]);
 	assert(decoded.instructions == instructions);
@@ -395,61 +350,49 @@ unittest{
 	assert(decoded.labelNames[1] == "start");
 	assert(decoded.labelNames[2] == "loop");
 	assert(decoded.labelNames[3] == "end");
-}
+}*/
 
-/// Parses data, asBytes it into ubyte[].
-///
-/// Returns: resulting ubyte[], or `null` if invalid or address or label
-private ubyte[] parseData(T)(string s){
+/// Parses data
+///	Throws: Exception if incorrect format
+/// Returns: parsed data.
+private T parseData(T)(string s){
 	static if (isIntegral!T){
 		// can be just an int
 		if (isNum(s, false))
-			return s.to!T.asBytes;
+			return s.to!T;
 		// can be a binary or hex literal
 		if (s.length > 2 && s[0] == '0'){
-			try{
-				if (s[1] == 'b')
-					return (cast(T)readBinary(s[2 .. $])).asBytes;
-				else if (s[1] == 'x')
-					return (cast(T)readHexadecimal(s[2 .. $])).asBytes;
-			} catch (Exception){
-				return null;
-			}
+			if (s[1] == 'b')
+				return (cast(T)readBinary(s[2 .. $]));
+			else if (s[1] == 'x')
+				return (cast(T)readHexadecimal(s[2 .. $]));
 		}
-		// or it can be a address
-		return null;
+		throw new Exception(format!"`%s` is not an integer"(s));
 
 	} else static if (isFloatingPoint!T){
 		if (isNum(s, true))
-			return s.to!T.asBytes;
-		return null;
+			return s.to!T;
+		throw new Exception(format!"`%s` is not a float"(s));
+
 	} else static if (is (T == bool)){
 		if (s == "true")
-			return true.asBytes;
+			return true;
 		if (s == "false")
-			return false.asBytes;
-		return null;
+			return false;
+		throw new Exception(format!"`%s` is not a boolean"(s));
 
 	} else static if (isSomeChar!T){
 		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\'')
 			return null;
 		s = s[1 .. $ - 1].unescape;
-		try{
-			return s.to!T;
-		} catch (Exception){
-			return null;
-		}
+		return s.to!T;
 
 	} else static if (is (T == string)){
 		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\"')
-			return null;
+			throw new Exception(format!"`%s` is not a string"(s));
 		s = s[1 .. $ - 1].unescape;
-		try{
-			T str = s.to!T;
-			return cast(ubyte[])cast(char[])str;
-		} catch (Exception){
-			return null;
-		}
+		return s.to!T;
+
 	} else {
 		static assert(false, "Unsupported argument type " ~ T.stringof);
 	}
