@@ -56,8 +56,7 @@ followed by the labels.
 A label is stored as:
 
 1. CodeIndex - fixed length, 8 bytes
-2. ArgIndex - fixed length, 8 bytes
-3. Name - variable length (`char` array).
+2. Name - variable length (`char` array).
 
 ## Instructions & Data
 
