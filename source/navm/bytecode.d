@@ -147,86 +147,73 @@ unittest{
 /// Returns: Expected stream size
 private size_t binStreamExpectedSize(
 		size_t metadataLen = 0,
-		size_t instructionsCount = 0,
-		size_t dataLen = 0,
-		size_t labelsCount = 0){
+		size_t labelsCount = 0,
+		size_t dataLen = 0){
 	return 17 + 8 + metadataLen +
-		8 + (instructionsCount * 2) +
-		8 + dataLen +
-		8 + ((8 * 3) * labelsCount);
+		8 + ((8 + 8) * labelsCount) +
+		8 + dataLen;
 }
 
 /// Writes ByteCode to a binary stream
 ///
 /// Returns: binary date in a ubyte[]
-/*public ubyte[] toBin(ref ByteCode code, ubyte[7] magicPostfix = 0,
+public ubyte[] toBin(ref ByteCode code, ubyte[8] magicPostfix = 0,
 		ubyte[] metadata = null){
 	// figure out expected length
 	size_t expectedSize = binStreamExpectedSize(
-			metadata.length, code.instructions.length, code.data.length,
-			code.labels.length);
+			metadata.length, code.labels.length, code.code.length);
 	// count label names sizes, add those
 	foreach (name; code.labelNames)
 		expectedSize += name.length;
 	ubyte[] stream = new ubyte[expectedSize];
 
 	// header
-	stream[0 .. 7] = cast(ubyte[])cast(char[])"NAVMBC-";
+	stream[0 .. 7] = cast(ubyte[])"NAVMBC-";
 	stream[7 .. 9] = ByteUnion!ushort(NAVMBC_VERSION).bytes;
-	stream[9 .. 16] = magicPostfix;
+	stream[9 .. 17] = magicPostfix;
 
 	// metadata
-	stream[16 .. 24] = ByteUnion!(size_t, 8)(metadata.length).bytes;
-	stream[24 .. 24 + metadata.length] = metadata;
-	size_t seek = 24 + metadata.length;
-
-	// instructions
-	stream[seek .. seek + 8] =
-		ByteUnion!(size_t, 8)(code.instructions.length * 2).bytes;
-	seek += 8;
-	foreach (inst; code.instructions){
-		stream[seek .. seek + 2] = ByteUnion!(ushort, 2)(inst).bytes;
-		seek += 2;
-	}
-
-	// data
-	stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.data.length).bytes;
-	seek += 8;
-	stream[seek .. seek + code.data.length] = code.data;
-	seek += code.data.length;
+	stream[17 .. 25] = ByteUnion!(size_t, 8)(metadata.length).bytes;
+	stream[25 .. 25 + metadata.length] = metadata;
+	size_t seek = 25 + metadata.length;
 
 	// labels
 	stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels.length).bytes;
 	seek += 8;
 	foreach (i, name; code.labelNames){
-		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels[i][0]).bytes;
-		seek += 8;
-		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels[i][1]).bytes;
+		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.labels[i]).bytes;
 		seek += 8;
 		stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(name.length).bytes;
 		seek += 8;
 		stream[seek .. seek + name.length] = cast(ubyte[])cast(char[])name;
 		seek += name.length;
 	}
+
+	// instructions data
+	stream[seek .. seek + 8] = ByteUnion!(size_t, 8)(code.end).bytes;
+	seek += 8;
+	stream[seek .. seek + code.code.length] = code.code;
+	seek += code.code.length;
+
 	return stream;
 }
 
 ///
 unittest{
 	ByteCode code;/// empty code
-	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7], [8, 9, 10]);
-	assert(bin.length == 17 + 8 + 3 + 8 + 8 + 8);
+	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7, 8], [8, 9, 10]);
+	assert(bin.length == 17 + 8 + 3 + 8 + 8);
 	assert(bin[0 .. 7] == "NAVMBC-"); // magic bytes
 	assert(bin[7 .. 9] == [2, 0]); // version
-	assert(bin[9 .. 16] == [1, 2, 3, 4, 5, 6, 7]); // magic postfix
-	assert(bin[16 .. 24] == [3, 0, 0, 0, 0, 0, 0, 0]); // length of metadata
-	assert(bin[24 .. 27] == [8, 9, 10]); // metadata
+	assert(bin[9 .. 17] == [1, 2, 3, 4, 5, 6, 7, 8]); // magic postfix
+	assert(bin[17 .. 25] == [3, 0, 0, 0, 0, 0, 0, 0]); // length of metadata
+	assert(bin[25 .. 28] == [8, 9, 10]); // metadata
 }
 
 /// Reads ByteCode from a byte stream in ubyte[]
 /// Throws: Exception in case of error
 /// Returns: ByteCode
-public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
+public ByteCode fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 		ref ubyte[] metadata){
 	if (stream.length < binStreamExpectedSize)
 		throw new Exception("Stream size if less than minimum possible size");
@@ -236,52 +223,40 @@ public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 		throw new Exception("Stream is of different ByteCode version.\n" ~
 				"\tStream: " ~ ByteUnion!ushort(stream[7 .. 9]).data.to!string ~
 				"\tSupported: " ~ NAVMBC_VERSION);
-	magicPostfix = stream[9 .. 16];
-	size_t len = ByteUnion!(size_t, 8)(stream[16 .. 24]).data;
+	magicPostfix = stream[9 .. 17];
+	size_t len = ByteUnion!(size_t, 8)(stream[17 .. 25]).data;
 	if (binStreamExpectedSize(len) > stream.length)
 		throw new Exception("Invalid stream length");
-	metadata = stream[24 .. 24 + len];
-	size_t seek = 24 + len;
+	metadata = stream[25 .. 25 + len];
+	size_t seek = 25 + len;
 
 	ByteCode code;
-	// instructions
-	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
-	if (binStreamExpectedSize(metadata.length, len / 2) > stream.length)
-		throw new Exception("Invalid stream length");
-	seek += 8;
-	code.instructions = (cast(ushort*)(stream.ptr + seek))[0 .. len / 2];
-	seek += len;
-
-	// data
-	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
-	if (binStreamExpectedSize(metadata.length, code.instructions.length, len)
-			> stream.length)
-		throw new Exception("Invalid stream length");
-	seek += 8;
-	code.data = stream[seek .. seek + len];
-	seek += len;
 
 	// labels
 	len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
-	if (binStreamExpectedSize(metadata.length,
-				code.instructions.length,
-				code.data.length, len) > stream.length)
+	if (binStreamExpectedSize(metadata.length, len) > stream.length)
 		throw new Exception("Invalid stream length");
 	seek += 8;
 	code.labels.length = len;
 	code.labelNames.length = len;
 	foreach (i, ref label; code.labels){
-		label[0] = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
-		seek += 8;
-		label[1] = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
+		label = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
 		seek += 8;
 		len = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
 		seek += 8;
 		if (seek + len > stream.length)
 			throw new Exception("Invalid stream length");
-		code.labelNames[i] = cast(immutable char[])stream[seek .. seek + len];
+		code.labelNames[i] = cast(immutable char[])stream[seek .. seek + len].dup;
 		seek += len;
 	}
+
+	// data
+	code.end = ByteUnion!(size_t, 8)(stream[seek .. seek + 8]).data;
+	if (binStreamExpectedSize(metadata.length, code.labels.length, code.end)
+			> stream.length)
+		throw new Exception("Invalid stream length");
+	seek += 8;
+	code.code = stream[seek .. $].dup;
 	return code;
 }
 
@@ -289,36 +264,30 @@ public ByteCode fromBin(ubyte[] stream, ref ubyte[7] magicPostfix,
 unittest{
 	import std.functional, std.range;
 	ByteCode code;
-	ushort[] instructions = iota(cast(ushort)1, ushort.max, 50).array;
-	ubyte[] data = iota(cast(ubyte)0, ubyte.max).cycle.take(3000).array;
-	code.instructions = instructions.dup;
-	code.data = data.dup;
+	ubyte[] data = iota(cast(ubyte)0, ubyte.max).cycle.take(0).array;
+	code.code = data.dup;
 	code.labelNames = ["data", "start", "loop", "end"];
 	code.labels = [
-		[0, 0],
-		[2, 8],
-		[1025, 2020],
-		[1300, 3000]
+		0,
+		2,
+		1025,
+		1300,
 	];
 
-	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7], [1, 2, 3]).dup;
-	ubyte[7] postfix;
+	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7, 8], [1, 2, 3]).dup;
+	ubyte[8] postfix;
 	ubyte[] metadata;
 	ByteCode decoded = bin.fromBin(postfix, metadata);
-	assert(postfix == [1, 2, 3, 4, 5, 6, 7]);
+	assert(postfix == [1, 2, 3, 4, 5, 6, 7, 8]);
 	assert(metadata == [1, 2, 3]);
-	assert(decoded.instructions == instructions);
-	assert(decoded.data == data);
 	assert(decoded.labels.length == 4);
-	assert(decoded.labels[0] == [0, 0]);
-	assert(decoded.labels[1] == [2, 8], decoded.labels[1].to!string);
-	assert(decoded.labels[2] == [1025, 2020]);
-	assert(decoded.labels[3] == [1300, 3000]);
+	assert(decoded.labels == [0, 2, 1025, 1300]);
 	assert(decoded.labelNames[0] == "data");
 	assert(decoded.labelNames[1] == "start");
 	assert(decoded.labelNames[2] == "loop");
 	assert(decoded.labelNames[3] == "end");
-}*/
+	assert(decoded.code == data, decoded.code.to!string);
+}
 
 /// Parses data
 ///	Throws: Exception if incorrect format
