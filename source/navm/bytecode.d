@@ -17,8 +17,8 @@ import std.conv,
 /// Position Independent Code
 /// (label names, labels, instructions, data, & indexes of relative address)
 public struct ByteCode{
-	string[] labelNames; /// label index against each labelName
-	size_t[] labels; /// [codeIndex, dataIndex] for each labal
+	string[] labelNames; /// labelNames, index corresponds `ByteCode.labels`
+	size_t[] labels; /// index in code for each label
 	ubyte[] code; /// instructions and their data
 	size_t end; /// index+1 of last instruction in code
 }
