@@ -1,4 +1,5 @@
 # NaVM
+
 A barebones VM, intended to be used for scripting applications.
 
 Created primarily for use in [qscript](https://github.com/nafees10/qscript).
@@ -74,7 +75,7 @@ execute!(printSum, print)(code);
 import std.algorithm : countUntil, canFind;
 ByteCode code;
 // locate the index of the label
-ptrdiff_t index = code.labels.countUntil("labelName");
+ptrdiff_t index = code.labelNames.countUntil("labelName");
 if (index == -1){
 	throw new Exception("labelName does not exist");
 }
@@ -84,21 +85,16 @@ execute!(..)(code, index);
 ### Jumps
 
 An instruction can cause execution to jump to another place in the bytecode, by
-receiving references to the instruction counter `_ic` and data counter `_dc`.
+receiving references to the instruction counter `_ic`.
 
-The instruction counter stores index of the next instruction to execute, and
-the data counter stores the index in the argument data array for the
-corresponding instruction.
+The instruction counter stores index of the next instruction to execute.
 
 The most common use case for jumps would be jumping to some label. A jump to a
 label could be implemented as:
 
 ```d
-void jump(ref ByteCode _code, ref size_t _ic, ref size_t _dc, size_t label){
-	// code.labels is an array of [instructionIndex, dataIndex] for each label,
-	// where index is the label index
-	_ic = code.labels[label][0];
-	_dc = code.labels[label][1];
+void jump(ref size_t _ic, size_t label){
+	_ic = label;
 }
 ```
 
@@ -109,7 +105,7 @@ start:
 	printS "Hello\n"
 loop:
 	printS "Looping forever\n"
-	jump @loop
+	jump @loop # @loop is replaced with the index of instruction after loop
 ```
 
 ### Shared state
