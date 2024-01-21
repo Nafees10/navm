@@ -56,7 +56,7 @@ public ByteCode parseByteCode(T...)(string[] lines)
 								"line %d: `%s` expects %d arguments, got %d"
 								(lineNo + 1, inst, InstArity!Inst, splits.length));
 					ret.code ~= (cast(ushort)ind).asBytes;
-					ret.code.length += InstArgsStruct!Inst.sizeof;
+					ret.code.length += SizeofSum!(InstArgs!Inst);
 					break pass1S;
 			}
 			default:
@@ -65,59 +65,28 @@ public ByteCode parseByteCode(T...)(string[] lines)
 		}
 		argsAll ~= splits;
 	}
+	ret.end = ret.code.length;
 
 	// pass 2: read args
 	size_t pos = 0;
-	FIFOStack!string strs = new FIFOStack!string;
-	size_t strsLen;
 	foreach (args; argsAll){
 		immutable ushort inst = ret.code[pos .. $].as!ushort;
 		pos += ushort.sizeof;
 		pass2S: final switch (inst){
 			static foreach (ind, Inst; T){
 				case ind:
-					ret.code[pos .. pos + InstArgsStruct!Inst.sizeof] =
-						parseArgs!Inst(ret, strs, strsLen, args).asBytes;
-					pos += InstArgsStruct!Inst.sizeof;
+					ret.code[pos .. pos + SizeofSum!(InstArgs!Inst)] =
+						parseArgs!Inst(ret, args);
+					pos += SizeofSum!(InstArgs!Inst);
 					break pass2S;
-			}
-		}
-	}
-
-	// pass 3: fix strs
-	InstArgsUnion!T un;
-	pos = 0;
-	ret.end = ret.code.length;
-	size_t posE = ret.code.length;
-	ret.code.length += strsLen;
-	while (pos < ret.end){
-		immutable ushort inst = ret.code[pos .. $].as!ushort;
-		pos += ushort.sizeof;
-		pass3S: final switch(inst){
-			static foreach (ind, Inst; T){
-				case ind:
-					un.s[ind] = ret.code[pos .. $].as!(InstArgsStruct!Inst);
-					static foreach (i, Arg; InstArgs!Inst){
-						static if (is (Arg == string)){
-							string str = strs.pop;
-							ret.code[posE .. posE + str.length] = cast(ubyte[])str;
-							un.s[ind].p[i] = cast(string)ret.code[posE .. posE + str.length];
-							posE += str.length;
-						}
-					}
-					ret.code[pos .. pos + InstArgsStruct!Inst.sizeof] = un.s[ind].asBytes;
-					pos += InstArgsStruct!Inst.sizeof;
-					break pass3S;
 			}
 		}
 	}
 	return ret;
 }
 
-private InstArgsStruct!Inst parseArgs(alias Inst)(
-		ref ByteCode code, FIFOStack!string strs, ref size_t strsLen,
-		string[] args){
-	InstArgsStruct!Inst s;
+private ubyte[] parseArgs(alias Inst)(ref ByteCode code, string[] args){
+	ubyte[] ret;
 	static foreach (i, Arg; InstArgs!Inst){
 		static if (is (Arg == string)){
 			if (args[i].length && args[i][0] == '"'){
@@ -125,8 +94,9 @@ private InstArgsStruct!Inst parseArgs(alias Inst)(
 				if (data == null)
 					throw new Exception(format!"Instruction `%s` expected %s, got `%s`"
 							(__traits(identifier, Inst), Arg.stringof, args[i]));
-				strs.push(cast(string)data);
-				strsLen += data.length;
+				ret ~= code.code.length.asBytes;
+				ret ~= (code.code.length + data.length).asBytes;
+				code.code ~= data;
 			} else {
 				throw new Exception(format!
 						"Instruction `%s` expected string for %d-th arg, got `%s`"
@@ -138,16 +108,16 @@ private InstArgsStruct!Inst parseArgs(alias Inst)(
 				if (!code.labelNames.canFind(args[i][1 .. $]))
 					throw new Exception(format!"Label `%s` used but not declared"
 							(args[i][1 .. $]));
-				s.p[i] = cast(typeof(s.p[i]))
-					code.labels[code.labelNames.countUntil(args[i][1 .. $])];
+				ret ~= (cast(Arg)
+						code.labels[code.labelNames.countUntil(args[i][1 .. $])]).asBytes;
 			} else {
-				s.p[i] = parseData!Arg(args[i]);
+				ret ~= parseData!Arg(args[i]).asBytes;
 			}
 		} else {
-			s.p[i] = parseData!Arg(args[i]);
+			ret ~= parseData!Arg(args[i]).asBytes;
 		}
 	}
-	return s;
+	return ret;
 }
 
 ///

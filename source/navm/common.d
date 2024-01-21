@@ -51,20 +51,6 @@ package template InstArities(T...) if (allSatisfy!(isCallable, T)){
 		InstArities = AliasSeq!(InstArities, InstArity!sym);
 }
 
-/// A struct storing an Instruction's InstParams
-package template InstArgsStruct(alias T) if (isCallable!T){
-	struct InstArgsStruct{
-		InstArgs!T p;
-	}
-}
-
-/// A union containing InstParamStruct for every function
-package template InstArgsUnion(T...) if (allSatisfy!(isCallable, T)){
-	union InstArgsUnion{
-		staticMap!(InstArgsStruct, T) s;
-	}
-}
-
 /// If a T can be .sizeof'd
 package enum HasSizeof(alias T) = __traits(compiles, T.sizeof);
 
@@ -111,7 +97,7 @@ package template InstCallStatement(alias Inst) if (isCallable!Inst){
 					ret ~= "code, ";
 				}
 			} else {
-				ret ~= "un.s[ind].p[" ~ mapTo.to!string ~ "], ";
+				ret ~= "p[" ~ mapTo.to!string ~ "], ";
 			}
 		}
 		if (ret[$ - 1] == '(')
