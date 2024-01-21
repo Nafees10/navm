@@ -27,6 +27,7 @@ package template InstParamIsArg(alias T, size_t N) if (isCallable!T){
 	enum InstParamIsArg =
 		ParameterIdentifierTuple!T[N] != "_code" &&
 		ParameterIdentifierTuple!T[N] != "_ic" &&
+		ParameterIdentifierTuple!T[N] != "_dc" &&
 		ParameterIdentifierTuple!T[N] != "_state";
 }
 
@@ -105,6 +106,8 @@ package template InstCallStatement(alias Inst) if (isCallable!Inst){
 			static if (mapTo == size_t.max){
 				static if (ParameterIdentifierTuple!Inst[i] == "_ic"){
 					ret ~= "ic, ";
+				} else static if (ParameterIdentifierTuple!Inst[i] == "_dc"){
+					ret ~= "dc, ";
 				} else static if (ParameterIdentifierTuple!Inst[i] == "_state"){
 					ret ~= "state, ";
 				} else static if (ParameterIdentifierTuple!Inst[i] == "_code"){
