@@ -13,26 +13,24 @@ public void execute(S, T...)(
 		ref ByteCode code,
 		ref S state,
 		size_t label = size_t.max) if (allSatisfy!(isCallable, T)){
-	size_t ic, dc;
-	if (label < code.labels.length){
-		ic = code.labels[label][0];
-		dc = code.labels[label][1];
-	}
+	size_t ic;
+	if (label < code.labels.length)
+		ic = code.labels[label];
 	InstArgsUnion!T un;
-	while (ic < code.instructions.length){
-		immutable ushort inst = code.instructions[ic];
+	while (ic < code.end){
+		immutable ushort inst = code.code[ic .. $].as!ushort;
+		ic += ushort.sizeof;
 		switcher: switch (inst){
 			foreach (ind, Inst; T){
 				case ind:
-					debug{
+					/*debug{
 						import std.stdio;
-						writef!"calling %d %s at ic=%d dc=%d; "(
-								ind, __traits(identifier, Inst), ic, dc);
-						writeln(code.data[ic .. ic + InstArgsStruct!Inst.sizeof]);
-					}
-					un.s[ind] = code.data[dc .. $].as!(InstArgsStruct!Inst);
-					ic ++;
-					dc += InstArgsStruct!Inst.sizeof;
+						writef!"calling %d %s at ic=%d; "(
+								ind, __traits(identifier, Inst), ic);
+						writeln(code.code[ic .. ic + InstArgsStruct!Inst.sizeof]);
+					}*/
+					un.s[ind] = code.code[ic .. $].as!(InstArgsStruct!Inst);
+					ic += InstArgsStruct!Inst.sizeof;
 					mixin(InstCallStatement!Inst);
 					break switcher;
 			}

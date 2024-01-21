@@ -18,9 +18,9 @@ import std.conv,
 /// (label names, labels, instructions, data, & indexes of relative address)
 public struct ByteCode{
 	string[] labelNames; /// label index against each labelName
-	size_t[2][] labels; /// [codeIndex, dataIndex] for each labal
-	ushort[] instructions; /// instructions
-	ubyte[] data; /// instructions data
+	size_t[] labels; /// [codeIndex, dataIndex] for each labal
+	ubyte[] code; /// instructions and their data
+	size_t end; /// index+1 of last instruction in code
 }
 
 /// ByteCode version
@@ -41,7 +41,7 @@ public ByteCode parseByteCode(T...)(string[] lines)
 				throw new Exception(format!"line %d: label `%s` redeclared"(
 							lineNo + 1, name));
 			ret.labelNames ~= name;
-			ret.labels ~= [ret.instructions.length, ret.data.length];
+			ret.labels ~= ret.code.length;
 			splits = splits[1 .. $];
 			if (splits.length == 0)
 				continue;
@@ -55,8 +55,8 @@ public ByteCode parseByteCode(T...)(string[] lines)
 						throw new Exception(format!
 								"line %d: `%s` expects %d arguments, got %d"
 								(lineNo + 1, inst, InstArity!Inst, splits.length));
-					ret.instructions ~= ind;
-					ret.data.length += InstArgsStruct!Inst.sizeof;
+					ret.code ~= (cast(ushort)ind).asBytes;
+					ret.code.length += InstArgsStruct!Inst.sizeof;
 					break pass1S;
 			}
 			default:
@@ -70,12 +70,13 @@ public ByteCode parseByteCode(T...)(string[] lines)
 	size_t pos = 0;
 	FIFOStack!string strs = new FIFOStack!string;
 	size_t strsLen;
-	foreach (i, args; argsAll){
-		immutable ushort inst = ret.instructions[i];
+	foreach (args; argsAll){
+		immutable ushort inst = ret.code[pos .. $].as!ushort;
+		pos += ushort.sizeof;
 		pass2S: final switch (inst){
 			static foreach (ind, Inst; T){
 				case ind:
-					ret.data[pos .. pos + InstArgsStruct!Inst.sizeof] =
+					ret.code[pos .. pos + InstArgsStruct!Inst.sizeof] =
 						parseArgs!Inst(ret, strs, strsLen, args).asBytes;
 					pos += InstArgsStruct!Inst.sizeof;
 					break pass2S;
@@ -86,22 +87,25 @@ public ByteCode parseByteCode(T...)(string[] lines)
 	// pass 3: fix strs
 	InstArgsUnion!T un;
 	pos = 0;
-	size_t posE = ret.data.length;
-	ret.data.length += strsLen;
-	foreach (inst; ret.instructions){
+	ret.end = ret.code.length;
+	size_t posE = ret.code.length;
+	ret.code.length += strsLen;
+	while (pos < ret.end){
+		immutable ushort inst = ret.code[pos .. $].as!ushort;
+		pos += ushort.sizeof;
 		pass3S: final switch(inst){
 			static foreach (ind, Inst; T){
 				case ind:
-					un.s[ind] = ret.data[pos .. $].as!(InstArgsStruct!Inst);
+					un.s[ind] = ret.code[pos .. $].as!(InstArgsStruct!Inst);
 					static foreach (i, Arg; InstArgs!Inst){
 						static if (is (Arg == string)){
 							string str = strs.pop;
-							ret.data[posE .. posE + str.length] = cast(ubyte[])str;
-							un.s[ind].p[i] = cast(string)ret.data[posE .. posE + str.length];
+							ret.code[posE .. posE + str.length] = cast(ubyte[])str;
+							un.s[ind].p[i] = cast(string)ret.code[posE .. posE + str.length];
 							posE += str.length;
 						}
 					}
-					ret.data[pos .. pos + InstArgsStruct!Inst.sizeof] = un.s[ind].asBytes;
+					ret.code[pos .. pos + InstArgsStruct!Inst.sizeof] = un.s[ind].asBytes;
 					pos += InstArgsStruct!Inst.sizeof;
 					break pass3S;
 			}
@@ -135,7 +139,7 @@ private InstArgsStruct!Inst parseArgs(alias Inst)(
 					throw new Exception(format!"Label `%s` used but not declared"
 							(args[i][1 .. $]));
 				s.p[i] = cast(typeof(s.p[i]))
-					code.labelNames.countUntil(args[i][1 .. $]);
+					code.labels[code.labelNames.countUntil(args[i][1 .. $])];
 			} else {
 				s.p[i] = parseData!Arg(args[i]);
 			}
