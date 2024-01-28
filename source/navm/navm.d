@@ -22,12 +22,6 @@ public void execute(S, T...)(
 		switcher: switch (inst){
 			foreach (ind, Inst; T){
 				case ind:
-					debug{
-						import std.stdio;
-						writef!"calling %d %s at ic=%d; "(
-								ind, __traits(identifier, Inst), ic);
-						writeln(code.code[ic .. ic + SizeofSum!(InstArgs!Inst)]);
-					}
 					{
 						InstArgs!Inst p;
 						static foreach (i, Arg; InstArgs!Inst){
