@@ -52,9 +52,42 @@ public void execute(S, T...)(
 	}
 }
 
+///
+unittest{
+	struct State{ int i; }
+	void inc1(ref State _state){
+		_state.i += 1;
+	}
+	void inc2(ref State _state){
+		_state.i += 2;
+	}
+	ByteCode code = parseByteCode!(inc1, inc2)([
+		"inc1", "inc2", "inc1"
+	]);
+	State state;
+	execute!(State, inc1, inc2)(code, state);
+	assert(state.i == 4);
+}
+
 /// ditto
 public void execute(T...)(ref ByteCode code, size_t label = size_t.max) if (
 		allSatisfy!(isCallable, T) && !InstsIsStateful!T){
 	ubyte dummyState;
 	execute!(ubyte, T)(code, dummyState, label);
+}
+
+///
+unittest{
+	int i;
+	void inc1(){
+		i += 1;
+	}
+	void inc2(){
+		i += 2;
+	}
+	ByteCode code = parseByteCode!(inc1, inc2)([
+		"inc1", "inc2", "inc1"
+	]);
+	execute!(inc1, inc2)(code);
+	assert(i == 4);
 }
