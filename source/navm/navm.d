@@ -26,7 +26,7 @@ public void execute(S, T...)(
 						import std.stdio;
 						writef!"calling %d %s at ic=%d; "(
 								ind, __traits(identifier, Inst), ic);
-						writeln(code.code[ic .. ic + InstArgsStruct!Inst.sizeof]);
+						writeln(code.code[ic .. ic + SizeofSum!(InstArgs!Inst)]);
 					}
 					{
 						InstArgs!Inst p;
