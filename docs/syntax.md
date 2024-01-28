@@ -1,8 +1,5 @@
 # NaVM syntax
 
-_Note that you don't need to use this syntax to write NaVM progrms. You can
-programmatically construct programs_ 
-
 ## Statements
 
 A statement is a single line. A statement in NaVM can be:
