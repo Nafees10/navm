@@ -1,22 +1,22 @@
 fib:
-	get -16
+	get -12
 	pshI 1
 	lesI
 	jmpC @fibRecCall
 	ret
 	fibRecCall:
 		pshI 1
-		get -16
+		get -12
 		subI
 		call @fib
 
 		pshI 2
-		get -16
+		get -12
 		subI
 		call @fib
 
 		addI
-		put -16
+		put -12
 		ret
 start:
 	pshI 36

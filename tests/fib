@@ -1,12 +1,12 @@
 fib:
-	get -16
+	get -12
 	pshI 1
 	lesI
 	jmpC @fibCalc
 	ret
 	fibCalc:
 		# decrement n by 2
-		get -16
+		get -12
 		pshI -1
 		addI # reverse counter at 0
 		pshI 0 # prev, at 4
@@ -15,7 +15,7 @@ fib:
 		get 0
 		jmpC @fibLoop
 		get 8
-		put -16
+		put -12
 		popN 3
 		ret
 	fibLoop:
@@ -39,4 +39,4 @@ fib:
 start:
 	pshI 36
 	call @fib
-	#printI
+	printI
