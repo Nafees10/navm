@@ -75,8 +75,8 @@ public ByteCode parseByteCode(T...)(string[] lines)
 		pass2S: final switch (inst){
 			static foreach (ind, Inst; T){
 				case ind:
-					ret.code[pos .. pos + SizeofSum!(InstArgs!Inst)] =
-						parseArgs!Inst(ret, args);
+					ubyte[] updated = parseArgs!Inst(ret, args);
+					ret.code[pos .. pos + SizeofSum!(InstArgs!Inst)] = updated;
 					pos += SizeofSum!(InstArgs!Inst);
 					break pass2S;
 			}
