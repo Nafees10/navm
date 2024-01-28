@@ -18,8 +18,8 @@ package template InstIsStateful(alias T) if (isCallable!T){
 
 /// Whether any of the instructions in a set require state
 package template InstsIsStateful(T...) if (allSatisfy!(isCallable, T)){
-	private enum IsTrue(T) = T == true;
-	enum InstIsStateful = anySatisfy!(IsTrue, staticMap!(InstIsStateful, T));
+	enum InstsIsStateful =
+		EraseAll!(false, staticMap!(InstIsStateful, T)).length > 0;
 }
 
 /// Whether N'th parameter of an Instruction is an argument
