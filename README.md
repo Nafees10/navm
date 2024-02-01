@@ -58,7 +58,11 @@ void printSum(ptrdiff_t a, ptrdiff_t b){
 void print(ptrdiff_t a){
 	writeln(a);
 }
-// load bytecode. bytecodeSource is the bytecode in a string
+string[] bytecodeSource = [
+	"print 2",
+	"printSum 1 2"
+];
+// load bytecode. bytecodeSource is the bytecode in a string array of lines
 ByteCode code;
 try {
 	code = parseByteCode!(printSum, print)(bytecodeSource);
