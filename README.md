@@ -141,6 +141,19 @@ Stack stack;
 execute!(Stack, InstrucionSet)(code, stack);
 ```
 
+### Generating ByteCode
+
+NaVM provides the `CodeWriter` struct to programmatically generate bytecode:
+
+```d
+CodeWriter!InstructionSet writer;
+writer.lPush("main"); // pushes `main:` label at start
+string label = writer.lnPush("loop"); // pushes `loop0:`, and returns `loop0`
+writer.iPush!Instruction(PARAMS); // pushes `Instruction` & type-checked params
+writer.iPush!JumpInstruction(label.Label); // pushes jump with `@loop0`
+Code code = writer.commit;
+```
+
 ---
 
 ## License
