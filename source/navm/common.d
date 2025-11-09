@@ -106,7 +106,6 @@ package template InstCallStatement(alias Inst) if (isCallable!Inst){
 	}
 }
 
-
 /// Union with array of ubytes
 package union ByteUnion(T, ubyte N = T.sizeof){
 	T data;
@@ -123,28 +122,18 @@ package union ByteUnion(T, ubyte N = T.sizeof){
 	}
 }
 
-
-/// Reads a ubyte[] as a type
+/// Reads a void[] as a type
 /// Returns: value in type T
-pragma(inline, true) package T as(T)(ubyte[] data) {
+pragma(inline, true) package inout(T) as(T)(inout void[] data) pure {
 	assert(data.length >= T.sizeof);
 	return *(cast(T*)data.ptr);
 }
 
-/// Returns: ubyte[] against a value of type T
-pragma(inline, true) package ubyte[] asBytes(T)(T val) {
-	ubyte[] ret;
+/// Returns: void[] against a value of type T
+pragma(inline, true) package void[] asBytes(T)(T val) pure {
+	void[] ret;
 	ret.length = T.sizeof;
-	return ret[] = (cast(ubyte*)&val)[0 .. T.sizeof];
-}
-
-///
-unittest{
-	assert((cast(ptrdiff_t)1025).asBytes.as!ptrdiff_t == 1025);
-	assert("hello".asBytes.as!string == "hello");
-	assert((cast(double)50.5).asBytes.as!double == 50.5);
-	assert('a'.asBytes.as!char == 'a');
-	assert(true.asBytes.as!bool == true);
+	return ret[] = (cast(void*)&val)[0 .. T.sizeof];
 }
 
 

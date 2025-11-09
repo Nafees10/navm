@@ -33,10 +33,11 @@ These are followed by 2 bytes, which are used to identify version information.
 
 ### Version Identifying Bytes
 
-| Version number, ushort|	First NaVM Version		|
+| Version number, ushort|  First NaVM Version   |
 | --------------------- | --------------------- |
-| 		`0x0001`					| 		v1.2							|
-| 		`0x0002`					| 		v2.0							|
+|     `0x0001`          |     v1.2              |
+|     `0x0002`          |     v2.0              |
+|     `0x0003`          |     v3.0              |
 
 Since all integers are stored in little endian, `0x0001` will be stored as:
 `01 00`

@@ -63,9 +63,9 @@ string[] bytecodeSource = [
 	"printSum 1 2"
 ];
 // load bytecode. bytecodeSource is the bytecode in a string array of lines
-ByteCode code;
+Code code;
 try {
-	code = parseByteCode!(printSum, print)(bytecodeSource);
+	code = parseCode!(printSum, print)(bytecodeSource);
 } catch (Exception e){
 	// probably an error in the bytecode
 }
@@ -77,7 +77,7 @@ execute!(printSum, print)(code);
 
 ```d
 import std.algorithm : countUntil, canFind;
-ByteCode code;
+Code code;
 // locate the index of the label
 ptrdiff_t index = code.labelNames.countUntil("labelName");
 if (index == -1){
@@ -135,7 +135,7 @@ void pop(ref Stack _state){
 import std.meta : AliasSeq;
 alias InstrucionSet = AliasSeq!(push, pop);
 // load
-ByteCode code = parseByteCode!InstrucionSet(bytecodeSource);
+Code code = parseCode!InstrucionSet(bytecodeSource);
 Stack stack;
 // execute
 execute!(Stack, InstrucionSet)(code, stack);
