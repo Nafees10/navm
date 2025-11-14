@@ -56,19 +56,17 @@ package enum HasSizeof(alias T) = __traits(compiles, T.sizeof);
 
 /// sum of sizes
 package template SizeofSum(T...) if (allSatisfy!(HasSizeof, T)){
-	enum SizeofSum = calculateSizeofSum();
-	private size_t calculateSizeofSum(){
+	enum SizeofSum = (){
 		size_t ret = 0;
 		foreach (sym; T)
 			ret += sym.sizeof;
 		return ret;
-	}
+	}();
 }
 
 /// Mapping of Args to Params for an instruction. size_t.max for unmapped
 package template InstParamArgMapping(alias T) if (isCallable!T){
-	enum InstParamArgMapping = getMapping;
-	size_t[Parameters!T.length] getMapping(){
+	enum InstParamArgMapping = (){
 		size_t[Parameters!T.length] ret;
 		size_t count = 0;
 		static foreach (i; 0 .. Parameters!T.length){
@@ -79,13 +77,12 @@ package template InstParamArgMapping(alias T) if (isCallable!T){
 			}
 		}
 		return ret;
-	}
+	}();
 }
 
 /// Instruction's Parameters alias for calling
 package template InstCallStatement(alias Inst) if (isCallable!Inst){
-	enum InstCallStatement = getStatement();
-	private string getStatement(){
+	enum InstCallStatement = (){
 		string ret = "Inst(";
 		static foreach (i, mapTo; InstParamArgMapping!Inst){
 			static if (mapTo == size_t.max){
@@ -103,7 +100,7 @@ package template InstCallStatement(alias Inst) if (isCallable!Inst){
 		if (ret[$ - 1] == '(')
 			return ret ~ ");";
 		return ret[0 .. $ - 2] ~ ");";
-	}
+	}();
 }
 
 /// Union with array of ubytes
