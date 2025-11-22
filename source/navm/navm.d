@@ -7,6 +7,8 @@ import std.conv,
 import navm.common;
 public import navm.bytecode;
 
+debug import std.stdio;
+
 /// Execute a Code
 public void execute(S, T...)(
 		ref Code code,
@@ -18,23 +20,12 @@ public void execute(S, T...)(
 	while (ic < code.end){
 		immutable ushort inst = code.code[ic .. $].as!ushort;
 		ic += ushort.sizeof;
+		void* cp = code.code.ptr + ic;
 		switcher: switch (inst){
 			foreach (ind, Inst; T){
 				case ind:
 					{
-						InstArgs!Inst p;
-						static foreach (i, Arg; InstArgs!Inst){
-							static if (is (Arg == string)){
-								immutable size_t
-									start = *(cast(size_t*)(code.code.ptr + ic)),
-									end = *(cast(size_t*)(code.code.ptr + ic + size_t.sizeof));
-								p[i] = cast(string)(code.code[start .. end]);
-								ic += size_t.sizeof * 2;
-							} else {
-								p[i] = *(cast(Arg*)(code.code.ptr + ic));
-								ic += Arg.sizeof;
-							}
-						}
+						ic += SizeofSum!(InstArgs!Inst);
 						mixin(InstCallStatement!Inst);
 					}
 					break switcher;

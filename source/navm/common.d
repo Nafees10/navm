@@ -64,37 +64,24 @@ package template SizeofSum(T...) if (allSatisfy!(HasSizeof, T)){
 	}();
 }
 
-/// Mapping of Args to Params for an instruction. size_t.max for unmapped
-package template InstParamArgMapping(alias T) if (isCallable!T){
-	enum InstParamArgMapping = (){
-		size_t[Parameters!T.length] ret;
-		size_t count = 0;
-		static foreach (i; 0 .. Parameters!T.length){
-			static if (InstParamIsArg!(T, i)){
-				ret[i] = count ++;
-			} else {
-				ret[i] = size_t.max;
-			}
-		}
-		return ret;
-	}();
-}
-
 /// Instruction's Parameters alias for calling
 package template InstCallStatement(alias Inst) if (isCallable!Inst){
+	import std.format;
 	enum InstCallStatement = (){
 		string ret = "Inst(";
-		static foreach (i, mapTo; InstParamArgMapping!Inst){
-			static if (mapTo == size_t.max){
-				static if (ParameterIdentifierTuple!Inst[i] == "_ic"){
-					ret ~= "ic, ";
-				} else static if (ParameterIdentifierTuple!Inst[i] == "_state"){
-					ret ~= "state, ";
-				} else static if (ParameterIdentifierTuple!Inst[i] == "_code"){
-					ret ~= "code, ";
-				}
+		size_t offset = 0;
+		static foreach (size_t i, string name; ParameterIdentifierTuple!Inst){
+			static if (name == "_ic"){
+				ret ~= "ic, ";
+			} else static if (name == "_state"){
+				ret ~= "state, ";
+			} else static if (name == "_code"){
+				ret ~= "code, ";
 			} else {
-				ret ~= "p[" ~ mapTo.to!string ~ "], ";
+				ret ~= format!
+					"*(cast(Parameters!Inst[%d]*)(cp + %d)), "(
+							i, offset);
+				offset += Parameters!Inst[i].sizeof;
 			}
 		}
 		if (ret[$ - 1] == '(')
