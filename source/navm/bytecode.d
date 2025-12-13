@@ -18,7 +18,7 @@ import std.conv,
 debug import std.stdio;
 
 /// ByteCode version
-public enum ushort NAVMBC_VERSION = 0x0004;
+public enum ushort NAVMBC_VERSION = 0x0003;
 
 /// ByteCode
 public struct Code{
@@ -69,8 +69,9 @@ public:
 		assert(params.length == InstArgs!I.length,
 				"Instruction Parameters count mismatch");
 		enum S = SizeofSum!(InstArgs!I) + ushort.sizeof;
-		void[S] block;
-		block[0 .. ushort.sizeof] = (cast(ushort)staticIndexOf!(I, IS)).asBytes;
+		ubyte[S] block;
+		block[0 .. ushort.sizeof] =
+			cast(ubyte[])(cast(ushort)staticIndexOf!(I, IS)).asBytes;
 		size_t off = ushort.sizeof;
 		static foreach (size_t i, Arg; T){
 			static if (is (Arg == string)){
@@ -238,9 +239,9 @@ private void[] parseArgs(alias Inst)(ref Code code, string[] args){
 				if (data == null)
 					throw new Exception(format!"Instruction `%s` expected %s, got `%s`"
 							(__traits(identifier, Inst), Arg.stringof, args[i]));
-				void* start = code.code.ptr + code.code.length;
+				ret ~= code.code.length.asBytes;
+				ret ~= (code.code.length + data.length).asBytes;
 				code.code ~= data;
-				ret ~= (cast(string)(start[0 .. data.length])).asBytes;
 			} else {
 				throw new Exception(format!
 						"Instruction `%s` expected string for %d-th arg, got `%s`"
@@ -339,7 +340,6 @@ public ubyte[] toBin(ref Code code, ubyte[8] magicPostfix = 0,
 	// instructions data
 	stream[seek .. seek + 8] = cast(ubyte[])ByteUnion!(size_t, 8)(code.end).bytes;
 	seek += 8;
-	// TODO: handle strings
 	stream[seek .. seek + code.code.length] = cast(ubyte[])code.code;
 	seek += code.code.length;
 
@@ -405,7 +405,6 @@ public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 			> stream.length)
 		throw new Exception("Invalid stream length");
 	seek += 8;
-	// TODO: handle strings
 	code.code = stream[seek .. $].dup;
 	return code;
 }
