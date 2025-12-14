@@ -6,6 +6,7 @@ import std.conv,
 
 import navm.common;
 public import navm.bytecode;
+public import navm.codewriter;
 
 /// Execute a Code
 public void execute(S, T...)(
