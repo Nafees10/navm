@@ -52,7 +52,7 @@ public Code parseCode(T...)(string[] lines)
 		splits = splits[1 .. $];
 		pass1S: switch (inst){
 			static foreach (ind, Inst; T){
-				case __traits(identifier, Inst):
+				case InstName!Inst:
 					if (splits.length!= InstArity!Inst)
 						throw new Exception(format!
 								"line %d: `%s` expects %d arguments, got %d"
@@ -95,14 +95,14 @@ private void[] parseArgs(alias Inst)(ref Code code, string[] args){
 				void[] data = cast(ubyte[])parseData!Arg(args[i]);
 				if (data == null)
 					throw new Exception(format!"Instruction `%s` expected %s, got `%s`"
-							(__traits(identifier, Inst), Arg.stringof, args[i]));
+							(InstName!Inst, Arg.stringof, args[i]));
 				ret ~= code.code.length.asBytes;
 				ret ~= (code.code.length + data.length).asBytes;
 				code.code ~= data;
 			} else {
 				throw new Exception(format!
 						"Instruction `%s` expected string for %d-th arg, got `%s`"
-						(__traits(identifier, Inst), i + 1, args[i]));
+						(InstName!Inst, i + 1, args[i]));
 			}
 
 		} else static if (isIntegral!Arg){

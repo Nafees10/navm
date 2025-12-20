@@ -4,6 +4,11 @@ import std.meta,
 			 std.conv,
 			 std.traits;
 
+/// Instruction name
+public template InstName(alias I) if (isCallable!I){
+	enum InstName = __traits(identifier, I);
+}
+
 /// Whether an instruction is stateful
 package template InstIsStateful(alias T) if (isCallable!T){
 	enum InstIsStateful = getInstIsStateful;
