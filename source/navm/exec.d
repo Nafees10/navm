@@ -1,12 +1,11 @@
-module navm.navm;
+module navm.exec;
 
 import std.conv,
 			 std.meta,
 			 std.traits;
 
-import navm.common;
-public import navm.bytecode;
-public import navm.codewriter;
+import navm.common,
+			 navm.meta;
 
 /// Execute a Code
 public void execute(S, T...)(
