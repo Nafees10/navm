@@ -58,7 +58,7 @@ unittest{
 	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7, 8], [8, 9, 10]);
 	assert(bin.length == 17 + 8 + 3 + 8 + 8);
 	assert(bin[0 .. 7] == "NAVMBC-"); // magic bytes
-	assert(bin[7 .. 9] == [3, 0]); // version
+	assert(bin[7 .. 9] == [4, 0]); // version
 	assert(bin[9 .. 17] == [1, 2, 3, 4, 5, 6, 7, 8]); // magic postfix
 	assert(bin[17 .. 25] == [3, 0, 0, 0, 0, 0, 0, 0]); // length of metadata
 	assert(bin[25 .. 28] == [8, 9, 10]); // metadata

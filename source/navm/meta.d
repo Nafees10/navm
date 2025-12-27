@@ -22,10 +22,7 @@ package template InstIsStateful(alias T) if (isCallable!T){
 }
 
 /// Whether any of the instructions in a set require state
-package template InstsIsStateful(T...) if (allSatisfy!(isCallable, T)){
-	enum InstsIsStateful =
-		EraseAll!(false, staticMap!(InstIsStateful, T)).length > 0;
-}
+package enum InstsIsStateful(T...) = anySatisfy!(InstIsStateful, T);
 
 /// Whether N'th parameter of an Instruction is an argument
 package template InstParamIsArg(alias T, size_t N) if (isCallable!T){
@@ -47,13 +44,6 @@ package template InstArgs(alias T) if (isCallable!T){
 /// Function arity (instruction arguments only)
 package template InstArity(alias T){
 	enum InstArity = InstArgs!T.length;
-}
-
-/// ditto
-package template InstArities(T...) if (allSatisfy!(isCallable, T)){
-	alias InstArities = AliasSeq!();
-	static foreach (sym; T)
-		InstArities = AliasSeq!(InstArities, InstArity!sym);
 }
 
 /// If a T can be .sizeof'd
