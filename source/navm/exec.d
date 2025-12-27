@@ -47,6 +47,7 @@ public void execute(S, T...)(
 
 ///
 unittest{
+	import navm.parser : parseCode;
 	struct State{ int i; }
 	void inc1(ref State _state){
 		_state.i += 1;
@@ -71,6 +72,7 @@ public void execute(T...)(ref Code code, size_t label = size_t.max) if (
 
 ///
 unittest{
+	import navm.parser : parseCode;
 	int i;
 	void inc1(){
 		i += 1;

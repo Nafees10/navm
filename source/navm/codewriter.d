@@ -5,7 +5,8 @@ import std.algorithm,
 			 std.traits,
 			 std.meta;
 
-import navm.common;
+import navm.common,
+			 navm.meta;
 
 /// Label Type
 public struct Label{
