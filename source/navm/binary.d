@@ -153,3 +153,19 @@ private size_t binStreamExpectedSize(
 		8 + ((8 + 8) * labelsCount) +
 		8 + dataLen;
 }
+
+/// Union with array of ubytes
+private union ByteUnion(T, ubyte N = T.sizeof){
+	T data;
+	ubyte[N] bytes;
+	this(ubyte[N] bytes){
+		this.bytes = bytes;
+	}
+	this(ubyte[] bytes){
+		assert(bytes.length >= N);
+		this.bytes = bytes[0 .. N];
+	}
+	this(T data){
+		this.data = data;
+	}
+}

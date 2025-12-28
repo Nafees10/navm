@@ -1,12 +1,26 @@
 module navm.meta;
 
 import std.meta,
+			 std.traits,
 			 std.conv,
 			 std.traits;
 
+/// Explicit Instruction name
+public struct Inst{
+	string name;
+	@disable this();
+	this(string name){
+		this.name = name;
+	}
+}
+
 /// Instruction name
-public template InstName(alias I) if (isCallable!I){
-	enum InstName = __traits(identifier, I);
+package template InstName(alias I) if (isCallable!I){
+	static if (hasUDA!(I, Inst)){
+		enum InstName = getUDAs!(I, Inst)[0].name;
+	} else {
+		enum InstName = __traits(identifier, I);
+	}
 }
 
 /// Whether an instruction is stateful
@@ -96,20 +110,4 @@ package template InstCallStatement(alias Inst) if (isCallable!Inst){
 			return ret ~ ");";
 		return ret[0 .. $ - 2] ~ ");";
 	}();
-}
-
-/// Union with array of ubytes
-package union ByteUnion(T, ubyte N = T.sizeof){
-	T data;
-	ubyte[N] bytes;
-	this(ubyte[N] bytes){
-		this.bytes = bytes;
-	}
-	this(ubyte[] bytes){
-		assert(bytes.length >= N);
-		this.bytes = bytes[0 .. N];
-	}
-	this(T data){
-		this.data = data;
-	}
 }
