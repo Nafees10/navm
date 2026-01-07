@@ -44,7 +44,7 @@ public ubyte[] toBin(
 	}
 
 	// instructions data
-	stream[seek .. seek + 8] = code.end.nativeToLittleEndian;
+	stream[seek .. seek + 8] = code.code.length.nativeToLittleEndian;
 	seek += 8;
 	stream[seek .. seek + code.code.length] = cast(ubyte[])code.code;
 	seek += code.code.length;
@@ -110,11 +110,11 @@ public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 	// data
 	buf8 = stream[seek .. seek + 8];
 	seek += 8;
-	code.end = buf8.littleEndianToNative!size_t;
-	if (binStreamExpectedSize(metadata.length, code.labels.length, code.end)
-			> stream.length)
+	code.code.length = buf8.littleEndianToNative!size_t;
+	if (binStreamExpectedSize(
+				metadata.length, code.labels.length, code.code.length) > stream.length)
 		throw new Exception("Invalid stream length");
-	code.code = stream[seek .. $].dup;
+	code.code[] = stream[seek .. code.code.length];
 	return code;
 }
 

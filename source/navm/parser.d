@@ -55,7 +55,6 @@ public Code parseCode(T...)(string[] lines)
 		}
 		argsAll ~= splits;
 	}
-	ret.end = ret.code.length;
 
 	// pass 2: read args
 	size_t pos = 0;
@@ -84,9 +83,9 @@ private void[] parseArgs(alias Inst)(ref Code code, string[] args){
 				if (data == null)
 					throw new Exception(format!"Instruction `%s` expected %s, got `%s`"
 							(InstName!Inst, Arg.stringof, args[i]));
-				ret ~= code.code.length.asBytes;
-				ret ~= (code.code.length + data.length).asBytes;
-				code.code ~= data;
+				ret ~= code.data.length.asBytes;
+				code.data ~= data.length.asBytes;
+				code.data ~= data;
 			} else {
 				throw new Exception(format!
 						"Instruction `%s` expected string for %d-th arg, got `%s`"

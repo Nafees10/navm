@@ -61,14 +61,20 @@ package template InstArity(alias T){
 }
 
 /// If a T can be .sizeof'd
-package enum HasSizeof(alias T) = __traits(compiles, T.sizeof);
+package enum HasSizeof(alias T) = __traits(compiles, T.sizeof) ||
+	is (T == string);
 
 /// sum of sizes
 package template SizeofSum(T...) if (allSatisfy!(HasSizeof, T)){
 	enum SizeofSum = (){
 		size_t ret = 0;
-		foreach (sym; T)
-			ret += sym.sizeof;
+		foreach (sym; T){
+			static if (isArray!sym){
+				ret += size_t.sizeof;
+			} else {
+				ret += sym.sizeof;
+			}
+		}
 		return ret;
 	}();
 }

@@ -9,8 +9,8 @@ public enum ushort NAVMBC_VERSION = 0x0004;
 public struct Code{
 	string[] labelNames; /// labelNames, index corresponds `labels`
 	size_t[] labels; /// index in code for each label
-	void[] code; /// instructions and their data
-	size_t end; /// index+1 of last instruction in code
+	void[] code; /// instructions and their operands
+	void[] data; /// data
 }
 
 pragma(inline, true){
