@@ -9,13 +9,12 @@ import std.bitmanip;
 /// Writes ByteCode to a binary stream
 ///
 /// Returns: binary date in a ubyte[]
-public ubyte[] toBin(
+public ubyte[] toBin(I...)(
 		ref Code code,
 		ubyte[8] magicPostfix = 0,
 		ubyte[] metadata = null){
 	// figure out expected length
-	size_t expectedSize = binStreamExpectedSize(
-			metadata.length, code.labels.length, code.code.length);
+	size_t expectedSize = binStreamExpectedSize(metadata.length, code);
 	// count label names sizes, add those
 	foreach (name; code.labelNames)
 		expectedSize += name.length;
@@ -46,8 +45,49 @@ public ubyte[] toBin(
 	// instructions data
 	stream[seek .. seek + 8] = code.code.length.nativeToLittleEndian;
 	seek += 8;
-	stream[seek .. seek + code.code.length] = cast(ubyte[])code.code;
-	seek += code.code.length;
+	for (size_t i = 0; i < code.code.length;){
+		immutable ushort inst = code.code[i .. $].as!ushort;
+		i += ushort.sizeof;
+		stream[seek .. seek + 2] = inst.nativeToLittleEndian;
+		switcher: switch (inst){
+			foreach (ind, Inst; T){
+				case ind:
+					{
+						InstArgs!Inst p;
+						static foreach (i, Arg; InstArgs!Inst){
+							static if (is (Arg == string)){
+								size_t arg = *(cast(size_t*)(code.code.ptr + i));
+								i += size_t.sizeof;
+								stream[seek .. seek + 8] = arg.nativeToLittleEndian;
+								seek += size_t.sizeof;
+							} else if (isIntegral!Arg || isFloatingPoint!Arg){
+								Arg arg = *(cast(Arg*)(code.code.ptr + i));
+								i += Arg.sizeof;
+								stream[seek .. seek + 8] = arg.nativeToLittleEndian;
+								seek += Arg.sizeof;
+							} else if (Arg.sizeof == 1){
+								stream[seek ++] = code.code[i ++];
+							} else {
+								static assert (false, "unsupported instruction arg type");
+							}
+						}
+					}
+					break switcher;
+			}
+			default:
+				break;
+		}
+	}
+
+	/// resources data
+	for (size_t i = 0; i < code.data.length; ){
+		size_t size = *(cast(size_t*)(code.data.ptr + i));
+		stream[seek .. seek + 8] = size.nativeToLittleEndian;
+		seek += 8;
+		i += 8;
+		stream[seek .. seek + size] = code.data[i .. i + size];
+		i += size;
+	}
 
 	return stream;
 }
@@ -69,7 +109,7 @@ unittest{
 /// Returns: ByteCode
 public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 		ref ubyte[] metadata){
-	if (stream.length < binStreamExpectedSize)
+	if (stream.length < binStreamExpectedSize(0, Code()))
 		throw new Exception("Stream size if less than minimum possible size");
 	if (stream[0 .. 7] != "NAVMBC-")
 		throw new Exception("Invalid header in stream");
@@ -79,7 +119,7 @@ public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 				"\tSupported: " ~ NAVMBC_VERSION);
 	magicPostfix = stream[9 .. 17];
 	size_t len = stream[17 .. 25].littleEndianToNative!size_t;
-	if (binStreamExpectedSize(len) > stream.length)
+	if (25 + len > stream.length)
 		throw new Exception("Invalid stream length");
 	metadata = stream[25 .. 25 + len];
 	size_t seek = 25 + len;
@@ -87,14 +127,16 @@ public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 	Code code;
 	ubyte[8] buf8;
 	// labels
+	if (seek + 8 > stream.length)
+		throw new Exception("Invalid stream length");
 	buf8 = stream[seek .. seek + 8];
 	len = buf8.littleEndianToNative!size_t;
-	if (binStreamExpectedSize(metadata.length, len) > stream.length)
-		throw new Exception("Invalid stream length");
 	seek += 8;
 	code.labels.length = len;
 	code.labelNames.length = len;
 	foreach (i, ref label; code.labels){
+		if (seek + 8 > stream.length)
+			throw new Exception("Invalid stream length");
 		buf8 = stream[seek .. seek + 8];
 		seek += 8;
 		label = buf8.littleEndianToNative!size_t;
@@ -111,8 +153,7 @@ public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 	buf8 = stream[seek .. seek + 8];
 	seek += 8;
 	code.code.length = buf8.littleEndianToNative!size_t;
-	if (binStreamExpectedSize(
-				metadata.length, code.labels.length, code.code.length) > stream.length)
+	if (binStreamExpectedSize(metadata.length, code) > stream.length)
 		throw new Exception("Invalid stream length");
 	code.code[] = stream[seek .. code.code.length];
 	return code;
@@ -148,11 +189,9 @@ unittest{
 }
 
 /// Returns: Expected stream size
-private size_t binStreamExpectedSize(
-		size_t metadataLen = 0,
-		size_t labelsCount = 0,
-		size_t dataLen = 0){
+private size_t binStreamExpectedSize(size_t metadataLen = 0, Code code){
 	return 17 + 8 + metadataLen +
-		8 + ((8 + 8) * labelsCount) +
-		8 + dataLen;
+		8 + ((8 + 8) * code.labels.length) +
+		8 + code.code.length +
+		8 + code.data.length;
 }
