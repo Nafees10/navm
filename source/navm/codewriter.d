@@ -56,25 +56,30 @@ public:
 		static foreach (size_t i, Arg; T){
 			static if (is (Arg == string)){
 				static assert(is (InstArgs!I[i] == string));
-				_dOff ~= _code.code.length + off;
-				block[off .. off + string.sizeof] = cast(ubyte[])params[i].asBytes;
+				block[off .. off + size_t.sizeof] =
+					cast(ubyte[])_code.data.length.asBytes;
+				_code.data ~= params[i].length.asBytes;
+				_code.data ~= cast(ubyte[])params[i];
+				off += size_t.sizeof;
 			} else
 			static if (is (Arg == Label)){
 				static assert (is (InstArgs!I[i] == size_t));
 				_labOff ~= _code.code.length + off;
 				_labOffN ~= params[i].name;
+				off += size_t.sizeof;
 			} else
 			static if (isIntegral!Arg){
 				static assert (isIntegral!(InstArgs!I[i]));
 				static assert (is (Arg : InstArgs!I[i]));
 				block[off .. off + InstArgs!I[i].sizeof] =
 					cast(ubyte[])(cast(InstArgs!I[i])(params[i])).asBytes;
+				off += InstArgs!I[i].sizeof;
 			} else {
 				static assert (is (Arg : InstArgs!I[i]));
 				block[off .. off + InstArgs!I[i].sizeof] =
 					cast(ubyte[])(cast(InstArgs!I[i])params[i]).asBytes;
+				off += InstArgs!I[i].sizeof;
 			}
-			off += InstArgs!I[i].sizeof;
 		}
 		_code.code ~= block;
 	}
@@ -86,7 +91,7 @@ public:
 		ret.labelNames = _code.labelNames.dup;
 		ret.labels = _code.labels.dup;
 		ret.code = _code.code.dup;
-		ret.end = ret.code.length;
+		ret.data = _code.data.dup;
 
 		// adjust _dOff
 		foreach (size_t off; _dOff){
