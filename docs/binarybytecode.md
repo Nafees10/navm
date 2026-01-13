@@ -10,9 +10,10 @@ The binary file contains these sections of bytecode in the this order:
 3. magic number postfix
 4. metadata
 7. labels
-5. instruction & data
+5. instruction & args
+6. resources
 
-## Magic Number & Version & Magic Number Postfix
+## Magic Number, Version, & Magic Number Postfix
 
 This part is always 17 bytes.
 
@@ -27,6 +28,7 @@ hexadecimal:
 ```
 4E 41 56 4D 42 43 2D
 ```
+
 These are followed by 2 bytes, which are used to identify version information.
 
 8 bytes after these bytes are ignored, these are the magic number postfix.
@@ -39,8 +41,10 @@ These are followed by 2 bytes, which are used to identify version information.
 |     `0x0002`          |     v2.0              |
 |     `0x0003`          |     v3.0              |
 
-Since all integers are stored in little endian, `0x0001` will be stored as:
+The version number is stored in little endian, `0x0001` will be stored as:
 `01 00`
+
+This document is valid only for the latest version.
 
 Byte combinations not present in table above are reserved for future versions.
 
@@ -65,6 +69,11 @@ An 8 byte (64 bit) unsigned integer stores the _number of bytes_ used for
 storing instruction codes and their data. Following bytes are the `code` part
 of the ByteCode.
 
----
+## Resources
 
-**All integers are stored in little endian encoding**
+An 8 byte (64 bit) unsigned integer stores the _number of bytes_ used for
+storing resources data. This is followed by resource segments, where each
+is stored as:
+
+1. Length of resource - 8 byte (64 bit) unsigned integer
+2. Resource data

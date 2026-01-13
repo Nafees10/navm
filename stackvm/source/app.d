@@ -6,8 +6,7 @@ import std.stdio,
 
 import utils.misc;
 
-import navm.navm;
-import navm.bytecode;
+import navm;
 
 struct Stack{
 	ubyte[4096] stack;

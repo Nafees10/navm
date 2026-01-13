@@ -1,11 +1,11 @@
-module navm.navm;
+module navm.exec;
 
 import std.conv,
 			 std.meta,
 			 std.traits;
 
-import navm.common;
-public import navm.bytecode;
+import navm.common,
+			 navm.meta;
 
 /// Execute a Code
 public void execute(S, T...)(
@@ -15,7 +15,7 @@ public void execute(S, T...)(
 	size_t ic;
 	if (label < code.labels.length)
 		ic = code.labels[label];
-	while (ic < code.end){
+	while (ic < code.code.length){
 		immutable ushort inst = code.code[ic .. $].as!ushort;
 		ic += ushort.sizeof;
 		switcher: switch (inst){
@@ -25,11 +25,14 @@ public void execute(S, T...)(
 						InstArgs!Inst p;
 						static foreach (i, Arg; InstArgs!Inst){
 							static if (is (Arg == string)){
-								immutable size_t
-									start = *(cast(size_t*)(code.code.ptr + ic)),
-									end = *(cast(size_t*)(code.code.ptr + ic + size_t.sizeof));
-								p[i] = cast(string)(code.code[start .. end]);
-								ic += size_t.sizeof * 2;
+								size_t index = *(cast(size_t*)
+										(code.code.ptr + ic));
+								immutable size_t length = *(cast(size_t*)
+										(code.data.ptr + index));
+								char* start = cast(char*)
+									(code.data.ptr + index + size_t.sizeof);
+								p[i] = cast(string)(start[0 .. length]);
+								ic += size_t.sizeof;
 							} else {
 								p[i] = *(cast(Arg*)(code.code.ptr + ic));
 								ic += Arg.sizeof;
@@ -47,6 +50,7 @@ public void execute(S, T...)(
 
 ///
 unittest{
+	import navm.parser : parseCode;
 	struct State{ int i; }
 	void inc1(ref State _state){
 		_state.i += 1;
@@ -71,6 +75,7 @@ public void execute(T...)(ref Code code, size_t label = size_t.max) if (
 
 ///
 unittest{
+	import navm.parser : parseCode;
 	int i;
 	void inc1(){
 		i += 1;
