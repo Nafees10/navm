@@ -3,93 +3,70 @@ module navm.binary;
 import navm.common,
 			 navm.meta;
 
-import std.conv : to;
 import std.bitmanip;
+import std.conv : to;
+
+private enum IsLittleEndian = (){
+	uint i = 1;
+	ubyte[uint.sizeof] le = nativeToLittleEndian(i);
+	return le[0] == 1;
+}();
+
+private void assertLittleEndian() pure {
+	assert (IsLittleEndian,
+			"binary serialization only supported on little endian CPUs");
+}
 
 /// Writes ByteCode to a binary stream
 ///
 /// Returns: binary date in a ubyte[]
-public ubyte[] toBin(I...)(
-		ref Code code,
-		ubyte[8] magicPostfix = 0,
+/// Writes ByteCode to a binary stream
+///
+/// Returns: binary date in a ubyte[]
+public ubyte[] toBin(ref Code code, ubyte[8] magicPostfix = 0,
 		ubyte[] metadata = null){
-	// figure out expected length
-	size_t expectedSize = binStreamExpectedSize(metadata.length, code);
+	assertLittleEndian;
+	size_t expectedSize = binStreamExpectedSize(
+			metadata.length, code.labels.length, code.code.length, code.data.length);
 	// count label names sizes, add those
 	foreach (name; code.labelNames)
 		expectedSize += name.length;
-	ubyte[] stream = new ubyte[expectedSize];
+	void[] stream = new ubyte[expectedSize];
 
 	// header
 	stream[0 .. 7] = cast(ubyte[])"NAVMBC-";
-	stream[7 .. 9] = NAVMBC_VERSION.nativeToLittleEndian;
+	stream[7 .. 9] = NAVMBC_VERSION.asBytes;
 	stream[9 .. 17] = magicPostfix;
 
 	// metadata
-	stream[17 .. 25] = metadata.length.nativeToLittleEndian;
+	stream[17 .. 25] = metadata.length.asBytes;
 	stream[25 .. 25 + metadata.length] = metadata;
 	size_t seek = 25 + metadata.length;
 
 	// labels
-	stream[seek .. seek + 8] = code.labels.length.nativeToLittleEndian;
+	stream[seek .. seek + 8] = code.labels.length.asBytes;
 	seek += 8;
 	foreach (i, name; code.labelNames){
-		stream[seek .. seek + 8] = code.labels[i].nativeToLittleEndian;
+		stream[seek .. seek + 8] = code.labels[i].asBytes;
 		seek += 8;
-		stream[seek .. seek + 8] = name.length.nativeToLittleEndian;
+		stream[seek .. seek + 8] = name.length.asBytes;
 		seek += 8;
 		stream[seek .. seek + name.length] = cast(ubyte[])cast(char[])name;
 		seek += name.length;
 	}
 
-	// instructions data
-	stream[seek .. seek + 8] = code.code.length.nativeToLittleEndian;
+	// instructions
+	stream[seek .. seek + 8] = code.code.length.asBytes;
 	seek += 8;
-	for (size_t i = 0; i < code.code.length;){
-		immutable ushort inst = code.code[i .. $].as!ushort;
-		i += ushort.sizeof;
-		stream[seek .. seek + 2] = inst.nativeToLittleEndian;
-		switcher: switch (inst){
-			foreach (ind, Inst; T){
-				case ind:
-					{
-						InstArgs!Inst p;
-						static foreach (i, Arg; InstArgs!Inst){
-							static if (is (Arg == string)){
-								size_t arg = *(cast(size_t*)(code.code.ptr + i));
-								i += size_t.sizeof;
-								stream[seek .. seek + 8] = arg.nativeToLittleEndian;
-								seek += size_t.sizeof;
-							} else if (isIntegral!Arg || isFloatingPoint!Arg){
-								Arg arg = *(cast(Arg*)(code.code.ptr + i));
-								i += Arg.sizeof;
-								stream[seek .. seek + 8] = arg.nativeToLittleEndian;
-								seek += Arg.sizeof;
-							} else if (Arg.sizeof == 1){
-								stream[seek ++] = code.code[i ++];
-							} else {
-								static assert (false, "unsupported instruction arg type");
-							}
-						}
-					}
-					break switcher;
-			}
-			default:
-				break;
-		}
-	}
+	stream[seek .. seek + code.code.length] = code.code;
+	seek += code.code.length;
 
-	/// resources data
-	for (size_t i = 0; i < code.data.length; ){
-		size_t size = *(cast(size_t*)(code.data.ptr + i));
-		stream[seek .. seek + 8] = size.nativeToLittleEndian;
-		seek += 8;
-		i += 8;
-		stream[seek .. seek + size] = code.data[i .. i + size];
-		i += size;
-	}
+	// data
+	stream[seek .. seek + 8] = code.data.length.asBytes;
+	seek += 8;
+	stream[seek .. seek + code.data.length] = code.data;
 
-	return stream;
+	return cast(ubyte[])stream;
 }
 
 ///
@@ -107,18 +84,21 @@ unittest{
 /// Reads ByteCode from a byte stream in ubyte[]
 /// Throws: Exception in case of error
 /// Returns: ByteCode
-public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
+public Code fromBin(
+		ubyte[] stream,
+		ref ubyte[8] magicPostfix,
 		ref ubyte[] metadata){
-	if (stream.length < binStreamExpectedSize(0, Code()))
+	assertLittleEndian;
+	if (stream.length < binStreamExpectedSize)
 		throw new Exception("Stream size if less than minimum possible size");
 	if (stream[0 .. 7] != "NAVMBC-")
 		throw new Exception("Invalid header in stream");
-	if (stream[7 .. 9] != NAVMBC_VERSION.nativeToLittleEndian)
+	if (stream[7 .. 9] != NAVMBC_VERSION.asBytes)
 		throw new Exception("Stream is of different ByteCode version.\n" ~
-				"\tStream: " ~ stream[7 .. 9].littleEndianToNative!ushort.to!string ~
+				"\tStream: " ~ stream[7 .. 9].as!ushort.to!string ~
 				"\tSupported: " ~ NAVMBC_VERSION);
 	magicPostfix = stream[9 .. 17];
-	size_t len = stream[17 .. 25].littleEndianToNative!size_t;
+	size_t len = stream[17 .. 25].as!size_t;
 	if (25 + len > stream.length)
 		throw new Exception("Invalid stream length");
 	metadata = stream[25 .. 25 + len];
@@ -130,7 +110,7 @@ public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 	if (seek + 8 > stream.length)
 		throw new Exception("Invalid stream length");
 	buf8 = stream[seek .. seek + 8];
-	len = buf8.littleEndianToNative!size_t;
+	len = buf8.as!size_t;
 	seek += 8;
 	code.labels.length = len;
 	code.labelNames.length = len;
@@ -139,23 +119,33 @@ public Code fromBin(ubyte[] stream, ref ubyte[8] magicPostfix,
 			throw new Exception("Invalid stream length");
 		buf8 = stream[seek .. seek + 8];
 		seek += 8;
-		label = buf8.littleEndianToNative!size_t;
+		label = buf8.as!size_t;
 		buf8 = stream[seek .. seek + 8];
 		seek += 8;
-		len = buf8.littleEndianToNative!size_t;
+		len = buf8.as!size_t;
 		if (seek + len > stream.length)
 			throw new Exception("Invalid stream length");
 		code.labelNames[i] = cast(immutable char[])stream[seek .. seek + len].dup;
 		seek += len;
 	}
 
-	// data
-	buf8 = stream[seek .. seek + 8];
+	// instructions
+	len = stream[seek .. seek + 8].as!size_t;
 	seek += 8;
-	code.code.length = buf8.littleEndianToNative!size_t;
-	if (binStreamExpectedSize(metadata.length, code) > stream.length)
+	if (binStreamExpectedSize(
+				metadata.length, code.labels.length, code.code.length)
+			> stream.length)
 		throw new Exception("Invalid stream length");
-	code.code[] = stream[seek .. code.code.length];
+	code.code = stream[seek .. seek + len].dup;
+
+	// data
+	len = stream[seek .. seek + 8].as!size_t;
+	seek += 8;
+	if (binStreamExpectedSize(
+				metadata.length, code.labels.length, code.code.length, code.data.length)
+			> stream.length)
+		throw new Exception("Invalid stream length");
+	code.data = stream[seek .. seek + len];
 	return code;
 }
 
@@ -189,9 +179,13 @@ unittest{
 }
 
 /// Returns: Expected stream size
-private size_t binStreamExpectedSize(size_t metadataLen = 0, Code code){
+private size_t binStreamExpectedSize(
+		size_t metadataLen = 0,
+		size_t labelsCount = 0,
+		size_t instLen = 0,
+		size_t dataLen = 0){
 	return 17 + 8 + metadataLen +
-		8 + ((8 + 8) * code.labels.length) +
-		8 + code.code.length +
-		8 + code.data.length;
+		8 + ((8 + 8) * labelsCount) +
+		8 + instLen +
+		8 + dataLen;
 }
