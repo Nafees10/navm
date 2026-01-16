@@ -80,9 +80,6 @@ private void[] parseArgs(alias Inst)(ref Code code, string[] args){
 		static if (is (Arg == string)){
 			if (args[i].length && args[i][0] == '"'){
 				void[] data = cast(ubyte[])parseData!Arg(args[i]);
-				if (data == null)
-					throw new Exception(format!"Instruction `%s` expected %s, got `%s`"
-							(InstName!Inst, Arg.stringof, args[i]));
 				ret ~= code.data.length.asBytes;
 				code.data ~= data.length.asBytes;
 				code.data ~= data;
