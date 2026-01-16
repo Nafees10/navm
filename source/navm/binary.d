@@ -20,9 +20,6 @@ private void assertLittleEndian() pure {
 /// Writes ByteCode to a binary stream
 ///
 /// Returns: binary date in a ubyte[]
-/// Writes ByteCode to a binary stream
-///
-/// Returns: binary date in a ubyte[]
 public ubyte[] toBin(ref Code code, ubyte[8] magicPostfix = 0,
 		ubyte[] metadata = null){
 	assertLittleEndian;
