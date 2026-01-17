@@ -243,10 +243,14 @@ void printS(string s){
 	write(s);
 }
 
+void printC(char c){
+	write(c);
+}
+
 alias InstructionSet = AliasSeq!(addI, subI, mulI, divI, modI, addF, subF,
 		mulF, divF, cmp, lesI, lesF, notB, andB, orB, not, and, or, pshI, pshF,
 		pop, popN, seek, off, pshO, popO, off0, get, getR, put, putR, incA, incR,
-		jmp, jmpC, call, ret, dbg, printI, printF, printS);
+		jmp, jmpC, call, ret, dbg, printI, printF, printS, printC);
 
 void main(string[] args){
 	if (args.length < 2)
