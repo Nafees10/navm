@@ -9,3 +9,4 @@ tempcode
 callgrind*
 svm
 *-test-library
+/test
