@@ -4,8 +4,6 @@ import navm.common,
 			 navm.error,
 			 navm.meta;
 
-import std.conv : to;
-
 private void assertLittleEndian() pure {
 	version (LittleEndian){} else {
 		assert (false,
@@ -145,6 +143,7 @@ public ErrVal!Code fromBin(
 ///
 unittest{
 	import std.functional, std.range;
+	import std.conv : to;
 	Code code;
 	ubyte[] data = iota(cast(ubyte)0, ubyte.max).cycle.take(0).array;
 	code.code = data.dup;

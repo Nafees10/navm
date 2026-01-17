@@ -1,10 +1,10 @@
 module navm.codewriter;
 
-import std.algorithm,
-			 std.traits,
-			 std.meta;
+import std.algorithm : countUntil;
+import std.traits : isCallable, isIntegral;
+import std.meta : AliasSeq, allSatisfy, staticIndexOf;
 
-import std.format : format;
+import std.conv : to;
 
 import navm.common,
 			 navm.error,
@@ -35,7 +35,7 @@ public:
 	///
 	/// Returns: new label's name
 	string lnPush(string prefix = null){
-		string label = format!"%s%d"(prefix, _labC ++);
+		string label = prefix ~ (_labC ++).to!string;
 		lPush(label);
 		return label;
 	}

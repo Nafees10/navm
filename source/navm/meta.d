@@ -1,9 +1,10 @@
 module navm.meta;
 
-import std.meta,
-			 std.traits,
-			 std.conv,
-			 std.traits;
+import std.meta : AliasSeq, allSatisfy, anySatisfy;
+import std.traits : isCallable, Parameters, ParameterIdentifierTuple,
+			 isArray, hasUDA;
+
+import std.conv : to; // needed in InstCallStatement
 
 /// Explicit Instruction name
 public struct Inst{

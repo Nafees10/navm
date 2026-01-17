@@ -17,6 +17,7 @@ public struct Err{
 		ValueNotFloat, /// value is not float
 		ValueNotBool, /// value is not boolean
 		ValueNotString, /// value is not string
+		ValueNotChar, /// value is not char
 		StringNotClosed, /// string not closed
 	}
 

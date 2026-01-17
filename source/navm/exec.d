@@ -1,8 +1,7 @@
 module navm.exec;
 
-import std.conv,
-			 std.meta,
-			 std.traits;
+import std.traits: isCallable;
+import std.meta : allSatisfy;
 
 import navm.common,
 			 navm.meta;

@@ -1,12 +1,10 @@
 module navm.parser;
 
-import std.meta,
-			 std.format,
-			 std.traits,
-			 std.array,
-			 std.algorithm;
-
-import std.conv : to;
+import std.meta : allSatisfy;
+import std.traits : isCallable, isIntegral, isFloatingPoint;
+import std.array : array;
+import std.algorithm : filter, countUntil, canFind;
+import std.conv : to; // used to str->int & str->float
 
 import utils.misc : readHexadecimal, readBinary, isNum;
 
@@ -162,17 +160,19 @@ private ErrVal!T parseData(T)(string s){
 			return false.ErrVal!T;
 		return ErrVal!T(Err.Type.ValueNotBool.Err(s));
 
-	} else static if (isSomeChar!T){
-		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\'')
-			return null;
+	} else static if (is (T == char)){
+		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\'' || s.length > 4)
+			return ErrVal!T(Err.Type.ValueNotFloat.Err);
 		s = s[1 .. $ - 1].unescape;
-		return s.to!T;
+		if (s.length > 1)
+			return ErrVal!T(Err.Type.ValueNotFloat.Err);
+		return s[0].ErrVal!T;
 
 	} else static if (is (T == string)){
 		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\"')
 			return ErrVal!T(Err.Type.ValueNotString.Err(s));
 		s = s[1 .. $ - 1].unescape;
-		return s.to!T.ErrVal!T;
+		return s.ErrVal!T;
 
 	} else {
 		static assert(false, "Unsupported argument type " ~ T.stringof);
@@ -187,7 +187,7 @@ unittest{
 	assert("0b101010".parseData!size_t.val == 0b101010);
 	assert("12345".parseData!size_t.val == 1_2345);
 	assert("\"bla bla\"".parseData!string.val == "bla bla");
-	assert("5.5".parseData!double.val == "5.5".to!double);
+	assert("5.5".parseData!double.val == 5.5);
 }
 
 /// reads a string into substrings separated by whitespace. Strings are read
