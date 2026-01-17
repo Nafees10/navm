@@ -4,11 +4,9 @@ import std.algorithm : countUntil;
 import std.traits : isCallable, isIntegral;
 import std.meta : AliasSeq, allSatisfy, staticIndexOf;
 
-import std.conv : to;
-
-import navm.common,
-			 navm.error,
-			 navm.meta;
+import navm.common;
+import navm.error;
+import navm.meta;
 
 /// Label Type
 public struct Label{
@@ -35,7 +33,7 @@ public:
 	///
 	/// Returns: new label's name
 	string lnPush(string prefix = null){
-		string label = prefix ~ (_labC ++).to!string;
+		string label = prefix ~ (_labC ++).intToStr;
 		lPush(label);
 		return label;
 	}

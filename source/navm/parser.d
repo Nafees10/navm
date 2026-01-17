@@ -2,15 +2,10 @@ module navm.parser;
 
 import std.meta : allSatisfy;
 import std.traits : isCallable, isIntegral, isFloatingPoint;
-import std.array : array;
-import std.algorithm : filter, countUntil, canFind;
-import std.conv : to; // used to str->int & str->float
 
-import utils.misc : readHexadecimal, readBinary, isNum;
-
-import navm.common,
-			 navm.error,
-			 navm.meta;
+import navm.common;
+import navm.error;
+import navm.meta;
 
 /// parses code from text format
 /// Returns: Code or Err
@@ -21,8 +16,7 @@ public ErrVal!Code parseCode(T...)(string[] lines)
 
 	// pass 1: split args, and read labels
 	foreach (lineNo, line; lines){
-		string[] splits = line.separateWhitespace.val
-			.filter!(a => a.length > 0).array;
+		string[] splits = line.separateWhitespace.val;
 		if (splits.length == 0) continue;
 		if (splits[0].length && splits[0][$ - 1] == ':'){
 			string name = splits[0][0 .. $ - 1];
@@ -46,7 +40,7 @@ public ErrVal!Code parseCode(T...)(string[] lines)
 					break pass1S;
 			}
 			default:
-				return ErrVal!Code(Err.Type.InstructionExpected.Err);
+				return ErrVal!Code(Err.Type.InstructionExpected.Err(inst));
 		}
 		argsAll ~= splits;
 	}
@@ -91,7 +85,7 @@ private ErrVal!(void[]) parseArgs(alias Inst)(ref Code code, string[] args){
 				if (!code.labelNames.canFind(args[i][1 .. $]))
 					return ErrVal!(void[])(Err.Type.LabelUndefined.Err(args[i][1 .. $]));
 				ret ~= cast(void[])(cast(Arg)
-						code.labels[code.labelNames.countUntil(args[i][1 .. $])]).asBytes;
+						code.labels[code.labelNames.indexOf(args[i][1 .. $])]).asBytes;
 			} else {
 				ErrVal!Arg convd = parseData!Arg(args[i]);
 				if (convd.isErr)
@@ -138,19 +132,26 @@ private ErrVal!T parseData(T)(string s){
 	static if (isIntegral!T){
 		// can be just an int
 		if (isNum(s, false))
-			return s.to!T.ErrVal!T;
+			return s.parseInt!T.ErrVal!T;
 		// can be a binary or hex literal
 		if (s.length > 2 && s[0] == '0'){
-			if (s[1] == 'b')
-				return (cast(T)readBinary(s[2 .. $])).ErrVal!T;
-			else if (s[1] == 'x')
-				return (cast(T)readHexadecimal(s[2 .. $])).ErrVal!T;
+			if (s[1] == 'b'){
+				s = s[2 .. $];
+				if (!isBinInt(s))
+					return ErrVal!T(Err.Type.ValueNotBin.Err);
+				return (cast(T)parseBinInt(s)).ErrVal!T;
+			} else if (s[1] == 'x'){
+				s = s[2 .. $];
+				if (!isHexInt(s))
+					return ErrVal!T(Err.Type.ValueNotHex.Err);
+				return (cast(T)parseHexInt(s)).ErrVal!T;
+			}
 		}
 		return ErrVal!T(Err.Type.ValueNotInt.Err(s));
 
 	} else static if (isFloatingPoint!T){
 		if (isNum(s, true))
-			return s.to!T.ErrVal!T;
+			return s.parseFloat!T.ErrVal!T;
 		return ErrVal!T(Err.Type.ValueNotFloat.Err(s));
 
 	} else static if (is (T == bool)){
@@ -201,11 +202,12 @@ private ErrVal!(string[]) separateWhitespace(string line){
 		immutable char c = line[i];
 		if (c == '#'){
 			if (start < i)
-				r ~= line[start .. i];
+				if (!line[start .. i].isWhite)
+					r ~= line[start .. i];
 			break;
 		}
 		if (c == '"' || c == '\''){
-			if (start < i)
+			if (start < i && !line[start .. i].isWhite)
 				r ~= line[start .. i];
 			start = i;
 			immutable ptrdiff_t endIndex = i + line[i .. $].strEnd;
@@ -218,7 +220,7 @@ private ErrVal!(string[]) separateWhitespace(string line){
 		}
 
 		if (c == ' ' || c == '\t'){
-			if (start < i)
+			if (start < i && !line[start .. i].isWhite)
 				r ~= line[start .. i];
 			while (i < line.length && (line[i] == ' ' || line[i] == '\t'))
 				i ++;
@@ -228,7 +230,7 @@ private ErrVal!(string[]) separateWhitespace(string line){
 		}
 
 	}
-	if (i == line.length && start <= i - 1)
+	if (i == line.length && start <= i - 1 && !line[start .. $].isWhite)
 		r ~= line[start .. $].dup;
 	return r.ErrVal!(string[]);
 }
@@ -242,7 +244,7 @@ unittest{
 	assert("\ta   \t b\"str\"".separateWhitespace.val == ["a", "b", "\"str\""]);
 	assert("   a   b  'c'\"str\"'c'".separateWhitespace.val ==
 			["a", "b", "'c'", "\"str\"", "'c'"]);
-	assert("a 'b'#c".separateWhitespace.val == ["a", "'b'"]);
+	assert("a  'b'#c".separateWhitespace.val == ["a", "'b'"]);
 	assert("a: a b#c".separateWhitespace.val == ["a:","a", "b"]);
 	assert("a 'b' #c".separateWhitespace.val == ["a", "'b'"]);
 }

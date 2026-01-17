@@ -4,7 +4,7 @@ import std.meta : AliasSeq, allSatisfy, anySatisfy;
 import std.traits : isCallable, Parameters, ParameterIdentifierTuple,
 			 isArray, hasUDA;
 
-import std.conv : to; // needed in InstCallStatement
+import navm.common : intToStr;
 
 /// Explicit Instruction name
 public struct Inst{
@@ -110,7 +110,7 @@ package template InstCallStatement(alias Inst) if (isCallable!Inst){
 					ret ~= "code, ";
 				}
 			} else {
-				ret ~= "p[" ~ mapTo.to!string ~ "], ";
+				ret ~= "p[" ~ mapTo.intToStr ~ "], ";
 			}
 		}
 		if (ret[$ - 1] == '(')

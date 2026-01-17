@@ -18,6 +18,8 @@ public struct Err{
 		ValueNotBool, /// value is not boolean
 		ValueNotString, /// value is not string
 		ValueNotChar, /// value is not char
+		ValueNotHex, /// value is not hexadecimal int
+		ValueNotBin, /// value is not binary int
 		StringNotClosed, /// string not closed
 	}
 
@@ -27,11 +29,6 @@ public struct Err{
 	this (Type type, string message = null) pure {
 		this.type = type;
 		this.message = message;
-	}
-
-	public string toString() const pure {
-		import std.format;
-		return format!"<error %s %s>"(type, message ? message : "");
 	}
 }
 
@@ -54,7 +51,7 @@ public struct ErrVal(T){
 	}
 	/// Returns: value
 	public @property T val() pure {
-		assert (!isErr, _err.toString);
+		assert (!isErr);
 		return _val;
 	}
 
