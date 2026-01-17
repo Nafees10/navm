@@ -5,3 +5,8 @@ copyright "Copyright © 2019-2025, Nafees Hassan"
 license "MIT"
 dependency "utils" version="~>0.8.0"
 subPackage "./stackvm"
+configuration "default" {
+}
+configuration "betterC" {
+	dflags "-betterC"
+}
