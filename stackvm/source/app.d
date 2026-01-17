@@ -4,6 +4,8 @@ import std.stdio,
 			 std.meta,
 			 std.conv : to;
 
+import core.stdc.stdlib : exit;
+
 import utils.misc;
 
 import navm;
@@ -252,7 +254,12 @@ void main(string[] args){
 	immutable size_t count = args.length > 2 && args[2].isNum
 		? args[2].to!size_t : 1;
 	StopWatch sw;
-	Code code = parseCode!InstructionSet(fileToArray(args[1]));
+	ErrVal!Code codeRes = parseCode!InstructionSet(fileToArray(args[1]));
+	if (codeRes.isErr){
+		stderr.writeln(codeRes.err);
+		exit(1);
+	}
+	Code code = codeRes.val;
 	debug {
 		writeln("Code: ");
 		writeln(code);

@@ -1,20 +1,16 @@
 module navm.binary;
 
 import navm.common,
+			 navm.error,
 			 navm.meta;
 
-import std.bitmanip;
 import std.conv : to;
 
-private enum IsLittleEndian = (){
-	uint i = 1;
-	ubyte[uint.sizeof] le = nativeToLittleEndian(i);
-	return le[0] == 1;
-}();
-
 private void assertLittleEndian() pure {
-	assert (IsLittleEndian,
-			"binary serialization only supported on little endian CPUs");
+	version (LittleEndian){} else {
+		assert (false,
+				"binary serialization only supported on little endian CPUs");
+	}
 }
 
 /// Writes ByteCode to a binary stream
@@ -79,25 +75,22 @@ unittest{
 }
 
 /// Reads ByteCode from a byte stream in ubyte[]
-/// Throws: Exception in case of error
-/// Returns: ByteCode
-public Code fromBin(
+/// Returns: ByteCode or Err
+public ErrVal!Code fromBin(
 		ubyte[] stream,
 		ref ubyte[8] magicPostfix,
 		ref ubyte[] metadata){
 	assertLittleEndian;
 	if (stream.length < binStreamExpectedSize)
-		throw new Exception("Stream size if less than minimum possible size");
+		return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 	if (stream[0 .. 7] != "NAVMBC-")
-		throw new Exception("Invalid header in stream");
-	if (stream[7 .. 9] != NAVMBC_VERSION.asBytes)
-		throw new Exception("Stream is of different ByteCode version.\n" ~
-				"\tStream: " ~ stream[7 .. 9].as!ushort.to!string ~
-				"\tSupported: " ~ NAVMBC_VERSION);
+		return ErrVal!Code(Err.Type.StreamHeaderInvalid.Err);
+	if (stream[7 .. 9].as!ushort != NAVMBC_VERSION)
+		return ErrVal!Code(Err.Type.StreamVersionInvalid.Err);
 	magicPostfix = stream[9 .. 17];
 	size_t len = stream[17 .. 25].as!size_t;
 	if (25 + len > stream.length)
-		throw new Exception("Invalid stream length");
+		return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 	metadata = stream[25 .. 25 + len];
 	size_t seek = 25 + len;
 
@@ -105,7 +98,7 @@ public Code fromBin(
 	ubyte[8] buf8;
 	// labels
 	if (seek + 8 > stream.length)
-		throw new Exception("Invalid stream length");
+		return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 	buf8 = stream[seek .. seek + 8];
 	len = buf8.as!size_t;
 	seek += 8;
@@ -113,7 +106,7 @@ public Code fromBin(
 	code.labelNames.length = len;
 	foreach (i, ref label; code.labels){
 		if (seek + 8 > stream.length)
-			throw new Exception("Invalid stream length");
+			return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 		buf8 = stream[seek .. seek + 8];
 		seek += 8;
 		label = buf8.as!size_t;
@@ -121,7 +114,7 @@ public Code fromBin(
 		seek += 8;
 		len = buf8.as!size_t;
 		if (seek + len > stream.length)
-			throw new Exception("Invalid stream length");
+			return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 		code.labelNames[i] = cast(immutable char[])stream[seek .. seek + len].dup;
 		seek += len;
 	}
@@ -130,20 +123,23 @@ public Code fromBin(
 	len = stream[seek .. seek + 8].as!size_t;
 	seek += 8;
 	if (binStreamExpectedSize(
-				metadata.length, code.labels.length, code.code.length)
-			> stream.length)
-		throw new Exception("Invalid stream length");
+				metadata.length,
+				code.labels.length,
+				code.code.length) > stream.length)
+		return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 	code.code = stream[seek .. seek + len].dup;
 
 	// data
 	len = stream[seek .. seek + 8].as!size_t;
 	seek += 8;
 	if (binStreamExpectedSize(
-				metadata.length, code.labels.length, code.code.length, code.data.length)
-			> stream.length)
-		throw new Exception("Invalid stream length");
+				metadata.length,
+				code.labels.length,
+				code.code.length,
+				code.data.length) > stream.length)
+		return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 	code.data = stream[seek .. seek + len];
-	return code;
+	return code.ErrVal!Code;
 }
 
 ///

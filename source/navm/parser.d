@@ -11,25 +11,25 @@ import std.conv : to;
 import utils.misc : readHexadecimal, readBinary, isNum;
 
 import navm.common,
+			 navm.error,
 			 navm.meta;
 
 /// parses code from text format
-/// Throws: Exception in case of errors in code
-/// Returns: Code
-public Code parseCode(T...)(string[] lines)
+/// Returns: Code or Err
+public ErrVal!Code parseCode(T...)(string[] lines)
 		if (allSatisfy!(isCallable, T)){
 	Code ret;
 	string[][] argsAll;
 
 	// pass 1: split args, and read labels
 	foreach (lineNo, line; lines){
-		string[] splits = line.separateWhitespace.filter!(a => a.length > 0).array;
+		string[] splits = line.separateWhitespace.val
+			.filter!(a => a.length > 0).array;
 		if (splits.length == 0) continue;
 		if (splits[0].length && splits[0][$ - 1] == ':'){
 			string name = splits[0][0 .. $ - 1];
 			if (ret.labelNames.canFind(name))
-				throw new Exception(format!"line %d: label `%s` redeclared"(
-							lineNo + 1, name));
+				return ErrVal!Code(Err.Type.LabelRedeclare.Err(name));
 			ret.labelNames ~= name;
 			ret.labels ~= ret.code.length;
 			splits = splits[1 .. $];
@@ -42,16 +42,13 @@ public Code parseCode(T...)(string[] lines)
 			static foreach (ind, Inst; T){
 				case InstName!Inst:
 					if (splits.length!= InstArity!Inst)
-						throw new Exception(format!
-								"line %d: `%s` expects %d arguments, got %d"
-								(lineNo + 1, inst, InstArity!Inst, splits.length));
+						return ErrVal!Code(Err.Type.InstructionArgCountInvalid.Err(inst));
 					ret.code ~= cast(ubyte[])(cast(ushort)ind).asBytes;
 					ret.code.length += SizeofSum!(InstArgs!Inst);
 					break pass1S;
 			}
 			default:
-				throw new Exception(format!"line %d: Instruction expected, got `%s`"
-						(lineNo + 1, inst));
+				return ErrVal!Code(Err.Type.InstructionExpected.Err);
 		}
 		argsAll ~= splits;
 	}
@@ -64,46 +61,53 @@ public Code parseCode(T...)(string[] lines)
 		pass2S: final switch (inst){
 			static foreach (ind, Inst; T){
 				case ind:
-					void[] updated = parseArgs!Inst(ret, args);
-					ret.code[pos .. pos + SizeofSum!(InstArgs!Inst)] = updated;
+					ErrVal!(void[]) updated = parseArgs!Inst(ret, args);
+					if (updated.isErr)
+						return ErrVal!Code(updated.err);
+					ret.code[pos .. pos + SizeofSum!(InstArgs!Inst)] = updated.val; // TODO
 					pos += SizeofSum!(InstArgs!Inst);
 					break pass2S;
 			}
 		}
 	}
-	return ret;
+	return ret.ErrVal!Code;
 }
 
-private void[] parseArgs(alias Inst)(ref Code code, string[] args){
+private ErrVal!(void[]) parseArgs(alias Inst)(ref Code code, string[] args){
 	void[] ret;
 	static foreach (i, Arg; InstArgs!Inst){
 		static if (is (Arg == string)){
 			if (args[i].length && args[i][0] == '"'){
-				void[] data = cast(ubyte[])parseData!Arg(args[i]);
+				ErrVal!string data = parseData!string(args[i]);
+				if (data.isErr)
+					return data.err.ErrVal!(void[]);
 				ret ~= code.data.length.asBytes;
-				code.data ~= data.length.asBytes;
-				code.data ~= data;
+				code.data ~= data.val.length.asBytes; // TODO
+				code.data ~= cast(ubyte[])(data.val);
 			} else {
-				throw new Exception(format!
-						"Instruction `%s` expected string for %d-th arg, got `%s`"
-						(InstName!Inst, i + 1, args[i]));
+				return ErrVal!(void[])(Err.Type.InstructionArgInvalid.Err(args[i]));
 			}
 
 		} else static if (isIntegral!Arg){
 			if (args[i].length && args[i][0] == '@'){
 				if (!code.labelNames.canFind(args[i][1 .. $]))
-					throw new Exception(format!"Label `%s` used but not declared"
-							(args[i][1 .. $]));
+					return ErrVal!(void[])(Err.Type.LabelUndefined.Err(args[i][1 .. $]));
 				ret ~= cast(void[])(cast(Arg)
 						code.labels[code.labelNames.countUntil(args[i][1 .. $])]).asBytes;
 			} else {
-				ret ~= cast(ubyte[])parseData!Arg(args[i]).asBytes;
+				ErrVal!Arg convd = parseData!Arg(args[i]);
+				if (convd.isErr)
+					return convd.err.ErrVal!(void[]);
+				ret ~= cast(ubyte[])convd.val.asBytes;
 			}
 		} else {
-			ret ~= cast(ubyte[])parseData!Arg(args[i]).asBytes;
+			ErrVal!Arg convd = parseData!Arg(args[i]);
+			if (convd.isErr)
+				return convd.err.ErrVal!(void[]);
+			ret ~= cast(ubyte[])convd.val.asBytes;
 		}
 	}
-	return ret;
+	return ErrVal!(void[])(ret);
 }
 
 ///
@@ -131,33 +135,32 @@ unittest{
 }
 
 /// Parses data
-///	Throws: Exception if incorrect format
-/// Returns: parsed data.
-private T parseData(T)(string s){
+/// Returns: parsed data or Err
+private ErrVal!T parseData(T)(string s){
 	static if (isIntegral!T){
 		// can be just an int
 		if (isNum(s, false))
-			return s.to!T;
+			return s.to!T.ErrVal!T;
 		// can be a binary or hex literal
 		if (s.length > 2 && s[0] == '0'){
 			if (s[1] == 'b')
-				return (cast(T)readBinary(s[2 .. $]));
+				return (cast(T)readBinary(s[2 .. $])).ErrVal!T;
 			else if (s[1] == 'x')
-				return (cast(T)readHexadecimal(s[2 .. $]));
+				return (cast(T)readHexadecimal(s[2 .. $])).ErrVal!T;
 		}
-		throw new Exception(format!"`%s` is not an integer"(s));
+		return ErrVal!T(Err.Type.ValueNotInt.Err(s));
 
 	} else static if (isFloatingPoint!T){
 		if (isNum(s, true))
-			return s.to!T;
-		throw new Exception(format!"`%s` is not a float"(s));
+			return s.to!T.ErrVal!T;
+		return ErrVal!T(Err.Type.ValueNotFloat.Err(s));
 
 	} else static if (is (T == bool)){
 		if (s == "true")
-			return true;
+			return true.ErrVal!T;
 		if (s == "false")
-			return false;
-		throw new Exception(format!"`%s` is not a boolean"(s));
+			return false.ErrVal!T;
+		return ErrVal!T(Err.Type.ValueNotBool.Err(s));
 
 	} else static if (isSomeChar!T){
 		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\'')
@@ -167,9 +170,9 @@ private T parseData(T)(string s){
 
 	} else static if (is (T == string)){
 		if (s.length < 2 || s[0] != s[$ - 1] || s[0] != '\"')
-			throw new Exception(format!"`%s` is not a string"(s));
+			return ErrVal!T(Err.Type.ValueNotString.Err(s));
 		s = s[1 .. $ - 1].unescape;
-		return s.to!T;
+		return s.to!T.ErrVal!T;
 
 	} else {
 		static assert(false, "Unsupported argument type " ~ T.stringof);
@@ -178,22 +181,20 @@ private T parseData(T)(string s){
 
 ///
 unittest{
-	assert("true".parseData!bool == true);
-	assert("false".parseData!bool == false);
-	assert("0x50".parseData!size_t == 0x50);
-	assert("0b101010".parseData!size_t == 0b101010);
-	assert("12345".parseData!size_t == 1_2345);
-	assert("\"bla bla\"".parseData!string == "bla bla");
-	assert("5.5".parseData!double == "5.5".to!double);
+	assert("true".parseData!bool.val == true);
+	assert("false".parseData!bool.val == false);
+	assert("0x50".parseData!size_t.val == 0x50);
+	assert("0b101010".parseData!size_t.val == 0b101010);
+	assert("12345".parseData!size_t.val == 1_2345);
+	assert("\"bla bla\"".parseData!string.val == "bla bla");
+	assert("5.5".parseData!double.val == "5.5".to!double);
 }
 
 /// reads a string into substrings separated by whitespace. Strings are read
 /// as a whole
 ///
-/// Returns: substrings
-///
-/// Throws: Exception if string not closed
-private string[] separateWhitespace(string line){
+/// Returns: substrings or err
+private ErrVal!(string[]) separateWhitespace(string line){
 	string[] r;
 	size_t i, start;
 	for (; i < line.length; i++){
@@ -209,7 +210,7 @@ private string[] separateWhitespace(string line){
 			start = i;
 			immutable ptrdiff_t endIndex = i + line[i .. $].strEnd;
 			if (endIndex <= i)
-				throw new Exception("string not closed");
+				return ErrVal!(string[])(Err.Type.StringNotClosed.Err);
 			r ~= line[start .. endIndex + 1];
 			start = endIndex + 1;
 			i = endIndex;
@@ -229,20 +230,21 @@ private string[] separateWhitespace(string line){
 	}
 	if (i == line.length && start <= i - 1)
 		r ~= line[start .. $].dup;
-	return r;
+	return r.ErrVal!(string[]);
 }
 ///
 unittest{
-	assert("potato".separateWhitespace == ["potato"]);
-	assert("potato potato".separateWhitespace == ["potato", "potato"]);
-	assert(" a b \"str\"".separateWhitespace == ["a", "b", "\"str\""]);
-	assert("a b 'c' \"str\"".separateWhitespace == ["a", "b", "'c'", "\"str\""]);
-	assert("\ta   \t b\"str\"".separateWhitespace == ["a", "b", "\"str\""]);
-	assert("   a   b  'c'\"str\"'c'".separateWhitespace ==
+	assert("potato".separateWhitespace.val == ["potato"]);
+	assert("potato potato".separateWhitespace.val == ["potato", "potato"]);
+	assert(" a b \"str\"".separateWhitespace.val == ["a", "b", "\"str\""]);
+	assert("a b 'c' \"str\"".separateWhitespace.val ==
+			["a", "b", "'c'", "\"str\""]);
+	assert("\ta   \t b\"str\"".separateWhitespace.val == ["a", "b", "\"str\""]);
+	assert("   a   b  'c'\"str\"'c'".separateWhitespace.val ==
 			["a", "b", "'c'", "\"str\"", "'c'"]);
-	assert("a 'b'#c".separateWhitespace == ["a", "'b'"]);
-	assert("a: a b#c".separateWhitespace == ["a:","a", "b"]);
-	assert("a 'b' #c".separateWhitespace == ["a", "'b'"]);
+	assert("a 'b'#c".separateWhitespace.val == ["a", "'b'"]);
+	assert("a: a b#c".separateWhitespace.val == ["a:","a", "b"]);
+	assert("a 'b' #c".separateWhitespace.val == ["a", "'b'"]);
 }
 
 /// Returns: the index where a string ends, -1 if not terminated

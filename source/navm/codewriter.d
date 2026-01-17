@@ -1,11 +1,13 @@
 module navm.codewriter;
 
 import std.algorithm,
-			 std.format,
 			 std.traits,
 			 std.meta;
 
+import std.format : format;
+
 import navm.common,
+			 navm.error,
 			 navm.meta;
 
 /// Label Type
@@ -85,8 +87,8 @@ public:
 	}
 
 	/// commits and generates a final Code
-	/// Returns: Code
-	Code commit(){
+	/// Returns: Code, or Err
+	ErrVal!Code commit(){
 		Code ret;
 		ret.labelNames = _code.labelNames.dup;
 		ret.labels = _code.labels.dup;
@@ -107,12 +109,11 @@ public:
 		foreach (size_t i; 0 .. _labOff.length){
 			ptrdiff_t labInd = ret.labelNames.countUntil(_labOffN[i]);
 			if (labInd >= ret.labelNames.length || labInd < 0)
-				throw new Exception(format!"Label `%s` used but not declared"(
-							_labOffN[i]));
+				return ErrVal!Code(Err.Type.LabelUndefined.Err(_labOffN[i]));
 			ret.code[_labOff[i] .. _labOff[i] + size_t.sizeof] =
 				cast(ubyte[])ret.labels[labInd].asBytes;
 		}
-		return ret;
+		return ret.ErrVal!Code;
 	}
 }
 
