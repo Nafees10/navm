@@ -2,11 +2,10 @@ import std.stdio,
 			 std.datetime.stopwatch,
 			 std.traits,
 			 std.meta,
+			 std.array,
 			 std.conv : to;
 
 import core.stdc.stdlib : exit;
-
-import utils.misc;
 
 import navm;
 
@@ -255,10 +254,10 @@ alias InstructionSet = AliasSeq!(addI, subI, mulI, divI, modI, addF, subF,
 void main(string[] args){
 	if (args.length < 2)
 		args = [args[0], "tests/default"];
-	immutable size_t count = args.length > 2 && args[2].isNum
-		? args[2].to!size_t : 1;
+	immutable size_t count = args.length > 2 ? args[2].to!size_t : 1;
 	StopWatch sw;
-	ErrVal!Code codeRes = parseCode!InstructionSet(fileToArray(args[1]));
+	ErrVal!Code codeRes = parseCode!InstructionSet(
+			File(args[1]).byLineCopy.array);
 	if (codeRes.isErr){
 		stderr.writeln(codeRes.err);
 		exit(1);
@@ -270,7 +269,13 @@ void main(string[] args){
 	}
 
 	Stack state;
-	immutable ptrdiff_t startIndex = code.labelNames.indexOf("start");
+	ptrdiff_t startIndex = -1;
+	foreach (size_t i, label; code.labelNames){
+		if (label == "start"){
+			startIndex = i;
+			break;
+		}
+	}
 	if (startIndex == -1){
 		writeln("label `start` not found");
 		return;
