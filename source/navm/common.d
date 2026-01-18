@@ -13,20 +13,17 @@ public struct Code{
 	void[] data; /// data
 }
 
-pragma(inline, true){
-	/// Reads a void[] as a type
-	/// Returns: value in type T
-	package inout(T) as(T)(inout void[] data) pure {
-		assert(data.length >= T.sizeof);
-		return *(cast(T*)data.ptr);
-	}
+/// Reads a void[] as a type
+/// Returns: value in type T
+package pragma(inline, true) inout(T) as(T)(inout void[] data) pure {
+	assert(data.length >= T.sizeof);
+	return *(cast(T*)data.ptr);
+}
 
-	/// Returns: void[] against a value of type T
-	package void[] asBytes(T)(T val) pure {
-		void[] ret;
-		ret.length = T.sizeof;
-		return ret[] = (cast(void*)&val)[0 .. T.sizeof];
-	}
+/// Returns: void[] against a value of type T
+package pragma(inline, true) void[T.sizeof] asBytes(T)(T val) pure {
+	void[T.sizeof] ret = (cast(void*)&val)[0 .. T.sizeof];
+	return ret;
 }
 
 package bool isWhite(string s) pure {
@@ -105,7 +102,8 @@ package T parseFloat(T)(string s) pure {
 	T r = 0;
 	for (ubyte i; i < s.length && i < ubyte.max; i ++){
 		if (s[i] == '.'){
-			r += cast(T)parseInt!size_t(s[i + 1 .. $]) / (10 * (s.length - 1 - i));
+			r += cast(T)parseInt!size_t(s[i + 1 .. $]) /
+				(10 * (cast(int)s.length - 1 - i));
 			break;
 		}
 		r = (r * 10) + (s[i] - '0');
@@ -226,6 +224,32 @@ unittest{
 	assert(0.intToStr == "0");
 	assert(1.intToStr == "1");
 	assert(10.intToStr == "10");
-	assert(123456789.intToStr == "123456789");
-	assert((-123456789).intToStr == "-123456789");
+	assert(123_456_789.intToStr == "123456789");
+	assert((-123_456_789).intToStr == "-123456789");
+}
+
+package T[] allocate(T)(size_t len){
+	version (D_BetterC){
+		import core.stdc.stdlib : malloc;
+		import core.stdc.string : memset;
+		immutable size_t size = T.sizeof * len;
+		void* ptr = malloc(size);
+		memset(ptr, 0, size);
+		return (cast(T*)ptr)[0 .. len];
+	} else {
+		return new T[len];
+	}
+}
+
+package T[] duplicate(T)(T[] src){
+	version (D_BetterC){
+		import core.stdc.stdlib : malloc;
+		import core.stdc.string : memcpy;
+		immutable size_t size = T.sizeof * src.length;
+		void* ptr = malloc(size);
+		memcpy(ptr, src.ptr, size);
+		return (cast(T*)ptr)[0 .. src.length];
+	} else {
+		return src.dup;
+	}
 }
