@@ -33,7 +33,7 @@ public ErrVal!Code parseCode(T...)(string[] lines)
 		pass1S: switch (inst){
 			static foreach (ind, Inst; T){
 				case InstName!Inst:
-					if (splits.length!= InstArity!Inst)
+					if (splits.length != InstArity!Inst)
 						return ErrVal!Code(Err.Type.InstructionArgCountInvalid.Err(inst));
 					ret.code ~= cast(ubyte[])(cast(ushort)ind).asBytes;
 					ret.code.length += SizeofSum!(InstArgs!Inst);
@@ -56,7 +56,7 @@ public ErrVal!Code parseCode(T...)(string[] lines)
 					ErrVal!(void[]) updated = parseArgs!Inst(ret, args);
 					if (updated.isErr)
 						return ErrVal!Code(updated.err);
-					ret.code[pos .. pos + SizeofSum!(InstArgs!Inst)] = updated.val; // TODO
+					ret.code[pos .. pos + SizeofSum!(InstArgs!Inst)] = updated.val;
 					pos += SizeofSum!(InstArgs!Inst);
 					break pass2S;
 			}
@@ -74,7 +74,7 @@ private ErrVal!(void[]) parseArgs(alias Inst)(ref Code code, string[] args){
 				if (data.isErr)
 					return data.err.ErrVal!(void[]);
 				ret ~= code.data.length.asBytes;
-				code.data ~= data.val.length.asBytes; // TODO
+				code.data ~= data.length.asBytes;
 				code.data ~= cast(ubyte[])(data.val);
 			} else {
 				return ErrVal!(void[])(Err.Type.InstructionArgInvalid.Err(args[i]));
@@ -231,7 +231,7 @@ private ErrVal!(string[]) separateWhitespace(string line){
 
 	}
 	if (i == line.length && start <= i - 1 && !line[start .. $].isWhite)
-		r ~= line[start .. $].dup;
+		r ~= line[start .. $].duplicate;
 	return r.ErrVal!(string[]);
 }
 ///

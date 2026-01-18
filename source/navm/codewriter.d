@@ -88,10 +88,10 @@ public:
 	/// Returns: Code, or Err
 	ErrVal!Code commit(){
 		Code ret;
-		ret.labelNames = _code.labelNames.dup;
-		ret.labels = _code.labels.dup;
-		ret.code = _code.code.dup;
-		ret.data = _code.data.dup;
+		ret.labelNames = _code.labelNames.duplicate;
+		ret.labels = _code.labels.duplicate;
+		ret.code = _code.code.duplicate;
+		ret.data = _code.data.duplicate;
 
 		// adjust _dOff
 		foreach (size_t off; _dOff){

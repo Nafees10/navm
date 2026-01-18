@@ -22,7 +22,7 @@ public ubyte[] toBin(ref Code code, ubyte[8] magicPostfix = 0,
 	// count label names sizes, add those
 	foreach (name; code.labelNames)
 		expectedSize += name.length;
-	void[] stream = new ubyte[expectedSize];
+	void[] stream = allocate!void(expectedSize);
 
 	// header
 	stream[0 .. 7] = cast(ubyte[])"NAVMBC-";
@@ -73,7 +73,8 @@ unittest{
 }
 
 /// Reads ByteCode from a byte stream in ubyte[]
-/// Returns: ByteCode or Err
+/// Returns: Code or Err
+/// the created Code instance will refer to memory in `stream`
 public ErrVal!Code fromBin(
 		ubyte[] stream,
 		ref ubyte[8] magicPostfix,
@@ -113,7 +114,7 @@ public ErrVal!Code fromBin(
 		len = buf8.as!size_t;
 		if (seek + len > stream.length)
 			return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
-		code.labelNames[i] = cast(immutable char[])stream[seek .. seek + len].dup;
+		code.labelNames[i] = cast(immutable char[])stream[seek .. seek + len];
 		seek += len;
 	}
 
@@ -125,7 +126,7 @@ public ErrVal!Code fromBin(
 				code.labels.length,
 				code.code.length) > stream.length)
 		return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
-	code.code = stream[seek .. seek + len].dup;
+	code.code = stream[seek .. seek + len];
 
 	// data
 	len = stream[seek .. seek + 8].as!size_t;
@@ -155,7 +156,7 @@ unittest{
 		1300,
 	];
 
-	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7, 8], [1, 2, 3]).dup;
+	ubyte[] bin = code.toBin([1, 2, 3, 4, 5, 6, 7, 8], [1, 2, 3]);
 	ubyte[8] postfix;
 	ubyte[] metadata;
 	Code decoded = bin.fromBin(postfix, metadata);
