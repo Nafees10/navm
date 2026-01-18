@@ -207,7 +207,7 @@ package string intToStr(T)(T num){
 		num *= -1;
 	}
 	immutable size_t len = cast(size_t)num.log10.floor + 1 + isNegative;
-	char[] r = new char[len];
+	char[] r = allocate!char(len);
 	int i = cast(int)r.length - 1;
 	while (i >= isNegative){
 		r[i] = cast(char)(num % 10 + '0');
@@ -238,6 +238,15 @@ package T[] allocate(T)(size_t len){
 		return (cast(T*)ptr)[0 .. len];
 	} else {
 		return new T[len];
+	}
+}
+
+package void deallocate(void* ptr){
+	version (D_BetterC){
+		import core.stdc.stdlib : free;
+		free(ptr);
+	} else {
+		// nothing to do, let GC handle it
 	}
 }
 
