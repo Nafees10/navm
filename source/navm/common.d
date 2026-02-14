@@ -197,37 +197,6 @@ unittest{
 	assert("1101".parseBinInt == 0B1101);
 }
 
-package string intToStr(T)(T num){
-	import core.stdc.math : log10, floor;
-	if (num == 0)
-		return "0";
-	int isNegative = 0;
-	if (num < 0){
-		isNegative = 1;
-		num *= -1;
-	}
-	immutable size_t len = cast(size_t)num.log10.floor + 1 + isNegative;
-	char[] r = allocate!char(len);
-	int i = cast(int)r.length - 1;
-	while (i >= isNegative){
-		r[i] = cast(char)(num % 10 + '0');
-		i --;
-		num /= 10;
-	}
-	if (isNegative)
-		r[0] = '-';
-	return cast(string)r;
-}
-
-///
-unittest{
-	assert(0.intToStr == "0");
-	assert(1.intToStr == "1");
-	assert(10.intToStr == "10");
-	assert(123_456_789.intToStr == "123456789");
-	assert((-123_456_789).intToStr == "-123456789");
-}
-
 package T[] allocate(T)(size_t len){
 	version (D_BetterC){
 		import core.stdc.stdlib : malloc;
