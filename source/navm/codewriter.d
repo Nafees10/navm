@@ -3,6 +3,7 @@ module navm.codewriter;
 import std.algorithm : countUntil;
 import std.traits : isCallable, isIntegral;
 import std.meta : AliasSeq, allSatisfy, staticIndexOf;
+import std.conv : to;
 
 import navm.common;
 import navm.error;
@@ -25,15 +26,13 @@ private:
 	Code _code;
 	/// label counter
 	size_t _labC;
-	/// dynamic data indices in _code.code
-	size_t[] _dOff;
 public:
 
 	/// pushes a numbered label
 	///
 	/// Returns: new label's name
 	string lnPush(string prefix = null){
-		string label = prefix ~ (_labC ++).intToStr;
+		string label = prefix ~ (_labC ++).to!string;
 		lPush(label);
 		return label;
 	}
@@ -93,16 +92,6 @@ public:
 		ret.code = _code.code.duplicate;
 		ret.data = _code.data.duplicate;
 
-		// adjust _dOff
-		foreach (size_t off; _dOff){
-			ubyte[] data = ret.code[off .. off + (ubyte[]).sizeof].as!(ubyte[]);
-			ret.code[off .. off + size_t.sizeof] =
-				cast(ubyte[])ret.code.length.asBytes;
-			ret.code[off + size_t.sizeof .. off + (2 * size_t.sizeof)] =
-				cast(ubyte[])(ret.code.length + data.length).asBytes;
-			ret.code ~= data;
-		}
-
 		// fix labels
 		foreach (size_t i; 0 .. _labOff.length){
 			ptrdiff_t labInd = ret.labelNames.countUntil(_labOffN[i]);
@@ -150,5 +139,8 @@ unittest{
 	writer.lPush("testLabel");
 	code = writer.commit;
 
-	// TODO: test this output
+	// TODO: test this output without depending on execute
+	import navm.exec : execute;
+	execute!IS(code);
+	assert (x == (1 | 2 | 4 | 8));
 }
