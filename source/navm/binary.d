@@ -127,6 +127,7 @@ public ErrVal!Code fromBin(
 				code.code.length) > stream.length)
 		return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 	code.code = stream[seek .. seek + len];
+	seek += len;
 
 	// data
 	len = stream[seek .. seek + 8].as!size_t;
@@ -135,7 +136,7 @@ public ErrVal!Code fromBin(
 				metadata.length,
 				code.labels.length,
 				code.code.length,
-				code.data.length) > stream.length)
+				len) > stream.length)
 		return ErrVal!Code(Err.Type.StreamSizeInvalid.Err);
 	code.data = stream[seek .. seek + len];
 	return code.ErrVal!Code;
