@@ -21,6 +21,7 @@ public struct Err{
 		ValueNotHex, /// value is not hexadecimal int
 		ValueNotBin, /// value is not binary int
 		StringNotClosed, /// string not closed
+		InvalidInstruction, /// invalid instruction in `Code`
 	}
 
 	public Type type; /// Type of this error
