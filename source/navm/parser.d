@@ -79,7 +79,7 @@ unittest{
 		"push @data",
 		"push2 1 2",
 		"add",
-		"print"
+		"print",
 	];
 	Code code = parse(source);
 	assert(code.labels.length == 2);
@@ -103,8 +103,9 @@ public ErrVal!(string[]) serialize(IS...)(Code code){
 		while (labSeek < code.labels.length && code.labels[labSeek] < ic){
 			labSeek ++;
 		}
-		if (labSeek < code.labels.length && code.labels[labSeek] == ic){
+		while (labSeek < code.labels.length && code.labels[labSeek] == ic){
 			ret ~= code.labelNames[labSeek] ~ ": #" ~ ic.to!string;
+			labSeek ++;
 		}
 		immutable ushort inst = code.code[ic .. $].as!ushort;
 		ic += ushort.sizeof;
@@ -139,6 +140,13 @@ switcher: switch (inst){
 			break;
 		}
 	}
+	while (labSeek < code.labels.length && code.labels[labSeek] < ic){
+		labSeek ++;
+	}
+	while (labSeek < code.labels.length && code.labels[labSeek] == ic){
+		ret ~= code.labelNames[labSeek] ~ ": #" ~ ic.to!string;
+		labSeek ++;
+	}
 	return ret.ErrVal!(string[]);
 }
 ///
@@ -153,16 +161,21 @@ unittest{
 	alias parse = parseCode!IS;
 	string[] source = [
 		"start: #0",
+		"startAlt: #0",
 		"\tpush 0",
 		"\tpush2 1 2",
+		"mid: #10",
+		"midAlt: #10",
 		"\tadd",
-		"\tprint \"hello \\n world\""
+		"\tprint \"hello \\n world\"",
+		"end: #22",
+		"endAlt: #22"
 	];
 	Code code = parse(source);
 	string[] dest = code.serialize!IS;
 	assert (source.length == dest.length);
 	foreach (size_t i; 0 .. source.length)
-		assert (source[i] == dest[i]);
+		assert (source[i] == dest[i], source[i] ~ " != " ~ dest[i]);
 }
 
 private ErrVal!(void[]) parseArgs(alias Inst)(ref Code code, string[] args){
