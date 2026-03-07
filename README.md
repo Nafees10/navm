@@ -63,12 +63,7 @@ string[] bytecodeSource = [
 	"printSum 1 2"
 ];
 // load bytecode. bytecodeSource is the bytecode in a string array of lines
-Code code;
-try {
-	code = parseCode!(printSum, print)(bytecodeSource);
-} catch (Exception e){
-	// probably an error in the bytecode
-}
+Code code = parseCode!(printSum, print)(bytecodeSource);
 // execute the code
 execute!(printSum, print)(code);
 ```
@@ -151,7 +146,12 @@ writer.lPush("main"); // pushes `main:` label at start
 string label = writer.lnPush("loop"); // pushes `loop0:`, and returns `loop0`
 writer.iPush!Instruction(PARAMS); // pushes `Instruction` & type-checked params
 writer.iPush!JumpInstruction(label.Label); // pushes jump with `@loop0`
-Code code = writer.commit;
+
+// output to `Code`
+Code code = writer.commit; 
+
+// convert `Code` to `string[]`
+string[] codeStr = code.serialize!InstructionSet;
 ```
 
 ---

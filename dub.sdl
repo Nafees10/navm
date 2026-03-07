@@ -1,7 +1,7 @@
 name "navm"
 description "A barebones VM for use in scripting languages"
 authors "Nafees Hassan"
-copyright "Copyright © 2019-2025, Nafees Hassan"
+copyright "Copyright © 2019-2026, Nafees Hassan"
 license "MIT"
 subPackage "./stackvm"
 configuration "default" {
