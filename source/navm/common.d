@@ -227,32 +227,3 @@ package T[] duplicate(T)(T[] src){
 		return src.dup;
 	}
 }
-
-/// escapes a string (replace `'\n'` with `"\\\n"` etc)
-package string escape(string s){
-	string ret;
-	foreach (char c; s){
-		switch (c){
-			case '\n':
-				ret ~= "\\\n";
-				continue;
-			case '\\':
-				ret ~= "\\\\";
-				continue;
-			case '\t':
-				ret ~= "\\\t";
-				continue;
-			default:
-				ret ~= c;
-		}
-	}
-	return ret;
-}
-
-///
-unittest{
-	assert ("abcd".escape == "abcd");
-	assert ("ab\\cd".escape == "ab\\\\cd");
-	assert ("ab\ncd".escape == "ab\\\ncd");
-	assert ("ab\tcd".escape == "ab\\\tcd");
-}

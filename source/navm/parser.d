@@ -65,6 +65,106 @@ public ErrVal!Code parseCode(T...)(string[] lines)
 	return ret.ErrVal!Code;
 }
 
+///
+unittest{
+	void push(ushort){}
+	void push2(ushort, ushort){}
+	void pop(){}
+	void add(){}
+	void print(){}
+	alias parse = parseCode!(push, push2, pop, add, print);
+	string[] source = [
+		"data: push 50",
+		"start: push 50",
+		"push @data",
+		"push2 1 2",
+		"add",
+		"print"
+	];
+	Code code = parse(source);
+	assert(code.labels.length == 2);
+	assert(code.labelNames.canFind("data"));
+	assert(code.labelNames.canFind("start"));
+	assert(code.labels[0] == 0);
+	assert(code.labels[1] == 4);
+}
+
+/// Converts a `Code` to human readable string, wich can be used in `parseCode`
+/// Returns: string representation of `Code`
+public ErrVal!(string[]) serialize(IS...)(Code code){
+	import std.array : join;
+	import std.conv : to;
+	import std.algorithm : isSorted;
+	assert (code.labels.isSorted);
+	size_t labSeek;
+	string[] ret;
+	size_t ic = 0;
+	while (ic < code.code.length){
+		while (labSeek < code.labels.length && code.labels[labSeek] < ic){
+			labSeek ++;
+		}
+		if (labSeek < code.labels.length && code.labels[labSeek] == ic){
+			ret ~= code.labelNames[labSeek] ~ ": #" ~ ic.to!string;
+		}
+		immutable ushort inst = code.code[ic .. $].as!ushort;
+		ic += ushort.sizeof;
+switcher: switch (inst){
+			foreach (ind, Inst; IS){
+				case ind:
+					{
+						string[] parts = new string[InstArity!Inst + 1];
+						parts[0] = InstName!Inst;
+						static foreach (i, Arg; InstArgs!Inst){
+							static if (is (Arg == string)){
+								size_t index = *(cast(size_t*)
+										(code.code.ptr + ic));
+								immutable size_t length = *(cast(size_t*)
+										(code.data.ptr + index));
+								char* start = cast(char*)
+									(code.data.ptr + index + size_t.sizeof);
+								parts[i + 1] =
+									'"' ~ (cast(string)start[0 .. length]).escape ~ '"';
+								ic += size_t.sizeof;
+							} else {
+								parts[i + 1] = (*(cast(Arg*)(code.code.ptr + ic))).to!string;
+								ic += Arg.sizeof;
+							}
+						}
+						ret ~= "\t" ~ parts.join(" ");
+					}
+					break switcher;
+			}
+			default:
+				return Err.Type.InvalidInstruction.Err.ErrVal!(string[]);
+			break;
+		}
+	}
+	return ret.ErrVal!(string[]);
+}
+///
+unittest{
+	import std.meta : AliasSeq;
+	void push(ushort){}
+	void push2(ushort, ushort){}
+	void pop(){}
+	void add(){}
+	void print(string){}
+	alias IS = AliasSeq!(push, push2, pop, add, print);
+	alias parse = parseCode!IS;
+	string[] source = [
+		"start: #0",
+		"\tpush 0",
+		"\tpush2 1 2",
+		"\tadd",
+		"\tprint \"hello \\n world\""
+	];
+	Code code = parse(source);
+	string[] dest = code.serialize!IS;
+	assert (source.length == dest.length);
+	foreach (size_t i; 0 .. source.length)
+		assert (source[i] == dest[i]);
+}
+
 private ErrVal!(void[]) parseArgs(alias Inst)(ref Code code, string[] args){
 	void[] ret;
 	static foreach (i, Arg; InstArgs!Inst){
@@ -100,30 +200,6 @@ private ErrVal!(void[]) parseArgs(alias Inst)(ref Code code, string[] args){
 		}
 	}
 	return ErrVal!(void[])(ret);
-}
-
-///
-unittest{
-	void push(ushort){}
-	void push2(ushort, ushort){}
-	void pop(){}
-	void add(){}
-	void print(){}
-	alias parse = parseCode!(push, push2, pop, add, print);
-	string[] source = [
-		"data: push 50",
-		"start: push 50",
-		"push @data",
-		"push2 1 2",
-		"add",
-		"print"
-	];
-	Code code = parse(source);
-	assert(code.labels.length == 2);
-	assert(code.labelNames.canFind("data"));
-	assert(code.labelNames.canFind("start"));
-	assert(code.labels[0] == 0);
-	assert(code.labels[1] == 4);
 }
 
 /// Parses data
@@ -294,4 +370,33 @@ private string unescape(string s){
 unittest{
 	assert("newline:\\ntab:\\t".unescape ==
 			"newline:\ntab:\t", "newline:\\ntab:\\t".unescape);
+}
+
+/// escapes a string (replace `'\n'` with `"\\\n"` etc)
+private string escape(string s){
+	string ret;
+	foreach (char c; s){
+		switch (c){
+			case '\n':
+				ret ~= "\\n";
+				continue;
+			case '\\':
+				ret ~= "\\\\";
+				continue;
+			case '\t':
+				ret ~= "\\t";
+				continue;
+			default:
+				ret ~= c;
+		}
+	}
+	return ret;
+}
+
+///
+unittest{
+	assert ("abcd".escape == "abcd");
+	assert ("ab\\cd".escape == "ab\\\\cd");
+	assert ("ab\ncd".escape == "ab\\ncd");
+	assert ("ab\tcd".escape == "ab\\tcd");
 }
