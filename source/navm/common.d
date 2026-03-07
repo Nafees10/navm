@@ -47,9 +47,7 @@ package bool canFind(T)(T[] array, T needle) pure {
 }
 
 package bool isNum(string s, bool allowDecimalPoint=true) pure {
-	bool hasDecimalPoint = false;
-	if (!allowDecimalPoint)
-		hasDecimalPoint = true; // hack
+	bool hasDecimalPoint = !allowDecimalPoint;
 	if (s.length > 0 && s[0] == '-')
 		s = s[1 .. $];
 	if (s.length == 0)
@@ -57,7 +55,7 @@ package bool isNum(string s, bool allowDecimalPoint=true) pure {
 	foreach (c; s){
 		if (c == '.' && !hasDecimalPoint){
 			hasDecimalPoint = true;
-		}else if (!"0123456789".canFind(c)){
+		} else if (c < '0' || c > '9'){
 			return false;
 		}
 	}
@@ -182,9 +180,7 @@ unittest{
 package size_t parseBinInt(string s) pure {
 	size_t r;
 	for (ubyte i; i < s.length && i < ubyte.max; i ++){
-		r <<= 1;
-		if (s[i] == '1')
-			r |= 1;
+		r = (r << 1) | (s[i] == '1');
 	}
 	return r;
 }
@@ -230,4 +226,33 @@ package T[] duplicate(T)(T[] src){
 	} else {
 		return src.dup;
 	}
+}
+
+/// escapes a string (replace `'\n'` with `"\\\n"` etc)
+package string escape(string s){
+	string ret;
+	foreach (char c; s){
+		switch (c){
+			case '\n':
+				ret ~= "\\\n";
+				continue;
+			case '\\':
+				ret ~= "\\\\";
+				continue;
+			case '\t':
+				ret ~= "\\\t";
+				continue;
+			default:
+				ret ~= c;
+		}
+	}
+	return ret;
+}
+
+///
+unittest{
+	assert ("abcd".escape == "abcd");
+	assert ("ab\\cd".escape == "ab\\\\cd");
+	assert ("ab\ncd".escape == "ab\\\ncd");
+	assert ("ab\tcd".escape == "ab\\\tcd");
 }
